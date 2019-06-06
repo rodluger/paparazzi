@@ -1,0 +1,56 @@
+\documentclass[modern]{aastex62}
+
+% Load the corTeX style definitions
+\input{cortex}
+
+% Bibliography stuff
+\bibliographystyle{aasjournal}
+
+% Begin!
+\begin{document}
+
+% Title
+\title{Doppler Imaging Fun}
+
+% Author list
+\author[0000-0002-0296-3826]{Rodrigo Luger}
+\email{rluger@flatironinstitute.org}
+\affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
+%
+\author{Megan Bedell}
+\affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
+
+% Introduction
+\section*{Placeholder}
+\label{sec:intro}
+%
+See Figure~\ref{fig:pretty_function}.
+%
+\begin{figure}[h!]
+    \begin{centering}
+    \includegraphics[width=0.5\linewidth]{figures/pretty_function.pdf}
+    \oscaption{pretty_function}{%
+        This is a plot of a pretty function. And at the end of this
+        caption is a symbol with a link to the \emph{exact} script
+        that generated it, hosted on \textsf{GitHub}.
+        \label{fig:pretty_function}
+    }
+    \end{centering}
+\end{figure}
+%
+
+This is an equation with a ``proof'' in the form of a \textsf{Jupyter} notebook:
+%
+\begin{proof}{euler}
+    \label{eq:euler}
+    e^{i\pi} + 1 = 0.
+\end{proof}
+%
+
+Check out \citet{Luger2018} and stuff.
+
+% Bibliography
+\pagebreak
+\bibliography{bib}
+
+\end{document}
