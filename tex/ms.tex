@@ -20,34 +20,53 @@
 \author{Megan Bedell}
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 
-% Introduction
-\section*{Placeholder}
-\label{sec:intro}
 %
-See Figure~\ref{fig:pretty_function}.
-%
-\begin{figure}[h!]
-    \begin{centering}
-    \includegraphics[width=0.5\linewidth]{figures/pretty_function.pdf}
-    \oscaption{pretty_function}{%
-        This is a plot of a pretty function. And at the end of this
-        caption is a symbol with a link to the \emph{exact} script
-        that generated it, hosted on \textsf{GitHub}.
-        \label{fig:pretty_function}
-    }
-    \end{centering}
-\end{figure}
-%
+\section{Introduction}
+Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.
 
-This is an equation with a ``proof'' in the form of a \textsf{Jupyter} notebook:
 %
-\begin{proof}{euler}
-    \label{eq:euler}
-    e^{i\pi} + 1 = 0.
+\section{The equation}
+\label{sec:the_equation}
+
+In the most general form, the Doppler-shifted intensity observed at wavelength $\lambda$ at
+position $x, y$ on the surface of the star at time $t$ is
+%
+\begin{align}
+    I(\lambda, \beta, x, y, t) &=
+        I\big(\lambda, 0, x, y, t\big) \nonumber \\
+        &+ \frac{\mathrm{d}I(\lambda, \beta, x, y, t)}{\mathrm{d}\beta} \Big|_{\beta=0} \Delta\beta(x, y) \nonumber \\
+        &+ \frac{\mathrm{d}^2I(\lambda, \beta, x, y, t)}{\mathrm{d}\beta^2} \Big|_{\beta=0} \Delta\beta^2(x, y) \nonumber \\
+        &+ ...
+\end{align}
+%
+where $\beta \equiv \frac{v}{c}$ is the relativistic parameter for a radial velocity $v$ on the surface.
+
+% 
+\section{Differentiating the spectrum}
+\label{sec:derivatives}
+The derivatives of the spectrum $I(\lambda)$ with respect to the relativistic parameter
+$\beta$ are found by application of Fa\`a di Bruno's formula for taking high
+order derivatives of the chain rule:
+%
+\begin{proof}{faa_di_bruno}
+    \label{eq:dIdbeta}
+    \frac{\mathrm{d}^n I(\lambda, \beta)}{\mathrm{d}\beta^n} \Big|_{\beta=0} &=
+    \sum_{k=1}^n \frac{\mathrm{d}^k I(\lambda_0)}{\mathrm{d}\lambda_0^k} \Big|_{\lambda_0=\lambda} \lambda^k P_{nk}
 \end{proof}
 %
+where
+%
+\begin{proof}{faa_di_bruno}
+    \label{eq:Pnk}
+    P_{nk} \equiv B_{n, k}\Bigg( \Big\{(-1)^j j! \Big\}_{j=1}^{n - k + 1} \Bigg)
+\end{proof}
+%
+and $B_{n, k}$ is the incomplete Bell polynomial. The quantity
+$\frac{\mathrm{d}^k I(\lambda_0)}{\mathrm{d}\lambda_0^k} \Big|_{\lambda_0=\lambda}$
+is just the $k^\mathrm{th}$ derivative of the spectrum with respect to wavelength in the
+rest frame, and must either be inferred from the data or computed numerically
+from the spectrum.
 
-Check out \citet{Luger2018} and stuff.
 
 % Bibliography
 \pagebreak
