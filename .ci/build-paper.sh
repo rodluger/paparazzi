@@ -22,6 +22,8 @@ then
     git status
     git push -f https://$GITHUB_USER:$GITHUB_API_KEY@github.com/$TRAVIS_REPO_SLUG HEAD:$TRAVIS_BRANCH-pdf >/dev/null 2>&1
 
+    echo "Done."
+
     # Return to top level
     cd $TRAVIS_BUILD_DIR
 
