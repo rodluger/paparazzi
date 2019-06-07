@@ -32,7 +32,7 @@ Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.
 \label{sec:uniform surfaces}
 
 Let $I(\lambda, x, y)$ be the Doppler-shifted intensity observed at wavelength $\lambda$ at
-position $x, y$ on the surface of the star. We may express it as
+sky-projected Cartesian position $x, y$ on the surface of the star. We may express it as
 %
 \begin{align}
     \label{eq:IntensityUnif}
@@ -80,7 +80,7 @@ order derivatives of the chain rule:
 \begin{proof}{faa_di_bruno}
     \label{eq:dIdbeta}
     \frac{\mathrm{d}^n I_0(\lambda_0)}{\mathrm{d}\beta^n} \Bigg|_{\beta=0} &=
-    \sum_{k=1}^n \frac{\mathrm{d}^k I(\lambda_0)}{\mathrm{d}\lambda_0^k} \lambda_0^k P_{nk}
+    \sum_{k=1}^n \frac{\mathrm{d}^k I_0(\lambda_0)}{\mathrm{d}\lambda_0^k} \lambda_0^k P_{nk}
 \end{proof}
 %
 where
@@ -102,7 +102,7 @@ we may re-write Equation~(\ref{eq:TaylorUnifExplicit}) as
         + 
         \sum_{n=1}^\infty
             \Bigg(
-                \sum_{k=1}^n \frac{\mathrm{d}^k I(\lambda)}{\mathrm{d}\lambda^k} \lambda^k P_{nk} 
+                \sum_{k=1}^n \frac{\mathrm{d}^k I_0(\lambda)}{\mathrm{d}\lambda^k} \lambda^k P_{nk} 
             \Bigg)
             \Bigg(
                 \Delta\beta(x, y)^n
@@ -121,7 +121,7 @@ denote $S$:
         + 
         \sum_{n=1}^\infty
             \Bigg(
-                \sum_{k=1}^n \frac{\mathrm{d}^k I(\lambda)}{\mathrm{d}\lambda^k} \lambda^k P_{nk} 
+                \sum_{k=1}^n \frac{\mathrm{d}^k I_0(\lambda)}{\mathrm{d}\lambda^k} \lambda^k P_{nk} 
             \Bigg)
             \Bigg(
                 \int{\Delta\beta(x, y)^n}\mathrm{d}\Omega
@@ -135,6 +135,37 @@ Note, importantly, that the terms in the first set of parentheses depend \emph{o
 while the terms in the second set of parentheses depend \emph{only} on the position.
 This Taylor expansion has therefore allowed us to deconvolve the effects of the Doppler
 shift from the actual spectrum of the star.
+
+As an example of an application of this equation, consider the case of a rigidly rotating,
+uniform star with equatorial velocity in units of the speed of light equal to $\beta_\mathrm{eq}$. 
+It is easy to show that in this case, $\beta(x, y) = \beta_\mathrm{eq} x$. The integrals
+in Equation~(\ref{eq:TaylorUnifSumIntegral}) are trivial to compute:
+%
+\begin{align}
+    \int{\Delta\beta(x, y)^n}\mathrm{d}\Omega = 
+        \begin{cases} 
+            0 & \quad\quad\quad\quad\quad n \, \mathrm{odd} \\
+            \beta_\mathrm{eq}\frac{\Gamma\big(\frac{n}{2} + \frac{1}{2}\big)}{\Gamma\big(\frac{n}{2} + 2\big)} & \quad\quad\quad\quad\quad n \, \mathrm{even}
+        \end{cases}
+\end{align}
+%
+so the expression for the spectrum becomes
+\begin{align}
+    \label{eq:LineBroadenedSpectrum}
+    S(\lambda) 
+        &=
+        \pi I_0(\lambda)
+        + 
+        \beta_\mathrm{eq}
+        \sum_{n\,\mathrm{even}}
+            \frac{\Gamma\big(\frac{n}{2} + \frac{1}{2}\big)}{\Gamma\big(\frac{n}{2} + 2\big)}
+            \sum_{k=1}^n 
+                \frac{\mathrm{d}^k I_0(\lambda)}{\mathrm{d}\lambda^k} \lambda^k P_{nk} 
+\end{align}
+%
+Equation~(\ref{eq:LineBroadenedSpectrum}) is the analytic expression for line broadening
+due to a rotating star.
+
 
 % Bibliography
 \bibliography{bib}
