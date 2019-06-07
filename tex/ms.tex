@@ -145,7 +145,7 @@ in Equation~(\ref{eq:TaylorUnifSumIntegral}) are trivial to compute:
     \int{\Delta\beta(x, y)^n}\mathrm{d}\Omega = 
         \begin{cases} 
             0 & \quad\quad\quad\quad\quad n \, \mathrm{odd} \\
-            \beta_\mathrm{eq}\frac{\Gamma\big(\frac{n}{2} + \frac{1}{2}\big)}{\Gamma\big(\frac{n}{2} + 2\big)} & \quad\quad\quad\quad\quad n \, \mathrm{even}
+            \beta_\mathrm{eq}\sqrt{\pi}\frac{\Gamma\big(\frac{n}{2} + \frac{1}{2}\big)}{\Gamma\big(\frac{n}{2} + 2\big)} & \quad\quad\quad\quad\quad n \, \mathrm{even}
         \end{cases}
 \end{align}
 %
@@ -156,7 +156,7 @@ so the expression for the spectrum becomes
         &=
         \pi I_0(\lambda)
         + 
-        \beta_\mathrm{eq}
+        \sqrt{\pi}\beta_\mathrm{eq}
         \sum_{n\,\mathrm{even}}
             \frac{\Gamma\big(\frac{n}{2} + \frac{1}{2}\big)}{\Gamma\big(\frac{n}{2} + 2\big)}
             \sum_{k=1}^n 
@@ -164,7 +164,7 @@ so the expression for the spectrum becomes
 \end{align}
 %
 Equation~(\ref{eq:LineBroadenedSpectrum}) is the analytic expression for line broadening
-due to a rotating star.
+due to a uniform rotating star.
 
 
 % Bibliography
