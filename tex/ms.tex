@@ -28,33 +28,59 @@
 Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.
 
 %
-\section{The equation}
-\label{sec:the_equation}
+\section{Uniform surfaces}
+\label{sec:uniform surfaces}
 
-In the most general form, the Doppler-shifted intensity observed at wavelength $\lambda$ at
-position $x, y$ on the surface of the star at time $t$ is
+Let $I(\lambda, x, y)$ be the Doppler-shifted intensity observed at wavelength $\lambda$ at
+position $x, y$ on the surface of the star. We may express it as
 %
 \begin{align}
-    I(\lambda, \beta, x, y, t) &=
-        I\big(\lambda, 0, x, y, t\big) \nonumber \\
-        &+ \frac{\mathrm{d}I(\lambda, \beta, x, y, t)}{\mathrm{d}\beta} \Big|_{\beta=0} \Delta\beta(x, y) \nonumber \\
-        &+ \frac{\mathrm{d}^2I(\lambda, \beta, x, y, t)}{\mathrm{d}\beta^2} \Big|_{\beta=0} \Delta\beta^2(x, y) \nonumber \\
-        &+ ...
+    \label{eq:IntensityUnif}
+    I(\lambda, x, y) &= I_0\Big(\mathcal{D}^{-1}_{\beta(x, y)}(\lambda)\Big)
 \end{align}
 %
-where $\beta \equiv \frac{v}{c}$ is the relativistic parameter for a radial velocity $v$ on the surface.
+where $I_0$ is the (spatially uniform) spectrum in the original, unshifted frame
+and 
+%
+\begin{align}
+    \mathcal{D}^{-1}_{\beta(x, y)}(\lambda) &= \frac{\lambda}{1 + \beta(x, y)} \nonumber \\
+                                            &\equiv \lambda_0
+\end{align}
+%
+is the non-relativistic \emph{inverse} Doppler operator, which takes as input the shifted (observed)
+wavelength $\lambda$ and returns the unshifted wavelength $\lambda_0$.
+The quantity
+%
+\begin{align}
+    \beta(x, y) &= \frac{v(x, y)}{c}
+\end{align}
+%
+is the ratio of the radial velocity $v(x, y)$ at a point on the
+surface to the speed of light.
 
-% 
-\section{Differentiating the spectrum}
-\label{sec:derivatives}
-The derivatives of the spectrum $I(\lambda)$ with respect to the relativistic parameter
+If we Taylor expand Equation~(\ref{eq:IntensityUnif}) about $\beta = 0$, we obtain
+%
+\begin{align}
+    \label{eq:TaylorUnifExplicit}
+    I(\lambda, x, y) 
+        &=
+        I_0(\lambda_0) \Bigg|_{\beta=0}
+        + 
+        \frac{\mathrm{d}I_0(\lambda_0)}{\mathrm{d}\beta} \Bigg|_{\beta=0} \Delta\beta(x, y)
+        + 
+        \frac{\mathrm{d}^2I_0(\lambda_0)}{\mathrm{d}\beta^2} \Bigg|_{\beta=0} \Delta\beta(x, y)^2
+        +
+        ... 
+\end{align}
+%
+The derivatives of the spectrum $I_0(\lambda_0)$ with respect to
 $\beta$ are found by application of Fa\`a di Bruno's formula for taking high
 order derivatives of the chain rule:
 %
 \begin{proof}{faa_di_bruno}
     \label{eq:dIdbeta}
-    \frac{\mathrm{d}^n I(\lambda, \beta)}{\mathrm{d}\beta^n} \Big|_{\beta=0} &=
-    \sum_{k=1}^n \frac{\mathrm{d}^k I(\lambda_0)}{\mathrm{d}\lambda_0^k} \Big|_{\lambda_0=\lambda} \lambda^k P_{nk}
+    \frac{\mathrm{d}^n I_0(\lambda_0)}{\mathrm{d}\beta^n} \Bigg|_{\beta=0} &=
+    \sum_{k=1}^n \frac{\mathrm{d}^k I(\lambda_0)}{\mathrm{d}\lambda_0^k} \lambda_0^k P_{nk}
 \end{proof}
 %
 where
@@ -64,15 +90,53 @@ where
     P_{nk} \equiv B_{n, k}\Bigg( \Big\{(-1)^j j! \Big\}_{j=1}^{n - k + 1} \Bigg)
 \end{proof}
 %
-and $B_{n, k}$ is the incomplete Bell polynomial. The quantity
-$\frac{\mathrm{d}^k I(\lambda_0)}{\mathrm{d}\lambda_0^k} \Big|_{\lambda_0=\lambda}$
-is just the $k^\mathrm{th}$ derivative of the spectrum with respect to wavelength in the
-rest frame, and must either be inferred from the data or computed numerically
-from the spectrum.
+is an integer computed from the incomplete Bell polynomial $B_{n, k}$.
+Given this result, and noting that $\lambda_0 = \lambda$ when $\beta = 0$,
+we may re-write Equation~(\ref{eq:TaylorUnifExplicit}) as
+%
+\begin{align}
+    \label{eq:TaylorUnifSum}
+    I(\lambda, x, y) 
+        &=
+        I_0(\lambda)
+        + 
+        \sum_{n=1}^\infty
+            \Bigg(
+                \sum_{k=1}^n \frac{\mathrm{d}^k I(\lambda)}{\mathrm{d}\lambda^k} \lambda^k P_{nk} 
+            \Bigg)
+            \Bigg(
+                \Delta\beta(x, y)^n
+            \Bigg)
+\end{align}
+%
+Assuming we only have access to spatially unresolved spectra of the star, the quantity
+we observe is the integral of the intensity over the surface of the star, which we
+denote $S$:
+%
+\begin{align}
+    \label{eq:TaylorUnifSumIntegral}
+    S(\lambda) 
+        &=
+        \pi I_0(\lambda)
+        + 
+        \sum_{n=1}^\infty
+            \Bigg(
+                \sum_{k=1}^n \frac{\mathrm{d}^k I(\lambda)}{\mathrm{d}\lambda^k} \lambda^k P_{nk} 
+            \Bigg)
+            \Bigg(
+                \int{\Delta\beta(x, y)^n}\mathrm{d}\Omega
+            \Bigg)
+\end{align}
+%
+where $\int\mathrm{d}\Omega$ denotes the surface integral over the visible disk
+of the star.
 
+Note, importantly, that the terms in the first set of parentheses depend \emph{only} on the wavelength,
+while the terms in the second set of parentheses depend \emph{only} on the position.
+This Taylor expansion has therefore allowed us to deconvolve the effects of the Doppler
+shift from the actual spectrum of the star.
 
 % Bibliography
-\pagebreak
 \bibliography{bib}
 
 \end{document}
