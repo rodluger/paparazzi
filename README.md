@@ -1,10 +1,6 @@
-<h1 align="center">
-  paparazzi
-</h1>
 <p align="center">
-  Taking the highest quality photos of the stars
-</p>
-<p align="center">
+  <img width = "450" src="paparazzi.png"/>
+  <br/>
   <a href="https://travis-ci.org/rodluger/paparazzi/">
     <img src="https://img.shields.io/travis/rodluger/paparazzi/master.svg"/>
   </a>
