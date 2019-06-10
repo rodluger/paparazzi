@@ -68,7 +68,7 @@ If we Taylor expand Equation~(\ref{eq:IntensityUnif}) about $\beta = 0$, we obta
         + 
         \frac{\mathrm{d}I_0(\lambda_0)}{\mathrm{d}\beta} \Bigg|_{\beta=0} \Delta\beta(x, y)
         + 
-        \frac{\mathrm{d}^2I_0(\lambda_0)}{\mathrm{d}\beta^2} \Bigg|_{\beta=0} \Delta\beta(x, y)^2
+        \frac{1}{2}\frac{\mathrm{d}^2I_0(\lambda_0)}{\mathrm{d}\beta^2} \Bigg|_{\beta=0} \Delta\beta(x, y)^2
         +
         ... 
 \end{align}
@@ -80,7 +80,7 @@ order derivatives of the chain rule:
 \begin{proof}{faa_di_bruno}
     \label{eq:dIdbeta}
     \frac{\mathrm{d}^n I_0(\lambda_0)}{\mathrm{d}\beta^n} \Bigg|_{\beta=0} &=
-    \sum_{k=1}^n \frac{\mathrm{d}^k I_0(\lambda_0)}{\mathrm{d}\lambda_0^k} \lambda_0^k P_{nk}
+    \sum_{k=1}^n P_{nk} \frac{\mathrm{d}^k I_0(\lambda_0)}{\mathrm{d}\lambda_0^k} \lambda_0^k
 \end{proof}
 %
 where
@@ -102,7 +102,7 @@ we may re-write Equation~(\ref{eq:TaylorUnifExplicit}) as
         + 
         \sum_{n=1}^\infty
             \Bigg(
-                \sum_{k=1}^n \frac{\mathrm{d}^k I_0(\lambda)}{\mathrm{d}\lambda^k} \lambda^k P_{nk} 
+                \sum_{k=1}^n \frac{P_{nk}}{n!} \frac{\mathrm{d}^k I_0(\lambda)}{\mathrm{d}\lambda^k} \lambda^k
             \Bigg)
             \Bigg(
                 \Delta\beta(x, y)^n
@@ -121,7 +121,7 @@ denote $S$:
         + 
         \sum_{n=1}^\infty
             \Bigg(
-                \sum_{k=1}^n \frac{\mathrm{d}^k I_0(\lambda)}{\mathrm{d}\lambda^k} \lambda^k P_{nk} 
+                \sum_{k=1}^n \frac{P_{nk}}{n!} \frac{\mathrm{d}^k I_0(\lambda)}{\mathrm{d}\lambda^k} \lambda^k
             \Bigg)
             \Bigg(
                 \int{\Delta\beta(x, y)^n}\mathrm{d}\Omega
@@ -139,13 +139,13 @@ shift from the actual spectrum of the star.
 As an example of an application of this equation, consider the case of a rigidly rotating,
 uniform star with equatorial velocity in units of the speed of light equal to $\beta_\mathrm{eq}$. 
 It is easy to show that in this case, $\beta(x, y) = \beta_\mathrm{eq} x$. The integrals
-in Equation~(\ref{eq:TaylorUnifSumIntegral}) are trivial to compute:
+in Equation~(\ref{eq:TaylorUnifSumIntegral}) are straightforward to compute:
 %
 \begin{align}
     \int{\Delta\beta(x, y)^n}\mathrm{d}\Omega = 
         \begin{cases} 
             0 & \quad\quad\quad\quad\quad n \, \mathrm{odd} \\
-            \beta_\mathrm{eq}\sqrt{\pi}\frac{\Gamma\big(\frac{n}{2} + \frac{1}{2}\big)}{\Gamma\big(\frac{n}{2} + 2\big)} & \quad\quad\quad\quad\quad n \, \mathrm{even}
+            \beta_\mathrm{eq}^n\sqrt{\pi}\frac{\Gamma\big(\frac{n}{2} + \frac{1}{2}\big)}{\Gamma\big(\frac{n}{2} + 2\big)} & \quad\quad\quad\quad\quad n \, \mathrm{even}
         \end{cases}
 \end{align}
 %
@@ -157,15 +157,46 @@ so the expression for the spectrum becomes
         \pi I_0(\lambda)
         + 
         \sqrt{\pi}
-        \sum_{n\,\mathrm{even}}
+        \sum_{n\,\mathrm{even}>0}
             \beta_\mathrm{eq}^n
             \frac{\Gamma\big(\frac{n}{2} + \frac{1}{2}\big)}{\Gamma\big(\frac{n}{2} + 2\big)}
             \sum_{k=1}^n 
-                \frac{\mathrm{d}^k I_0(\lambda)}{\mathrm{d}\lambda^k} \lambda^k P_{nk} 
+            \frac{P_{nk}}{n!} \frac{\mathrm{d}^k I_0(\lambda)}{\mathrm{d}\lambda^k} \lambda^k 
 \end{align}
 %
 Equation~(\ref{eq:LineBroadenedSpectrum}) is the analytic expression for line broadening
 due to a uniform rotating star.
+
+\begin{figure}[p!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/convergence.pdf}
+    \oscaption{convergence}{%
+        Fractional root mean square error on the Taylor expansion of a
+        Doppler-shifted Gaussian absorption line profile as a function of 
+        the Doppler parameter 
+        $\xi \equiv \beta / \left( \nicefrac{\sigma}{\mu}\right)$ 
+        and the order of the expansion $N$. The Taylor series
+        does not converge above $\xi \approx 3$.
+        \label{fig:convergence}
+    }
+\end{figure}
+
+\begin{figure}[p!]
+    \centering
+    \subfigure[Local absorption]{\label{fig:convergence_line:a}%
+        \includegraphics[width=2.5in]{figures/local_spectrum.pdf}}
+    \hspace{0.25in}
+    \subfigure[Disk-integrated absorption]{\label{fig:convergence_line:b}%
+        \includegraphics[width=2.5in]{figures/disk_integrated_spectrum.pdf}}
+    \oscaption{convergence}{%
+        Taylor expansion of a Doppler-shifted Gaussian absorption line
+        (orange) for different values of the Doppler parameter 
+        $\xi \equiv \beta / \left( \nicefrac{\sigma}{\mu}\right)$. 
+        The dashed black curve is the line in the rest frame, and the blue
+        curve is the shifted line computed numerically at high precision.
+        \label{fig:convergence_line}
+    }
+\end{figure}
 
 
 % Bibliography
