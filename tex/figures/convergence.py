@@ -150,6 +150,7 @@ def plot_local_spectrum():
                       xy=(0, 0), xycoords="axes fraction",
                       xytext=(5, 5), textcoords="offset points", fontsize=10)
         axis.margins(0, None)
+        axis.set_ylim(-0.15, 1.35)
     fig.savefig("local_spectrum.pdf", bbox_inches='tight')
 
 
@@ -175,6 +176,7 @@ def plot_disk_integrated_spectrum():
                       xy=(0, 0), xycoords="axes fraction",
                       xytext=(5, 5), textcoords="offset points", fontsize=10)
         axis.margins(0, None)
+        axis.set_ylim(-0.15, 1.35)
     fig.savefig("disk_integrated_spectrum.pdf", bbox_inches='tight')
 
 
