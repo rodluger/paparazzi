@@ -305,6 +305,7 @@ the approximation in the second line is valid when $\beta \ll 1$
 The equation for the observed disk-integrated spectrum is therefore
 %
 \begin{align}
+    \label{eq:uniform}
     S(\xi) &= 
     \pi
     \mathcal{F}^{-1}
@@ -321,13 +322,29 @@ The equation for the observed disk-integrated spectrum is therefore
     \Big]
 \end{align}
 %
-Figure~\ref{fig:uniform}
+Figure~\ref{fig:uniform} shows an example application of this equation
+to the case of rotational broadening of a Gaussian absorption line.
 
 \begin{figure}[p!]
     \centering
     \includegraphics[width=0.9\textwidth]{figures/uniform.pdf}
     \oscaption{uniform}{%
-        Hello.
+        Application of Equation~(\ref{eq:uniform}) to computation
+        of rotational line broadening of a Gaussian absorption line.
+        \emph{Top:} A line centered at $\lambda = 1.00$ with 
+        standard deviation $\sigma = 0.01$ (dashed black curve) is 
+        redshifted by a Doppler parameter $\beta = 0.05$. The
+        blue curve is the result obtained by interpolation, while
+        the dashed orange curve is the result obtained by scaling
+        the Fourier transform of the line according to
+        Equation~(\ref{eq:translation}) and then applying the inverse
+        Fourier transform.
+        \emph{Bottom:} The same line profile is now integrated over
+        the visible disk of a uniform, rigidly rotating star with
+        $\beta_\mathrm{eq} = 0.05$ numerically (blue curve) and via
+        the Fourier method (Equation~\ref{eq:uniform}). In both cases,
+        the results agree to within the accuracy of the numerical
+        approaches.
         \label{fig:uniform}
     }
 \end{figure}
