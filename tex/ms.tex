@@ -222,6 +222,7 @@ over the visible disk $\mathcal{S}$ of the star:
 where we define
 %
 \begin{align}
+    \label{eq:Jhat}
     \hat{J}(k) \equiv 
         \iint\limits_{\mathcal{S}(x, y)}
         % MAGIC
@@ -236,7 +237,9 @@ transform:
 %
 \begin{align}
     S(\xi) &= \mathcal{F}^{-1}\Big[ \hat{S}(k) \Big] \nonumber \\
+           \label{eq:S}
            &= \mathcal{F}^{-1}\Big[ \hat{I_0}(k) \hat{J}(k) \Big] \\
+           \label{eq:S_conv}
            &= I_0(\xi) \circ J(\xi)
 \end{align}
 %
@@ -244,8 +247,8 @@ where the last step follows from the convolution theorem,
 with $J(\xi) \equiv \mathcal{F}^{-1}\left[ \hat{J}(k) \right]$ and $\circ$
 denoting the convolution operator.
 
-\subsubsection{Integration over the full stellar disk}
-\label{sec:full_disk}
+\subsubsection{Rotational line broadening}
+\label{sec:line_broadening}
 %
 As an example, consider the case of an unocculted, uniform star of unit
 radius with negligible limb darkening, rigidly rotating about an axis 
@@ -260,7 +263,7 @@ $\omega_\mathrm{eq}$. The velocity profile everywhere on the surface is
 %
 The surface integral term may then be computed as
 %
-\begin{align}
+\begin{proof}{Fourier}
     \hat{J}(k) 
     &=
         \int_{-1}^{1}
@@ -296,7 +299,7 @@ The surface integral term may then be computed as
                 \beta_\mathrm{eq}^2
             \right)
     \quad ,
-\end{align}
+\end{proof}
 %
 where $_{2}F_{1}$ is the hypergeometric function. Note that
 the approximation in the second line is valid when $\beta \ll 1$
@@ -304,7 +307,7 @@ the approximation in the second line is valid when $\beta \ll 1$
 
 The equation for the observed disk-integrated spectrum is therefore
 %
-\begin{align}
+\begin{proof}{Fourier}
     \label{eq:uniform}
     S(\xi) &= 
     \pi
@@ -320,7 +323,7 @@ The equation for the observed disk-integrated spectrum is therefore
             \beta_\mathrm{eq}^2
         \right)
     \Big]
-\end{align}
+\end{proof}
 %
 Figure~\ref{fig:uniform} shows an example application of this equation
 to the case of rotational broadening of a Gaussian absorption line.
@@ -348,6 +351,99 @@ to the case of rotational broadening of a Gaussian absorption line.
         \label{fig:uniform}
     }
 \end{figure}
+
+\subsubsection{Rossiter-McLaughlin Effect}
+\label{sec:rmeffect}
+%
+Consider now the case where the integral is taken over only a portion
+of the stellar disk, as in the case of an occultation by an orbiting planet
+(or stellar companion). We can make use of Equation~(\ref{eq:S}) to
+compute the time evolution of the observed spectrum during a transit
+or occultation, i.e., the Rossiter-McLaughlin effect.
+%
+Working again in the non-relativistic limit, we may approximate
+Equation~(\ref{eq:Jhat}) as
+%
+\begin{align}
+    \label{eq:Jhat_approx}
+    \hat{J}(k) \approx
+        \iint\limits_{\mathcal{S}(x, y)}
+        % MAGIC
+        \left( 1 - \beta(x, y) \right) ^ {2\pi i k}
+        % MAGIC
+        \mathrm{d}\mathcal{S}(x, y)
+\end{align}
+%
+We can further decompose this into its real and imaginary parts,
+keeping only terms up to linear order in $\beta_\mathrm{eq}$:
+%
+\begin{align}
+    \label{eq:Jhat_approx_re}
+    \mathrm{Re}\left[\hat{J}(k)\right] 
+    &\approx
+        \iint\limits_{\mathcal{S}(x, y)}
+        % MAGIC
+        \cos \Big[ 2\pi k \ln\big(1 - \beta(x, y)\big) \Big]
+        % MAGIC
+        \mathrm{d}\mathcal{S}(x, y)
+    \nonumber \\
+    &\approx
+        \iint\limits_{\mathcal{S}(x, y)}
+        \mathrm{d}\mathcal{S}(x, y)
+\end{align}
+%
+and
+%
+\begin{align}
+    \label{eq:Jhat_approx_im}
+    \mathrm{Im}\left[\hat{J}(k)\right] 
+    &\approx
+        \iint\limits_{\mathcal{S}(x, y)}
+        % MAGIC
+        \sin \Big( 2\pi k \ln\big(1 - \beta(x, y)\big) \Big)
+        % MAGIC
+        \mathrm{d}\mathcal{S}(x, y)
+    \nonumber \\
+    &\approx
+        -2\pi k
+        \iint\limits_{\mathcal{S}(x, y)}
+        % MAGIC
+        \beta(x, y)
+        % MAGIC
+        \mathrm{d}\mathcal{S}(x, y)
+        \quad .
+\end{align}
+%
+\cite{Luger2019} developed an analytic formalism to compute these 
+integrals, provided $\beta(x, y)$ can be expressed in terms of
+spherical harmonics. We will see in the following section that
+$\beta(x, y)$ can be expressed exactly as the sum of
+spherical harmonics of low degree in the case of a 
+star with arbitrary inclination and obliquity and linear
+differential rotation. For now, however, let us consider again
+the simple case of a rigidly rotating star with rotation axis
+perpendicular to the line of sight. In this case,
+%
+\begin{align}
+    \mathrm{Re}\left[\hat{J}(k)\right] 
+    &\approx \iint\limits_{\mathcal{S}(x, y)}\mathrm{d}\mathcal{S}(x, y)
+    \nonumber \\
+    &= \mathbf{s}_0(x_o, y_o, r_o)
+\end{align}
+%
+and
+%
+\begin{align}
+    \mathrm{Im}\left[\hat{J}(k)\right] 
+    &\approx 
+    -2\pi k \beta_\mathrm{eq}
+    \iint\limits_{\mathcal{S}(x, y)}
+    x
+    \mathrm{d}\mathcal{S}(x, y)
+    \nonumber \\
+    &= -\pi k \beta_\mathrm{eq} \mathbf{s}_1(x_o, y_o, r_o)
+\end{align}
+%
 
 % Bibliography
 \bibliography{bib}
