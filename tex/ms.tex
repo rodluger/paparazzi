@@ -442,8 +442,34 @@ and
     \mathrm{d}\mathcal{S}(x, y)
     \nonumber \\
     &= -\pi k \beta_\mathrm{eq} \mathbf{s}_1(x_o, y_o, r_o)
+    \quad,
 \end{align}
 %
+where $\mathbf{s}_n(x_o, y_o, r_o)$ is the $n^\mathrm{th}$ component of the 
+occultation solution vector defined in \citet{Luger2019} for an occultor
+of radius $r_o$
+at normalized position $(x_o, y_o)$ with respect to the center of the star.
+%
+The equation for the observed spectrum is therefore
+%
+\begin{align}
+    \label{eq:uniform}
+    S(\xi) &= 
+    \mathcal{F}^{-1}
+    \Big[
+        \mathcal{F}(I_0)
+        \,
+        \Big(
+            \mathbf{s}_0(x_o, y_o, r_o)
+            -
+            \pi i k \beta_\mathrm{eq} \mathbf{s}_1(x_o, y_o, r_o)
+        \Big)
+    \Big]
+    \quad.
+\end{align}
+%
+
+
 
 % Bibliography
 \bibliography{bib}

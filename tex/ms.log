@@ -1009,7 +1009,11 @@ Class revtex4-1 Info: Robustifying \LaTeX's \boldmath command on input line 10.
 Class revtex4-1 Info: cite was not loaded (OK!) on input line 10.
 Class revtex4-1 Info: mcite was not loaded (OK!) on input line 10.
 Class revtex4-1 Info: multicol was not loaded (OK!) on input line 10.
- (ms.aux)
+ (ms.aux
+
+LaTeX Warning: Label `eq:uniform' multiply defined.
+
+)
 \openout1 = `ms.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 10.
@@ -1040,8 +1044,7 @@ LaTeX Font Info:    ... okay on input line 10.
 Package hyperref Info: Link coloring ON on input line 10.
  (nameref.sty
 Package: nameref 2016/05/21 v2.44 Cross-referencing by name of section
-
-(gettitlestring.sty
+ (gettitlestring.sty
 Package: gettitlestring 2016/05/16 v1.5 Cleanup title references (HO)
 )
 \c@section@level=\count335
@@ -1121,8 +1124,8 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) (se-ascii-print.def
 File: se-ascii-print.def 2016/05/16 v1.11 stringenc: Printable ASCII characters
 
-)
-[1] <<<Taylor: 6>>> [2] [3] <<<Fourier: 16>>> <<<Fourier: 17>>>
+) [1] <<<Taylor: 6>>> [2] [3] <<<Fourier: 16>>>
+<<<Fourier: 17>>>
 File: figures/uniform.pdf Graphic file (type pdf)
 <use figures/uniform.pdf>
  [4]
@@ -1130,9 +1133,13 @@ File: figures/uniform.pdf Graphic file (type pdf)
 LaTeX Warning: A float is stuck (cannot be placed) on input line 427.
 
 [5] (ms.bbl) [6]
-Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 451.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 451.
+Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 477.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 477.
  (ms.aux)
-Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 451.
+Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 477.
+
+
+LaTeX Warning: There were multiply-defined labels.
+
  )
-Output written on ms.xdv (6 pages, 86292 bytes).
+Output written on ms.xdv (6 pages, 89548 bytes).
