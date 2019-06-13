@@ -1118,21 +1118,17 @@ File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 LaTeX Font Info:    Try loading font information for U+msb on input line 17.
  (umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-) <<<faa_di_bruno: 5>>>
+)
+Overfull \vbox (2.3347pt too high) has occurred while \output is active []
+
+
 (se-ascii-print.def
 File: se-ascii-print.def 2016/05/16 v1.11 stringenc: Printable ASCII characters
 
-) [1] <<<faa_di_bruno: 6>>>
-File: figures/convergence.pdf Graphic file (type pdf)
-<use figures/convergence.pdf>
-File: figures/local_spectrum.pdf Graphic file (type pdf)
-<use figures/local_spectrum.pdf>
-File: figures/disk_integrated_spectrum.pdf Graphic file (type pdf)
-<use figures/disk_integrated_spectrum.pdf>
- (ms.bbl) [2] [3]
-Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 205.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 205.
+) [1] <<<Taylor: 6>>> (ms.bbl [2]) [3]
+Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 180.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 180.
  (ms.aux)
-Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 205.
+Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 180.
  )
-Output written on ms.xdv (3 pages, 40772 bytes).
+Output written on ms.xdv (3 pages, 42828 bytes).

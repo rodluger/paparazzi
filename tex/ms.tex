@@ -31,32 +31,59 @@ Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.
 \section{Uniform surfaces}
 \label{sec:uniform surfaces}
 
-Let $I(\xi, x, y)$ be the Doppler-shifted intensity observed at log wavelength $\xi \equiv \ln\lambda$ at
-sky-projected Cartesian position $x, y$ on the surface of the star. We may express it as
+Let $I(\xi, x, y)$ be the Doppler-shifted intensity observed at log wavelength 
+$\xi \equiv \ln\lambda$ at sky-projected Cartesian position $x, y$ on the 
+surface of the star. We may express it as
 %
 \begin{align}
     \label{eq:IntensityUnif}
     I(\xi, x, y) &= I_0(\xi_0)
 \end{align}
 %
-where $I_0$ is the (spatially uniform) spectrum in the original, unshifted frame
-and 
+where $I_0$ is the (spatially uniform) spectrum in the original, unshifted 
+frame and 
 %
 \begin{align}
+    \label{eq:xi0}
     \xi_0 &= \xi - \alpha(x, y)
 \end{align}
 %
 is the log wavelength in the unshifted frame. The quantity $\alpha$ is
-computed from the formula for the relativistic Doppler shift and is equal to
+computed from the formula for the Doppler shift and is equal to
 %
 \begin{align}
-    \alpha(x, y) &\equiv \frac{1}{2}\ln\left( \frac{1 - \nicefrac{v}{c}}{1 + \nicefrac{v}{c}} \right)
+    \alpha(x, y) 
+        &=
+        \frac{1}{2}\ln\left( 
+            \frac{1 - \beta}{1 + \beta} 
+        \right) \nonumber \\
+        &\approx
+        \ln(1 - \beta)
 \end{align}
 %
-where $v = v(x, y)$ is the radial velocity at a point on 
-the surface of the star and $c$ is the speed of light.
+where $\beta = v(x, y) / c$ is the ratio of the 
+radial velocity at a point on 
+the surface of the star to the speed of light. We assume the
+$z$-axis points toward the observer, so positive values of $v$ correspond
+to blueshifts.
 
-If we Taylor expand Equation~(\ref{eq:IntensityUnif}) about $\alpha = 0$, we obtain
+A common approach to computing the Doppler-shifted spectrum is to
+evaluate the spectrum at the rest frame wavelength (Equation~\ref{eq:xi0})
+and interpolate back to the grid in $\xi$. This is practical when
+computing the spectrum at a single \emph{point} on the surface, but not
+ideal when one is interested in the \emph{integral} over the entire
+surface, which is typically what we can observe. The standard approach is
+to discretize the surface of the star with a fine grid, evaluate the
+Doppler-shifted spectrum in each cell, and sum over the spatial axes
+to approximate the integral. Depending on the resolution of the grid,
+this is either numerically inaccurate or computationally inefficient 
+(and often both).
+
+\subsection{Linearizing the Doppler operator}
+\label{sec:taylor}
+
+One way to improve upon this could be to linearize the Doppler operator via
+a Taylor expansion in $\alpha$ about $\alpha=0$:
 %
 \begin{align}
     \label{eq:TaylorUnifExplicit}
@@ -64,9 +91,11 @@ If we Taylor expand Equation~(\ref{eq:IntensityUnif}) about $\alpha = 0$, we obt
         &=
         I_0(\xi_0) \Bigg|_{\alpha=0}
         + 
-        \frac{\mathrm{d}I_0(\xi_0)}{\mathrm{d}\alpha} \Bigg|_{\alpha=0} \Delta\alpha(x, y)
+        \frac{\mathrm{d}I_0(\xi_0)}{\mathrm{d}\alpha} \Bigg|_{\alpha=0} 
+            \Delta\alpha(x, y)
         + 
-        \frac{1}{2}\frac{\mathrm{d}^2I_0(\xi_0)}{\mathrm{d}\alpha^2} \Bigg|_{\alpha=0} \Delta\alpha(x, y)^2
+        \frac{1}{2}\frac{\mathrm{d}^2I_0(\xi_0)}{\mathrm{d}\alpha^2} 
+            \Bigg|_{\alpha=0} \Delta\alpha(x, y)^2
         +
         ... 
 \end{align}
@@ -82,7 +111,7 @@ $\alpha$ are computed by repeated application of the chain rule:
 Given this result, and noting that $\xi_0 = \xi$ when $\alpha = 0$,
 we may re-write Equation~(\ref{eq:TaylorUnifExplicit}) as
 %
-\begin{align}
+\begin{proof}{Taylor}
     \label{eq:TaylorUnifSum}
     I(\xi, x, y) 
         &=
@@ -92,9 +121,58 @@ we may re-write Equation~(\ref{eq:TaylorUnifExplicit}) as
             \frac{(-1)^n}{n!}
             \frac{\mathrm{d}^nI_0(\xi)}{\mathrm{d}\xi^n}
             \Delta\alpha(x, y)^n
+\end{proof}
+%
+The utility of this expression is that the spatial dependence of the spectrum
+is now entirely encoded in the terms $\Delta\alpha(x, y)^n$, which is
+\emph{independent of wavelength}. The surface integral of 
+Equation~(\ref{eq:TaylorUnifSum}) is therefore far easier to compute, since
+it is the integral of a \emph{scalar} function that could even be approximated
+analytically for some choice of the velocity field $\alpha(x, y)$.
+
+In practice, however, Equation~(\ref{eq:TaylorUnifSum}) is impractical for
+two reasons. First, it requires knowledge of high order derivatives of the 
+spectrum, which may not always be easy or convenient to compute. Second, and
+more important, the series expansion is typically extremely slow to converge
+and is therefore only practically useful in the limit that the Doppler shift
+is much smaller than the typical width of a spectral line; see the notebook
+link next to Equation~(\ref{eq:TaylorUnifSum}) for an example.
+
+\subsection{Taking the Fourier transform}
+\label{sec:fourier}
+
+A much better approach is to consider what happens when we take the
+Fourier transform of the spectrum $I(\xi, x, y)$, defined as
+%
+\begin{align}
+    \label{eq:FT}
+    \hat{I}(k, x, y)
+    \equiv
+    \mathcal{F}\Big[I(\xi, x, y)\Big](k) 
+    =
+    \int_{-\infty}^\infty
+        I(\xi, x, y)
+        \mathrm{e}^{-2\pi i k \xi} \mathrm{d}\xi
 \end{align}
-
-
+%
+where $k$ is the transformed independent variable in units 
+of inverse log wavelength. The utility of this transform is
+that it effectively linearizes the Doppler operator, since
+the Fourier transform of the translation of a function is
+simply a linear scaling of the Fourier transform of the
+original function. Specifically, if the Doppler-shifted spectrum 
+is given by
+%
+\begin{align}
+    I(\xi, x, y) &= I_0\big(\xi - \alpha(x, y)\big) \quad,
+\end{align}
+%
+its Fourier transform is equal to
+%
+\begin{align}
+    \hat{I}(\xi, x, y) &= \mathrm{e}^{-2\pi i k \alpha(x, y)}\hat{I_0}(k)
+\end{align}
+%
 
 % Bibliography
 \bibliography{bib}
