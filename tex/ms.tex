@@ -161,38 +161,17 @@ its Fourier transform is equal to
 %
 where $\hat{I_0}(k, x, y) \equiv \mathcal{F}\left[ I_0(\xi, x, y) \right]$.
 %
-To obtain the Fourier transform of the observed spectrum, we
+To obtain the Fourier transform of the observed spectrum, we first
 expand $\hat{I_0}(k, x, y)$ in terms of spherical harmonics,
 %
 \begin{align}
     \label{eq:fourier:I0}
     \hat{I_0}(k, x, y) 
         &=
-        \sum_{l=0}^\infty\sum_{m=-l}^{l} \hat{a}_{lm}(k) Y_{lm}(x, y)
-\end{align}
-%
-then take the integral of 
-Equation~(\ref{eq:fourier:translation})
-over the visible disk $\mathcal{S}$ of the star:
-%
-\begin{align}
-    \label{eq:fourier:SYlm}
-    \hat{S}(k) 
-    &=
-        \sum_{l=0}^\infty\sum_{m=-l}^{l}
-        \hat{a}_{lm}(k)
-        \iint\limits_{\mathcal{S}(x, y)}
-        Y_{lm}(x, y)
-        \mathrm{e}^{2\pi i k \alpha(x, y)}
-        \mathrm{d}\mathcal{S}(x, y)
+        \sum_{l=0}^\infty\sum_{m=-l}^{l} Y_{lm}(x, y) \hat{a}_{lm}(k)
     \nonumber \\
-    &=
-        \iint\limits_{\mathcal{S}(x, y)}
-        \tilde{\bvec{y}}(x, y)
-        \mathrm{e}^{2\pi i k \alpha(x, y)}
-        \mathrm{d}\mathcal{S}(x, y)
-        \cdot
-        \bvec{\hat{a}}(k)
+    &= 
+    \tilde{\bvec{y}}^\top(x, y) \cdot \bvec{\hat{a}}(k)
     \quad ,
 \end{align}
 %
@@ -212,7 +191,7 @@ where
 is the column vector of spherical harmonic coefficients at wavenumber $k$, and
 %
 \begin{align}
-    \tilde{\bvec{y}}(x, y) \equiv 
+    \tilde{\bvec{y}}^\top(x, y) \equiv 
 \Big( 
     Y_{0,0}(x, y) \quad\quad\quad\quad\quad\quad 
     Y_{1,-1}(x, y) \quad\quad\quad\quad\quad\quad 
@@ -223,7 +202,25 @@ is the column vector of spherical harmonic coefficients at wavenumber $k$, and
 \end{align}
 %
 is the corresponding row vector of spherical harmonics at a point $(x, y)$ 
-on the sphere. In order to tackle the integrals in 
+on the sphere.
+%
+We then take the integral of Equation~(\ref{eq:fourier:translation})
+over the visible disk $\mathcal{S}$ of the star:
+%
+\begin{align}
+    \label{eq:fourier:SYlm}
+    \hat{S}(k) 
+    &=
+        \iint\limits_{\mathcal{S}(x, y)}
+        \tilde{\bvec{y}}^\top(x, y)
+        \mathrm{e}^{2\pi i k \alpha(x, y)}
+        \mathrm{d}\mathcal{S}(x, y)
+        \cdot
+        \bvec{\hat{a}}(k)
+    \quad ,
+\end{align}
+%
+In order to tackle the integrals in 
 Equation~(\ref{eq:fourier:SYlm}), let us change bases from spherical
 harmonics to polynomials on the sphere:
 %
@@ -232,7 +229,7 @@ harmonics to polynomials on the sphere:
     \hat{S}(k) 
     &=
         \iint\limits_{\mathcal{S}(x, y)}
-        \tilde{\bvec{p}}(x, y)
+        \tilde{\bvec{p}}^\top(x, y)
         \mathrm{e}^{2\pi i k \alpha(x, y)}
         \mathrm{d}\mathcal{S}(x, y)
         \cdot
@@ -244,7 +241,7 @@ harmonics to polynomials on the sphere:
 where
 %
 \begin{align}
-    \tilde{\bvec{p}}(x, y) \equiv 
+    \tilde{\bvec{p}}^\top(x, y) \equiv 
 \Big( 
     1 \quad\quad\quad\quad\quad\quad 
     x \quad\quad\quad\quad\quad\quad 
@@ -291,7 +288,7 @@ we arrive at an expression for the observed spectrum:
     &=
     \mathcal{F}^{-1} \Bigg[\,\,\,
         \iint\limits_{\mathcal{S}(x, y)}
-        \tilde{\bvec{p}}(x, y)
+        \tilde{\bvec{p}}^\top(x, y)
         \mathrm{e}^{2\pi i k \alpha(x, y)}
         \mathrm{d}\mathcal{S}(x, y)
         \cdot
@@ -301,7 +298,7 @@ we arrive at an expression for the observed spectrum:
     &=
     \mathcal{F}^{-1} \Bigg[\,\,\,
         \iint\limits_{\mathcal{S}(x, y)}
-        \tilde{\bvec{p}}(x, y)
+        \tilde{\bvec{p}}^\top(x, y)
         \mathrm{e}^{2\pi i k \alpha(x, y)}
         \mathrm{d}\mathcal{S}(x, y)
     \Bigg]
@@ -322,7 +319,7 @@ further simplify this expression:
     S(\xi) 
     &=    
     \iint\limits_{\mathcal{S}(x, y)}
-    \tilde{\bvec{p}}(x, y)
+    \tilde{\bvec{p}}^\top(x, y)
     \mathcal{F}^{-1} \Big[
         \mathrm{e}^{2\pi i k \alpha(x, y)}
     \Big]
@@ -333,7 +330,7 @@ further simplify this expression:
     \nonumber \\
     &=    
     \iint\limits_{\mathcal{S}(x, y)}
-    \tilde{\bvec{p}}(x, y)
+    \tilde{\bvec{p}}^\top(x, y)
     \delta\big(\xi - \alpha(x, y)\big)
     \mathrm{d}\mathcal{S}(x, y)
     \circ
@@ -345,14 +342,15 @@ further simplify this expression:
 where $\delta$ is the Dirac delta function. Since the integrand in the
 equation above is zero everywhere except where the argument of the
 $\delta$ function is zero, the equation may be written as a line integral 
-along some curve $\mathcal{C}(x, y)$ along which $\xi = \alpha(x, y)$:
+along some curve $\mathcal{C}(x, y)$ that satisfies $\alpha(x, y) = \xi$
+and $x^2 + y^2 \le 1$:
 %
 \begin{align}
     \label{eq:convolve:SUgly}
     S(\xi) 
     &=    
     \int\limits_{\mathcal{C}(x, y)}
-    \tilde{\bvec{p}}(x, y)
+    \tilde{\bvec{p}}^\top(x, y)
     \mathrm{d}\mathcal{C}(x, y)
     \circ
     \bvec{A_1}
@@ -361,106 +359,6 @@ along some curve $\mathcal{C}(x, y)$ along which $\xi = \alpha(x, y)$:
 \end{align}
 %
 
-
-\appendix
-
-\section{Taylor Expanding the Doppler operator \\ (and why this is a bad idea)}
-\label{sec:taylor}
-%
-An alternative way to tackle the problem is to linearize the Doppler 
-operator via a Taylor expansion in $\alpha$ about $\alpha=0$:
-%
-\begin{align}
-    \label{eq:taylor:I}
-    I(\xi, x, y) 
-        &=
-        I_0(\xi_0, x, y) \Bigg|_{\alpha=0}
-        + 
-        \frac{\mathrm{d}I_0(\xi_0, x, y)}{\mathrm{d}\alpha} \Bigg|_{\alpha=0} 
-            \Delta\alpha(x, y)
-        + 
-        \frac{1}{2}\frac{\mathrm{d}^2I_0(\xi_0, x, y)}{\mathrm{d}\alpha^2} 
-            \Bigg|_{\alpha=0} \Delta\alpha(x, y)^2
-        +
-        ... 
-\end{align}
-%
-Since the dependence of Equation~(\ref{eq:xi0}) on $\alpha$ is trivial,
-the derivatives of the spectrum $I_0(\xi_0)$ with respect to
-$\alpha$ are simply
-%
-\begin{align}
-    \frac{\mathrm{d}^nI_0(\xi_0, x, y)}{\mathrm{d}\alpha^n} &=
-    \dfrac{\mathrm{d}^nI_0(\xi_0, x, y)}{\mathrm{d}\xi_0^n} \nonumber\\ &\equiv
-    I_0^{(n)}(\xi_0, x, y)
-    \quad.
-\end{align}
-%
-Given this result, and noting that $\xi_0 = \xi$ when $\alpha = 0$,
-we may re-write Equation~(\ref{eq:taylor:I}) as
-%
-\begin{proof}{Taylor}
-    \label{eq:taylor:ISum}
-    I(\xi, x, y) 
-        &=
-        \sum_{n=0}^\infty
-            \frac{I_{0}^{(n)}(\xi, x, y)}{n!}
-            \Delta\alpha(x, y)^n
-        \quad ,
-\end{proof}
-%
-The utility of this expression is that the velocity dependence of the spectrum
-is now entirely encoded in the terms $\Delta\alpha(x, y)^n$, which are
-\emph{independent of wavelength}. We can further decouple the spatial
-dependence from the spectral dependence by expressing the intensity field
-as an expansion over spherical harmonics $Y_{lm}(x, y)$ in the sky-projected
-coordinates:
-%
-\begin{align}
-    I_0(\xi, x, y) = \sum_{l=0}^\infty\sum_{m=-l}^{l} a_{lm}(\xi) Y_{lm}(x, y)
-    \quad .
-\end{align}
-%
-Equation~(\ref{eq:taylor:ISum}) now reads
-%
-\begin{align}
-    \label{eq:taylor:IYlm}
-    I(\xi, x, y) 
-        &=
-        \sum_{n=0}^\infty
-            \sum_{l=0}^\infty\sum_{m=-l}^{l}
-                \frac{a_{lm}^{(n)}(\xi)}{n!}
-                Y_{lm}(x, y)\Delta\alpha(x, y)^n
-            \quad .
-\end{align}
-%
-Finally, integrating this equation over the visible disk of 
-the star, we arrive at an equation for the observed spectrum:
-%
-\begin{align}
-    \label{eq:taylor:S}
-    S(\xi) 
-        &=
-        \sum_{n=0}^\infty
-            \sum_{l=0}^\infty\sum_{m=-l}^{l}
-                \frac{a_{lm}^{(n)}(\xi)}{n!}
-                \iint\limits_{\mathcal{S}(x, y)}
-                Y_{lm}(x, y)\Delta\alpha(x, y)^n
-                \mathrm{d}{\mathcal{S}(x, y)}
-            \quad .
-\end{align}
-%
-By expanding the spectrum in both the spectral and spatial dimensions, we
-have effectively decoupled the two. However, Equation~(\ref{eq:taylor:S}) 
-is impractical for three reasons. First, the surface integrals can be very
-difficult to solve (although we will show later how these integrals may be
-approximated analytically). Second, it requires knowledge of high order 
-derivatives of the spectrum, which may not always be easy or convenient to 
-compute. Third, and most important, the series expansion in $n$ is typically 
-extremely slow to converge and is therefore only practically useful in the 
-limit that the Doppler shift is much smaller than the typical width of a 
-spectral line; see the notebook link next to Equation~(\ref{eq:taylor:ISum}) 
-for an example.
 
 % Bibliography
 \bibliography{bib}
