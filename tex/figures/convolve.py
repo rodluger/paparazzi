@@ -15,7 +15,7 @@ def randu(lo=0, hi=1, size=1):
 
 def I_num(xi, I0, beta=0):
     """
-    Return the shifted spectrum, computed numerically.
+    Return the shifted spectrum at a point, computed numerically.
     
     """
     alpha = np.log(1 - beta)
@@ -23,7 +23,7 @@ def I_num(xi, I0, beta=0):
     return np.interp(xi0, xi, I0)
 
 
-def S_num(xi, I0, beta=0, npts=1000):
+def S_num(xi, I0, beta=0, npts=300):
     """
     Return the disk-integrated spectrum, computed numerically.
     
@@ -31,8 +31,10 @@ def S_num(xi, I0, beta=0, npts=1000):
     S = np.zeros_like(xi)
     A = 0
     for x in np.linspace(-1, 1, npts + 2)[1:-1]:
-        S += I_num(xi, I0, beta=beta * x) * np.sqrt(1 - x ** 2)
-        A += np.sqrt(1 - x ** 2)
+        for y in np.linspace(-1, 1, npts + 2)[1:-1]:
+            if (x ** 2 + y ** 2) <= 1:
+                S += I_num(xi, I0, beta=beta * x)
+                A += 1
     return np.pi * S / A
 
 
@@ -42,7 +44,8 @@ def S(xi, I0, beta=0):
     with a convolution.
     
     """
-    xsq = ((1 - np.exp(xi)) / beta) ** 2
+    gam = ((1 - np.exp(xi)) / beta)
+    xsq = gam ** 2
     integ = 2 * np.sqrt(1 - xsq[xsq <= 1])
     res = convolve(I0, integ, mode='same')
     norm = np.pi / convolve(np.ones_like(I0), integ, mode='same')
@@ -50,7 +53,7 @@ def S(xi, I0, beta=0):
 
 
 def plot_figure(beta=0.05, amp=[1.0], mu=[1.0], sigma=[0.01],
-                npts=1000, lam_range=(0.9, 1.1),
+                npts=300, lam_range=(0.9, 1.1),
                 pad=0, nlam=1000, noise=0.0):
     """
     Plot the figure for the paper.
@@ -105,7 +108,7 @@ def plot_figure(beta=0.05, amp=[1.0], mu=[1.0], sigma=[0.01],
 
 if __name__ == "__main__":
     np.random.seed(12)
-    npts = 1000
+    npts = 300
     beta = 0.01
     nlines = 5
     amp = np.ones(nlines)
