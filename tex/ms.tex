@@ -29,19 +29,19 @@
 Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.
 
 %
-\section{Uniform surfaces}
-\label{sec:uniform surfaces}
+\section{The problem}
+\label{sec:the_problem}
 %
 Let $I(\xi, x, y)$ be the Doppler-shifted intensity observed at log wavelength 
 $\xi \equiv \ln\lambda$ at sky-projected Cartesian position $x, y$ on the 
 surface of the star. We may express it as
 %
 \begin{align}
-    \label{eq:IntensityUnif}
-    I(\xi, x, y) &= I_0(\xi_0)
+    \label{eq:I}
+    I(\xi, x, y) &= I_0(\xi_0, x, y)
 \end{align}
 %
-where $I_0$ is the (spatially uniform) spectrum in the original, unshifted 
+where $I_0$ is the spectrum at each point on the star in the surface rest
 frame and 
 %
 \begin{align}
@@ -53,49 +53,74 @@ is the log wavelength in the unshifted frame. The quantity $\alpha$ is
 computed from the formula for the Doppler shift and is equal to
 %
 \begin{align}
+    \label{eq:alpha}
     \alpha(x, y) 
         &=
         \frac{1}{2}\ln\left( 
             \frac{1 - \beta}{1 + \beta} 
         \right) 
-        %\nonumber \\
-        %&\approx
-        %\ln(1 - \beta)
+        \nonumber \\
+        &\approx
+        \ln(1 - \beta)
 \end{align}
 %
 where $\beta = v(x, y) / c$ is the ratio of the 
-radial velocity at a point on 
-the surface of the star to the speed of light. In keeping with the 
-literature, we assume that positive values of $v$ correspond to redshifts.
+radial velocity at a point on the surface of the star to the speed of light
+and the second line is valid when $\beta \ll 1$ (i.e., the non-relativistic
+Doppler shift). Throughout this paper, we will assume the non-relativistic 
+limit, as it greatly simplifies the math.
+In keeping with the literature, we take positive values of $v$ to mean 
+redshifts.
 
 A common approach to computing the Doppler-shifted spectrum is to
 evaluate the spectrum at the rest frame wavelength (Equation~\ref{eq:xi0})
 and interpolate back to the grid in $\xi$. This is practical when
 computing the spectrum at a single \emph{point} on the surface, but not
 ideal when one is interested in the \emph{integral} over the entire
-surface, which is typically what we can observe. The standard approach is
+surface of the star $\mathcal{S}$, which is typically all we can observe:
+%
+\begin{align}
+    \label{eq:S}
+    S(\xi) 
+        &\equiv
+        \iint\limits_{\mathcal{S}(x, y)}
+                I(\xi, x, y)
+        \mathrm{d}{\mathcal{S}(x, y)}
+        \quad .
+\end{align}
+%
+The difficulty in solving Equation~(\ref{eq:S}) stems from the fact
+that $I(\xi, x, y)$ is difficult to write down in closed form, given
+the non-linearity of the Doppler shift.
+The standard approach to solving this integral is therefore
 to discretize the surface of the star with a fine grid, evaluate the
 Doppler-shifted spectrum in each cell, and sum over the spatial axes
 to approximate the integral. Depending on the resolution of the grid,
 this is either numerically inaccurate or computationally inefficient 
 (and often both).
 
-\subsection{Linearizing the Doppler operator}
+\section{The Solution}
+
+Below, we consider three alternative methods to solving
+Equation~(\ref{eq:S}) to improve the speed and accuracy of the
+computation.
+
+\subsection{Taylor expanding the Doppler operator}
 \label{sec:taylor}
 %
-One way to improve upon this could be to linearize the Doppler operator via
+One way to tackle the problem is to linearize the Doppler operator via
 a Taylor expansion in $\alpha$ about $\alpha=0$:
 %
 \begin{align}
-    \label{eq:TaylorUnifExplicit}
+    \label{eq:taylor:I}
     I(\xi, x, y) 
         &=
-        I_0(\xi_0) \Bigg|_{\alpha=0}
+        I_0(\xi_0, x, y) \Bigg|_{\alpha=0}
         + 
-        \frac{\mathrm{d}I_0(\xi_0)}{\mathrm{d}\alpha} \Bigg|_{\alpha=0} 
+        \frac{\mathrm{d}I_0(\xi_0, x, y)}{\mathrm{d}\alpha} \Bigg|_{\alpha=0} 
             \Delta\alpha(x, y)
         + 
-        \frac{1}{2}\frac{\mathrm{d}^2I_0(\xi_0)}{\mathrm{d}\alpha^2} 
+        \frac{1}{2}\frac{\mathrm{d}^2I_0(\xi_0, x, y)}{\mathrm{d}\alpha^2} 
             \Bigg|_{\alpha=0} \Delta\alpha(x, y)^2
         +
         ... 
@@ -106,47 +131,85 @@ the derivatives of the spectrum $I_0(\xi_0)$ with respect to
 $\alpha$ are simply
 %
 \begin{align}
-    \frac{\mathrm{d}^nI_0(\xi_0)}{\mathrm{d}\alpha^n} &=
-    \dfrac{\mathrm{d}^nI_0(\xi_0)}{\mathrm{d}\xi_0^n} \quad.
+    \frac{\mathrm{d}^nI_0(\xi_0, x, y)}{\mathrm{d}\alpha^n} &=
+    \dfrac{\mathrm{d}^nI_0(\xi_0, x, y)}{\mathrm{d}\xi_0^n} \nonumber\\ &\equiv
+    I_0^{(n)}(\xi_0, x, y)
+    \quad.
 \end{align}
 %
 Given this result, and noting that $\xi_0 = \xi$ when $\alpha = 0$,
-we may re-write Equation~(\ref{eq:TaylorUnifExplicit}) as
+we may re-write Equation~(\ref{eq:taylor:I}) as
 %
 \begin{proof}{Taylor}
-    \label{eq:TaylorUnifSum}
+    \label{eq:taylor:ISum}
     I(\xi, x, y) 
         &=
-        I_0(\xi)
-        +
-        \sum_{n=1}^\infty
-            \frac{1}{n!}
-            \frac{\mathrm{d}^nI_0(\xi)}{\mathrm{d}\xi^n}
+        \sum_{n=0}^\infty
+            \frac{I_{0}^{(n)}(\xi, x, y)}{n!}
             \Delta\alpha(x, y)^n
+        \quad ,
 \end{proof}
 %
-The utility of this expression is that the spatial dependence of the spectrum
-is now entirely encoded in the terms $\Delta\alpha(x, y)^n$, which is
-\emph{independent of wavelength}. The surface integral of 
-Equation~(\ref{eq:TaylorUnifSum}) is therefore far easier to compute, since
-it is the integral of a \emph{scalar} function that could even be approximated
-analytically for some choice of the velocity field $\alpha(x, y)$.
+The utility of this expression is that the velocity dependence of the spectrum
+is now entirely encoded in the terms $\Delta\alpha(x, y)^n$, which are
+\emph{independent of wavelength}. We can further decouple the spatial
+dependence from the spectral dependence by expressing the intensity field
+as an expansion over spherical harmonics $Y_{lm}(x, y)$ in the sky-projected
+coordinates:
+%
+\begin{align}
+    I_0(\xi, x, y) = \sum_{l=0}^\infty\sum_{m=-l}^{l} a_{lm}(\xi) Y_{lm}(x, y)
+    \quad .
+\end{align}
+%
+Equation~(\ref{eq:taylor:ISum}) now reads
+%
+\begin{align}
+    \label{eq:taylor:IYlm}
+    I(\xi, x, y) 
+        &=
+        \sum_{n=0}^\infty
+            \sum_{l=0}^\infty\sum_{m=-l}^{l}
+                \frac{a_{lm}^{(n)}(\xi)}{n!}
+                Y_{lm}(x, y)\Delta\alpha(x, y)^n
+            \quad .
+\end{align}
+%
+Finally, integrating this equation over the visible disk of 
+the star, we arrive at an equation for the observed spectrum:
+%
+\begin{align}
+    \label{eq:taylor:S}
+    S(\xi) 
+        &=
+        \sum_{n=0}^\infty
+            \sum_{l=0}^\infty\sum_{m=-l}^{l}
+                \frac{a_{lm}^{(n)}(\xi)}{n!}
+                \iint\limits_{\mathcal{S}(x, y)}
+                Y_{lm}(x, y)\Delta\alpha(x, y)^n
+                \mathrm{d}{\mathcal{S}(x, y)}
+            \quad .
+\end{align}
+%
+By expanding the spectrum in both the spectral and spatial dimensions, we
+have effectively decoupled the two. However, Equation~(\ref{eq:taylor:S}) 
+is impractical for three reasons. First, the surface integrals can be very
+difficult to solve (although we will show later how these integrals may be
+approximated analytically). Second, it requires knowledge of high order 
+derivatives of the spectrum, which may not always be easy or convenient to 
+compute. Third, and most important, the series expansion in $n$ is typically 
+extremely slow to converge and is therefore only practically useful in the 
+limit that the Doppler shift is much smaller than the typical width of a 
+spectral line; see the notebook link next to Equation~(\ref{eq:taylor:ISum}) 
+for an example.
 
-However, Equation~(\ref{eq:TaylorUnifSum}) is impractical for
-two reasons. First, it requires knowledge of high order derivatives of the 
-spectrum, which may not always be easy or convenient to compute. Second, and
-more important, the series expansion is typically extremely slow to converge
-and is therefore only practically useful in the limit that the Doppler shift
-is much smaller than the typical width of a spectral line; see the notebook
-link next to Equation~(\ref{eq:TaylorUnifSum}) for an example.
-
-\subsection{Taking the Fourier transform}
+\subsection{Taking the Fourier transform of the spectrum}
 \label{sec:fourier}
 %
 Recall the definition of the Fourier transform of a function $f(\xi)$,
 %
 \begin{align}
-    \label{eq:FT}
+    \label{eq:fourier:FT}
     \mathcal{F}\Big[f(\xi)\Big](k) 
     &\equiv
     \int_{-\infty}^\infty
@@ -161,7 +224,7 @@ Recall the definition of the Fourier transform of a function $f(\xi)$,
 and the corresponding inverse Fourier transform,
 %
 \begin{align}
-    \label{eq:IFT}
+    \label{eq:fourier:IFT}
     \mathcal{F}^{-1}\Big[\hat{f}(k)\Big](\xi) 
     &\equiv
     \int_{-\infty}^\infty
@@ -180,295 +243,137 @@ Fourier transform is that a translation of $I(\xi, x, y)$ by
 an amount $\Delta\xi$ corresponds to a linear scaling
 of $\hat{I}(k, x, y)$ by an amount $\mathrm{e}^{-2\pi i k \Delta\xi}$
 \citep[e.g.,][]{Schoenstadt2006}.
-Specifically, if the Doppler-shifted spectrum 
-is given by
+Specifically, if the Doppler-shifted spectrum is given by
 %
 \begin{align}
-    I(\xi, x, y) &= I_0\big(\xi + \alpha(x, y)\big) \quad,
+    I(\xi, x, y) &= I_0\big(\xi + \alpha(x, y)\big), x, y) \quad,
 \end{align}
 %
 its Fourier transform is equal to 
 %
 \begin{align}
-    \label{eq:translation}
-    \hat{I}(\xi, x, y) &= \mathrm{e}^{2\pi i k \alpha(x, y)}\hat{I_0}(k) \quad,
+    \label{eq:fourier:translation}
+    \hat{I}(\xi, x, y) 
+    &= 
+    \mathrm{e}^{2\pi i k \alpha(x, y)}\hat{I_0}(k, x, y)
+    \quad ,
 \end{align}
 %
-where $\hat{I_0}(k) \equiv \mathcal{F}\left[ I_0(\xi) \right]$.
+where $\hat{I_0}(k, x, y) \equiv \mathcal{F}\left[ I_0(\xi, x, y) \right]$.
 %
 Much as in \S\ref{sec:taylor}, we have de-coupled the spatial and spectral
 terms, but this time without the need of a Taylor expansion. To obtain
-the Fourier transform of the disk-integrated spectrum, $\hat{S}$, we may 
-integrate Equation~(\ref{eq:translation})
+the observed spectrum, we
+expand $\hat{I_0}(k, x, y)$ in terms of spherical harmonics,
+%
+\begin{align}
+    \label{eq:fourier:I0}
+    \hat{I_0}(k, x, y) 
+        &=
+        \sum_{l=0}^\infty\sum_{m=-l}^{l} \hat{a}_{lm}(k) Y_{lm}(x, y)
+\end{align}
+%
+then take the inverse Fourier transform of the integral of 
+Equation~(\ref{eq:fourier:translation})
 over the visible disk $\mathcal{S}$ of the star:
 %
 \begin{align}
-    \label{eq:integral_translation}
-    \hat{S}(k) 
-    &= 
-        \hat{I_0}(k)\iint\limits_{\mathcal{S}(x, y)}
+    \label{eq:fourier:SYlm}
+    S(k) 
+    &=
+    \mathcal{F}^{-1}\Big[
+        \sum_{l=0}^\infty\sum_{m=-l}^{l}
+        \hat{a}_{lm}(k)
+        \iint\limits_{\mathcal{S}(x, y)}
+        Y_{lm}(x, y)
         \mathrm{e}^{2\pi i k \alpha(x, y)}
-        \mathrm{d}\mathcal{S}(x, y) \nonumber \\
-    &=
-        \hat{I_0}(k)\iint\limits_{\mathcal{S}(x, y)}
-        % MAGIC
-        \left( \frac{1 - \beta(x, y)}{1 + \beta(x, y)} \right) ^ {\pi i k}
-        % MAGIC
-        \mathrm{d}\mathcal{S}(x, y) \nonumber \\
-    &=
-        \hat{I_0}(k) \hat{J}(k)
-\end{align}
-%
-where we define
-%
-\begin{align}
-    \label{eq:Jhat}
-    \hat{J}(k) \equiv 
-        \iint\limits_{\mathcal{S}(x, y)}
-        % MAGIC
-        \left( \frac{1 - \beta(x, y)}{1 + \beta(x, y)} \right) ^ {\pi i k}
-        % MAGIC
         \mathrm{d}\mathcal{S}(x, y)
-\end{align}
-%
-to be the surface integral of the velocity field in Fourier space.
-The disk-integrated spectrum is then obtained by applying the inverse Fourier
-transform:
-%
-\begin{align}
-    S(\xi) &= \mathcal{F}^{-1}\Big[ \hat{S}(k) \Big] \nonumber \\
-           \label{eq:S}
-           &= \mathcal{F}^{-1}\Big[ \hat{I_0}(k) \hat{J}(k) \Big] \\
-           \label{eq:S_conv}
-           &= I_0(\xi) \circ J(\xi)
-\end{align}
-%
-where the last step follows from the convolution theorem, 
-with $J(\xi) \equiv \mathcal{F}^{-1}\left[ \hat{J}(k) \right]$ and $\circ$
-denoting the convolution operator.
-
-\subsubsection{Rotational line broadening}
-\label{sec:line_broadening}
-%
-As an example, consider the case of an unocculted, uniform star of unit
-radius with negligible limb darkening, rigidly rotating about an axis 
-perpendicular to the line of sight with equatorial angular velocity 
-$\omega_\mathrm{eq}$. The velocity profile everywhere on the surface is
-%
-\begin{align}
-    \beta(x, y) &= \frac{\omega_\mathrm{eq}}{c}x \nonumber\\
-                &\equiv \beta_\mathrm{eq} x 
-                \quad .
-\end{align}
-%
-The surface integral term may then be computed as
-%
-\begin{proof}{Fourier}
-    \hat{J}(k) 
+    \Big]
+    \nonumber \\
     &=
-        \int_{-1}^{1}
-        \int_{-\sqrt{1 - x^2}}^{\sqrt{1 - x^2}}
-        % MAGIC
-        \left( 
-            \frac{1 - \beta_\mathrm{eq} x}
-                 {1 + \beta_\mathrm{eq} x} 
-        \right) ^ {\pi i k}
-        % MAGIC
-        \mathrm{d}y
-        \,
-        \mathrm{d}x
-        \nonumber \\[0.75em]
-    &\approx
-        \int_{-1}^{1}
-        \int_{-\sqrt{1 - x^2}}^{\sqrt{1 - x^2}}
-        % MAGIC
-        \left( 
-            1 - \beta_\mathrm{eq} x 
-        \right) ^ {2\pi i k}
-        % MAGIC
-        \mathrm{d}y
-        \,
-        \mathrm{d}x
-        \nonumber \\[0.75em]
-    &=
-        \pi \, _{2}F_{1}
-            \left(
-                -\pi i k, \, 
-                \frac{1}{2} - \pi i k; \,
-                2; \,
-                \beta_\mathrm{eq}^2
-            \right)
+    \mathcal{F}^{-1}\Big[
+        \iint\limits_{\mathcal{S}(x, y)}
+        \bvec{Y}(x, y)
+        \mathrm{e}^{2\pi i k \alpha(x, y)}
+        \mathrm{d}\mathcal{S}(x, y)
+        \cdot
+        \bvec{\hat{a}}(k)
+    \Big]
     \quad ,
-\end{proof}
+\end{align}
 %
-where $_{2}F_{1}$ is the hypergeometric function. Note that
-the approximation in the second line is valid when $\beta \ll 1$
-(i.e., the non-relativistic case).
+where
+%
+\begin{align}
+    \bvec{\hat{a}}(k) \equiv
+\left( 
+    \hat{a}_{0,0}(k) \quad\quad\quad\quad\quad\quad 
+    \hat{a}_{1,-1}(k) \quad\quad\quad\quad\quad\quad 
+    \hat{a}_{1,0}(k) \quad\quad\quad\quad\quad\quad
+    \hat{a}_{1,1}(k) \quad\quad\quad\quad\quad\quad 
+    ... 
+\right)^\top
+\end{align}
+%
+is the column vector of spherical harmonic coefficients at wavenumber $k$, and
+%
+\begin{align}
+    \bvec{Y}(x, y) \equiv 
+\left( 
+    Y_{0,0}(x, y) \quad\quad\quad\quad\quad\quad 
+    Y_{1,-1}(x, y) \quad\quad\quad\quad\quad\quad 
+    Y_{1,0}(x, y) \quad\quad\quad\quad\quad\quad 
+    Y_{1,1}(x, y) \quad\quad\quad\quad\quad\quad 
+    ... 
+\right)
+\end{align}
+%
+is the corresponding row vector of spherical harmonics at a point $(x, y)$ 
+on the sphere. 
 
-The equation for the observed disk-integrated spectrum is therefore
+In the case that the integration area $\mathcal{S}$ is the entire surface of
+the star, the integrals in Equation~(\ref{eq:fourier:SYlm}) are
+\emph{analytic}. To see this, we may change bases from spherical harmonics
+to polynomials on the sphere:
 %
-\begin{proof}{Fourier}
-    \label{eq:uniform}
-    S(\xi) &= 
-    \pi
-    \mathcal{F}^{-1}
-    \Big[
-        \mathcal{F}(I_0)
-        \,
-        _{2}F_{1}
-        \left(
-            -\pi i k, \, 
-            \frac{1}{2} - \pi i k; \,
-            2; \,
-            \beta_\mathrm{eq}^2
-        \right)
+\begin{align}
+    \label{eq:fourier:SP}
+    S(k) 
+    &=
+    \mathcal{F}^{-1}\Big[
+        \iint\limits_{\mathcal{S}(x, y)}
+        \bvec{P}(x, y)
+        \mathrm{e}^{2\pi i k \alpha(x, y)}
+        \mathrm{d}\mathcal{S}(x, y)
+        \cdot
+        \bvec{A_1}
+        \bvec{\hat{a}}(k)
     \Big]
-\end{proof}
-%
-Figure~\ref{fig:uniform} shows an example application of this equation
-to the case of rotational broadening of a Gaussian absorption line.
-
-\begin{figure}[p!]
-    \centering
-    \includegraphics[width=0.9\textwidth]{figures/uniform.pdf}
-    \oscaption{uniform}{%
-        Application of Equation~(\ref{eq:uniform}) to computation
-        of rotational line broadening of a Gaussian absorption line.
-        \emph{Top:} A line centered at $\lambda = 1.00$ with 
-        standard deviation $\sigma = 0.01$ (dashed black curve) is 
-        redshifted by a Doppler parameter $\beta = 0.05$. The
-        blue curve is the result obtained by interpolation, while
-        the dashed orange curve is the result obtained by scaling
-        the Fourier transform of the line according to
-        Equation~(\ref{eq:translation}) and then applying the inverse
-        Fourier transform.
-        \emph{Bottom:} The same line profile is now integrated over
-        the visible disk of a uniform, rigidly rotating star with
-        $\beta_\mathrm{eq} = 0.05$ numerically (blue curve) and via
-        the Fourier method (Equation~\ref{eq:uniform}). In both cases,
-        the results agree to within the accuracy of the numerical
-        approaches.
-        \label{fig:uniform}
-    }
-\end{figure}
-
-\subsubsection{Rossiter-McLaughlin Effect}
-\label{sec:rmeffect}
-%
-Consider now the case where the integral is taken over only a portion
-of the stellar disk, as in the case of an occultation by an orbiting planet
-(or stellar companion). We can make use of Equation~(\ref{eq:S}) to
-compute the time evolution of the observed spectrum during a transit
-or occultation, i.e., the Rossiter-McLaughlin effect.
-%
-Working again in the non-relativistic limit, we may approximate
-Equation~(\ref{eq:Jhat}) as
-%
-\begin{align}
-    \label{eq:Jhat_approx}
-    \hat{J}(k) \approx
-        \iint\limits_{\mathcal{S}(x, y)}
-        % MAGIC
-        \left( 1 - \beta(x, y) \right) ^ {2\pi i k}
-        % MAGIC
-        \mathrm{d}\mathcal{S}(x, y)
+    \quad .
 \end{align}
 %
-We can further decompose this into its real and imaginary parts,
-keeping only terms up to linear order in $\beta_\mathrm{eq}$:
+where
 %
 \begin{align}
-    \label{eq:Jhat_approx_re}
-    \mathrm{Re}\left[\hat{J}(k)\right] 
-    &\approx
-        \iint\limits_{\mathcal{S}(x, y)}
-        % MAGIC
-        \cos \Big[ 2\pi k \ln\big(1 - \beta(x, y)\big) \Big]
-        % MAGIC
-        \mathrm{d}\mathcal{S}(x, y)
-    \nonumber \\
-    &\approx
-        \iint\limits_{\mathcal{S}(x, y)}
-        \mathrm{d}\mathcal{S}(x, y)
+    \bvec{P}(x, y) \equiv 
+\left( 
+    1 \quad\quad\quad\quad\quad\quad 
+    x \quad\quad\quad\quad\quad\quad 
+    z \quad\quad\quad\quad\quad\quad 
+    y \quad\quad\quad\quad\quad\quad 
+    x^2 \quad\quad\quad\quad\quad\quad 
+    xz \quad\quad\quad\quad\quad\quad 
+    xy \quad\quad\quad\quad\quad\quad
+    yz \quad\quad\quad\quad\quad\quad 
+    y^2 \quad\quad\quad\quad\quad\quad
+    ... 
+\right)^\top
 \end{align}
 %
-and
-%
-\begin{align}
-    \label{eq:Jhat_approx_im}
-    \mathrm{Im}\left[\hat{J}(k)\right] 
-    &\approx
-        \iint\limits_{\mathcal{S}(x, y)}
-        % MAGIC
-        \sin \Big( 2\pi k \ln\big(1 - \beta(x, y)\big) \Big)
-        % MAGIC
-        \mathrm{d}\mathcal{S}(x, y)
-    \nonumber \\
-    &\approx
-        -2\pi k
-        \iint\limits_{\mathcal{S}(x, y)}
-        % MAGIC
-        \beta(x, y)
-        % MAGIC
-        \mathrm{d}\mathcal{S}(x, y)
-        \quad .
-\end{align}
-%
-\cite{Luger2019} developed an analytic formalism to compute these 
-integrals, provided $\beta(x, y)$ can be expressed in terms of
-spherical harmonics. We will see in the following section that
-$\beta(x, y)$ can be expressed exactly as the sum of
-spherical harmonics of low degree in the case of a 
-star with arbitrary inclination and obliquity and linear
-differential rotation. For now, however, let us consider again
-the simple case of a rigidly rotating star with rotation axis
-perpendicular to the line of sight. In this case,
-%
-\begin{align}
-    \mathrm{Re}\left[\hat{J}(k)\right] 
-    &\approx \iint\limits_{\mathcal{S}(x, y)}\mathrm{d}\mathcal{S}(x, y)
-    \nonumber \\
-    &= \mathbf{s}_0(x_o, y_o, r_o)
-\end{align}
-%
-and
-%
-\begin{align}
-    \mathrm{Im}\left[\hat{J}(k)\right] 
-    &\approx 
-    -2\pi k \beta_\mathrm{eq}
-    \iint\limits_{\mathcal{S}(x, y)}
-    x
-    \mathrm{d}\mathcal{S}(x, y)
-    \nonumber \\
-    &= -\pi k \beta_\mathrm{eq} \mathbf{s}_1(x_o, y_o, r_o)
-    \quad,
-\end{align}
-%
-where $\mathbf{s}_n(x_o, y_o, r_o)$ is the $n^\mathrm{th}$ component of the 
-occultation solution vector defined in \citet{Luger2019} for an occultor
-of radius $r_o$
-at normalized position $(x_o, y_o)$ with respect to the center of the star.
-%
-The equation for the observed spectrum is therefore
-%
-\begin{align}
-    \label{eq:uniform}
-    S(\xi) &= 
-    \mathcal{F}^{-1}
-    \Big[
-        \mathcal{F}(I_0)
-        \,
-        \Big(
-            \mathbf{s}_0(x_o, y_o, r_o)
-            -
-            \pi i k \beta_\mathrm{eq} \mathbf{s}_1(x_o, y_o, r_o)
-        \Big)
-    \Big]
-    \quad.
-\end{align}
-%
-
+is the polynomial basis \citep[Equation 7 in][]{Luger2019}
+and $\bvec{A_1}$ is the change of basis matrix from spherical harmonics
+to polynomials 
+\citep[Equation B11 in][]{Luger2019}.
 
 
 % Bibliography
