@@ -113,7 +113,7 @@ Recall the definition of the Fourier transform of a function $f(\xi)$,
     &\equiv
     \int_{-\infty}^\infty
         f(\xi)
-        \mathrm{e}^{-2\pi i k \xi} \mathrm{d}\xi
+        \mathrm{e}^{-2\pi \imag k \xi} \mathrm{d}\xi
     \nonumber \\
     &=
     \hat{f}(k)
@@ -128,7 +128,7 @@ and the corresponding inverse Fourier transform,
     &\equiv
     \int_{-\infty}^\infty
         \hat{f}(k)
-        \mathrm{e}^{2\pi i k \xi} \mathrm{d}k
+        \mathrm{e}^{2\pi \imag k \xi} \mathrm{d}k
     \nonumber \\
     &=
     f(\xi)
@@ -141,7 +141,7 @@ a function $\hat{I}(k, x, y)$, where we refer to $k$ as a ``wavenumber''.
 A useful property of the
 Fourier transform is that a translation of $I(\xi, x, y)$ by
 an amount $\Delta\xi$ corresponds to a linear scaling
-of $\hat{I}(k, x, y)$ by an amount $\mathrm{e}^{-2\pi i k \Delta\xi}$
+of $\hat{I}(k, x, y)$ by an amount $\mathrm{e}^{-2\pi \imag k \Delta\xi}$
 \citep[e.g.,][]{Schoenstadt2006}.
 Specifically, if the Doppler-shifted spectrum is given by
 %
@@ -155,7 +155,7 @@ its Fourier transform is equal to
     \label{eq:fourier:translation}
     \hat{I}(\xi, x, y) 
     &= 
-    \mathrm{e}^{2\pi i k \alpha(x, y)}\hat{I_0}(k, x, y)
+    \mathrm{e}^{2\pi \imag k \alpha(x, y)}\hat{I_0}(k, x, y)
     \quad ,
 \end{align}
 %
@@ -213,7 +213,7 @@ over the visible disk $\mathcal{S}$ of the star:
     &=
         \iint\limits_{\mathcal{S}(x, y)}
         \tilde{\bvec{y}}^\top(x, y)
-        \mathrm{e}^{2\pi i k \alpha(x, y)}
+        \mathrm{e}^{2\pi \imag k \alpha(x, y)}
         \mathrm{d}\mathcal{S}(x, y)
         \cdot
         \bvec{\hat{a}}(k)
@@ -230,10 +230,11 @@ harmonics to polynomials on the sphere:
     &=
         \iint\limits_{\mathcal{S}(x, y)}
         \tilde{\bvec{p}}^\top(x, y)
-        \mathrm{e}^{2\pi i k \alpha(x, y)}
+        \mathrm{e}^{2\pi \imag k \alpha(x, y)}
         \mathrm{d}\mathcal{S}(x, y)
         \cdot
         \bvec{A_1}
+        \cdot
         \bvec{\hat{a}}(k)
     \quad .
 \end{align}
@@ -259,7 +260,8 @@ where
 is the polynomial basis \citep[Equation 7 in][]{Luger2019}
 and $\bvec{A_1}$ is the change of basis matrix from spherical harmonics
 to polynomials 
-\citep[Equation B11 in][]{Luger2019}.
+\citep[Equation B11 in][]{Luger2019}. On the observer-facing surface of 
+the unit sphere, the coordinate $z$ is given by $\sqrt{1 - x^2 - y^2}$.
 
 At this point, we have two options: we can remain in Fourier space and
 attempt to solve the surface integral in Equation~(\ref{eq:fourier:S})
@@ -283,27 +285,29 @@ If we take the inverse Fourier transform of Equation~(\ref{eq:fourier:S}),
 we arrive at an expression for the observed spectrum:
 %
 \begin{align}
-    \label{eq:convolve:SUgly}
+    \label{eq:convolve:SUgly1}
     S(\xi) 
     &=
     \mathcal{F}^{-1} \Bigg[\,\,\,
         \iint\limits_{\mathcal{S}(x, y)}
         \tilde{\bvec{p}}^\top(x, y)
-        \mathrm{e}^{2\pi i k \alpha(x, y)}
+        \mathrm{e}^{2\pi \imag k \alpha(x, y)}
         \mathrm{d}\mathcal{S}(x, y)
         \cdot
         \bvec{A_1}
+        \cdot
         \bvec{\hat{a}}(k)
     \Bigg] \nonumber \\
     &=
     \mathcal{F}^{-1} \Bigg[\,\,\,
         \iint\limits_{\mathcal{S}(x, y)}
         \tilde{\bvec{p}}^\top(x, y)
-        \mathrm{e}^{2\pi i k \alpha(x, y)}
+        \mathrm{e}^{2\pi \imag k \alpha(x, y)}
         \mathrm{d}\mathcal{S}(x, y)
+        \cdot
+        \bvec{A_1}
     \Bigg]
     \circ
-    \bvec{A_1}
     \bvec{a}(\xi)
     \quad ,
 \end{align}
@@ -315,17 +319,18 @@ Since only the exponential term in the integrand depends on $k$, we may
 further simplify this expression:
 %
 \begin{align}
-    \label{eq:convolve:SUgly}
+    \label{eq:convolve:SUgly2}
     S(\xi) 
     &=    
     \iint\limits_{\mathcal{S}(x, y)}
     \tilde{\bvec{p}}^\top(x, y)
     \mathcal{F}^{-1} \Big[
-        \mathrm{e}^{2\pi i k \alpha(x, y)}
+        \mathrm{e}^{2\pi \imag k \alpha(x, y)}
     \Big]
     \mathrm{d}\mathcal{S}(x, y)
-    \circ
+    \cdot
     \bvec{A_1}
+    \circ
     \bvec{a}(\xi)
     \nonumber \\
     &=    
@@ -333,8 +338,9 @@ further simplify this expression:
     \tilde{\bvec{p}}^\top(x, y)
     \delta\big(\xi - \alpha(x, y)\big)
     \mathrm{d}\mathcal{S}(x, y)
-    \circ
+    \cdot
     \bvec{A_1}
+    \circ
     \bvec{a}(\xi)
     \quad,
 \end{align}
@@ -342,23 +348,266 @@ further simplify this expression:
 where $\delta$ is the Dirac delta function. Since the integrand in the
 equation above is zero everywhere except where the argument of the
 $\delta$ function is zero, the equation may be written as a line integral 
-along some curve $\mathcal{C}(x, y)$ that satisfies $\alpha(x, y) = \xi$
-and $x^2 + y^2 \le 1$:
+along some curve $\mathcal{C}(x, y)$ whose points satisfy 
+$\alpha(x, y) = \xi$
+and lie within $\mathcal{S}$:
 %
 \begin{align}
-    \label{eq:convolve:SUgly}
+    \label{eq:convolve:S}
     S(\xi) 
     &=    
+    \mathbf{g}(\xi)
+    \circ
+    \bvec{a}(\xi)
+    \quad,
+\end{align}
+%
+where we define
+%
+\begin{align}
+    \label{eq:convolve:g}
+    \mathbf{g}(\xi) 
+    &\equiv    
+    \mathbf{s}^\top(\xi) 
+    \cdot
+    \bvec{A_1}
+\end{align}
+%
+and
+%
+\begin{align}
+    \label{eq:convolve:sT}
+    \mathbf{s}^\top(\xi) 
+    &\equiv    
     \int\limits_{\mathcal{C}(x, y)}
     \tilde{\bvec{p}}^\top(x, y)
     \mathrm{d}\mathcal{C}(x, y)
-    \circ
-    \bvec{A_1}
-    \bvec{a}(\xi)
+    \quad.
+\end{align}
+
+In order to solve Equation~(\ref{eq:convolve:S}), we must assume 
+explicit functional
+forms for the velocity field $\alpha(x, y)$ and the region of integration
+$\mathcal{S}$, which we do in the following sections.
+
+\section{Doppler imaging of rigid rotators}
+\label{sec:rigid}
+%
+In the case that the star's rotation is rigid (i.e., differential rotation
+is negligible), the radial velocity at any point on the surface is 
+simply proportional to the distance to the axis of rotation. Without loss
+of generality, if we assume the axis of rotation lies along the $y-z$ plane,
+we have
+%
+\begin{align}
+    \beta(x, y) = \frac{\omega \sin i \, x}{c}
+\end{align}
+%
+and
+%
+\begin{align}
+    \label{eq:rigid:alpha}
+    \alpha(x, y) = \ln\left( 1 - \frac{\omega \sin i \, x}{c} \right)
+    \quad ,
+\end{align}
+%
+where $\omega$ is the angular velocity of the star and $i$ is the
+inclination relative to $\hat{y}$. Furthermore, if
+we assume the star is unocculted, the region of integration $\mathcal{S}$ 
+is simply the unit disk, so $\mathcal{C}(x, y)$ is the set of all points
+that satisfy both $\alpha(x, y) = \xi$ and $x^2 + y^2 \le 1$.
+Solving Equation~(\ref{eq:rigid:alpha}) for $x$ and 
+setting $\alpha(x, y) = \xi$, we find that the curves $\mathcal{C}(x, y)$ 
+are simply vertical lines on the unit disk given by
+%
+\begin{align}
+    x &= 
+        \frac{c}{\omega\sin i} \left(1 - \mathrm{e}^{\xi}\right)
+    \nonumber \\
+    &\equiv \gamma(\xi)
+    \quad .
+\end{align}
+%
+The integral in Equation~(\ref{eq:convolve:sT}) is therefore just an integral
+over $y$:
+%
+\begin{align}
+    \label{eq:rigid:sT}
+    \bvec{s}^\top(\xi) 
+    &=    
+    \int\limits_{-\sqrt{1 - \gamma(\xi)^2}}^{\sqrt{1 - \gamma(\xi)^2}}
+    \tilde{\bvec{p}}^\top
+    \Big(\gamma(\xi), y\Big)
+    \mathrm{d}y
+    \quad .
+\end{align}
+%
+From \citet{Luger2019}, the $n^\mathrm{th}$ term of the polynomial basis
+is a polynomial in $x$, $y$, and $z = \sqrt{1 - x^2 - y^2}$:
+%
+\begin{proof}{PolynomialBasis}
+    \tilde{p}_n 
+    &=
+    x^i y^j z^k
+\end{proof}
+%
+where $i, j, k$ are integers given by
+%
+\begin{proof}{PolynomialBasis}
+    \label{eq:lm}
+    i &= \floor*{\Lambda - \Delta}
+    \nonumber \\[0.5em]
+    j &= \floor*{\Delta}
+    \nonumber \\[0.5em]
+    k &= \ceil*{\Delta} - \floor*{\Delta}
+\end{proof}
+%
+with
+%
+\begin{proof}{PolynomialBasis}
+    \Lambda &= \floor*{\sqrt{n}}
+    \nonumber \\[0.5em]
+    \Delta &= \frac{n - \Lambda^2}{2}
+    \quad .
+\end{proof}
+%
+We may now explicitly write down the $n^\mathrm{th}$ term of 
+Equation~(\ref{eq:rigid:sT}),
+%
+\begin{align}
+    s_n(\xi) 
+    &=    
+    \begin{dcases}
+        \gamma(\xi)^i
+        \int\limits_{-\sqrt{1 - \gamma(\xi)^2}}^{\sqrt{1 - \gamma(\xi)^2}}
+            y^j
+        \mathrm{d}y
+        &
+        \qquad k = 0
+        \\[1em]
+        \gamma(\xi)^i
+        \int\limits_{-\sqrt{1 - \gamma(\xi)^2}}^{\sqrt{1 - \gamma(\xi)^2}}
+            y^j
+            \sqrt{1 - \gamma(\xi)^2 - y^2} \,
+        \mathrm{d}y 
+        & 
+        \qquad k = 1 \quad ,
+    \end{dcases}
+\end{align}
+%
+and solve it analytically:
+%
+\begin{align}
+        \label{eq:rigid:sTAnalytic}
+        s_n(\xi) 
+        &=     
+    \begin{dcases}
+        \frac{2 \gamma(\xi)^i \big(1 - \gamma(\xi)^ 2\big)^{\frac{j + 1}{2}}}{j + 1}
+        &
+        \qquad k = 0 \,\,\, \& \,\,\, j \, \mathrm{even}
+        \\[1em]
+        \gamma(\xi)^{i} \mathcal{I}_{j}\big(\gamma(\xi)\big)
+        &
+        \qquad k = 1 \,\,\, \& \,\,\, j \, \mathrm{even}
+        \\[1em]
+        0
+        &
+        \qquad j \, \mathrm{odd} \quad,
+    \end{dcases}
+\end{align}
+%
+where $\mathcal{I}_j(\gamma)$ is computed analytically
+from the upward recurrence relation given by Equation~(\ref{eq:app:Ij}),
+with $\mathcal{I}_0(\gamma)$ given by Equation~(\ref{eq:app:I0}).
+
+\appendix
+
+\section{Integrals}
+\subsection{Equation~(\ref{eq:rigid:sTAnalytic})}
+%
+When $k = 1$, we may write the $n^\mathrm{th}$ component
+of Equation~(\ref{eq:rigid:sTAnalytic}) as
+%
+\begin{align}
+    s_n(\xi) = 
+        \gamma(\xi)^{i}
+        \mathcal{I}_{j}\big(\gamma(\xi)\big)
+\end{align}
+%
+where
+%
+\begin{align}
+    \mathcal{I}_j(\gamma) &\equiv
+    \int\limits_{-\sqrt{1-\gamma^2}}^{\sqrt{1-\gamma^2}}
+        y^{j}
+        \sqrt{1 - \gamma^2 - y^2} \,
+    \mathrm{d}y
     \quad.
 \end{align}
 %
-
+Substituting $y = \sin\psi\sqrt{1 - \gamma^2}$, we have
+%
+\begin{align}
+    \mathcal{I}_j(\gamma) &=
+    %
+    (1 - \gamma^2)^{\frac{j + 2}{2}}
+    \int\limits_{-\frac{\pi}{2}}^{\frac{\pi}{2}}
+        \sin^j\psi
+        \cos^2\psi \,
+    \mathrm{d}\psi
+    \quad.
+\end{align}
+%
+We may solve this integral using the recurrence relation
+%
+\begin{align}
+    \int
+        \sin^j\psi
+        \cos^m\psi \,
+    \mathrm{d}\psi
+    &=
+    -\frac{\sin^{j-1}\psi \cos^{m+1}\psi}{j + m}
+    +
+    \frac{j - 1}{j + m}\int\sin^{j-2}\psi \cos^m\psi \mathrm{d}\psi
+    \quad ,
+\end{align}
+%
+which, in our case, simplifies to
+%
+\begin{align}
+    \int\limits_{-\frac{\pi}{2}}^{\frac{\pi}{2}}
+        \sin^j\psi
+        \cos^2\psi \,
+    \mathrm{d}\psi
+    &=
+    \frac{j - 1}{j + 2}\int\limits_{-\frac{\pi}{2}}^{\frac{\pi}{2}}\sin^{j-2}\psi \cos^2\psi \mathrm{d}\psi
+    \quad.
+\end{align}
+%
+We thus arrive at the recurrence relation
+%
+\begin{align}
+    \label{eq:app:Ij}
+    \mathcal{I}_j(\gamma) &=
+    \frac{j - 1}{j + 2}
+    (1 - \gamma^2)
+    \mathcal{I}_{j-2}(\gamma)
+    \quad.
+\end{align}
+%
+Since this expression is only used when $j$ is even, we only need one
+initial condition for upward recursion:
+%
+\begin{align}
+    \label{eq:app:I0}
+    \mathcal{I}_0(\gamma) &\equiv
+    \int\limits_{-\sqrt{1-\gamma^2}}^{\sqrt{1-\gamma^2}}
+        \sqrt{1 - \gamma^2 - y^2} \,
+    \mathrm{d}y
+    \nonumber \\
+    &= \frac{\pi}{2}(1 - \gamma^2)
+    \quad.
+\end{align}
 
 % Bibliography
 \bibliography{bib}
