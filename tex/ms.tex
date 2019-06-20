@@ -307,14 +307,19 @@ we arrive at an expression for the observed spectrum:
         \cdot
         \bvec{A_1}
     \Bigg]
-    \circ
+    *
     \bvec{a}(\xi)
     \quad ,
 \end{align}
 %
 where the second line follows from the convolution theorem, with
-$\circ$ denoting the convolution operator over $\xi$ and 
-$\bvec{a}(\xi) \equiv \mathcal{F}^{-1}\left[ \bvec{\hat{a}}(k) \right]$.
+$\bvec{a}(\xi) \equiv \mathcal{F}^{-1}\left[ \bvec{\hat{a}}(k) \right]$
+and $*$ denoting the convolution operator over $\xi$:
+%
+\begin{align}
+    (f * g)(\xi) \equiv \int\limits_{-\infty}^{\infty}f(\tau)g(\xi - \tau)\mathrm{d}\tau
+\end{align}
+%
 Since only the exponential term in the integrand depends on $k$, we may 
 further simplify this expression:
 %
@@ -330,7 +335,7 @@ further simplify this expression:
     \mathrm{d}\mathcal{S}(x, y)
     \cdot
     \bvec{A_1}
-    \circ
+    *
     \bvec{a}(\xi)
     \nonumber \\
     &=    
@@ -340,7 +345,7 @@ further simplify this expression:
     \mathrm{d}\mathcal{S}(x, y)
     \cdot
     \bvec{A_1}
-    \circ
+    *
     \bvec{a}(\xi)
     \quad,
 \end{align}
@@ -357,7 +362,7 @@ and lie within $\mathcal{S}$:
     S(\xi) 
     &=    
     \mathbf{g}(\xi)
-    \circ
+    *
     \bvec{a}(\xi)
     \quad,
 \end{align}
