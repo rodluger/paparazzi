@@ -1119,9 +1119,9 @@ File: se-ascii-print.def 2016/05/16 v1.11 stringenc: Printable ASCII characters
 
 ) [1] [2] [3] <<<PolynomialBasis: 21>>> [4]
 <<<PolynomialBasis: 22>>> <<<PolynomialBasis: 23>>> [5] (ms.bbl) [6]
-Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 540.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 540.
+Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 539.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 539.
  (ms.aux)
-Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 540.
+Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 539.
  )
-Output written on ms.xdv (6 pages, 91856 bytes).
+Output written on ms.xdv (6 pages, 90584 bytes).

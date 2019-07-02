@@ -32,7 +32,7 @@ Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.
 \section{The problem}
 \label{sec:the_problem}
 %
-Let $I_\xi(\xi, \mathbf{x}, t, \mathbf{d})$ be the specific 
+Let $I(\xi, \mathbf{x}, t, \mathbf{d})$ be the specific 
 intensity observed 
 at log wavelength $\xi \equiv \ln\lambda$ and at sky-projected 
 Cartesian position $\mathbf{x} = (x, y, z)$ on the surface of the 
@@ -42,16 +42,17 @@ We may express this intensity as
 %
 \begin{align}
     \label{eq:intro:Ixi}
-    I_\xi(\xi, \mathbf{x}, t, \mathbf{d}) &= 
-        I_{\xi}^0(\xi_0(\mathbf{x}, \mathbf{d}), \mathbf{x}, t)
+    I(\xi, \mathbf{x}, t, \mathbf{d}) &= 
+        I_0\Big(\xi_0(\xi, \mathbf{x}, \mathbf{d}), \mathbf{x}, t\Big)
 \end{align}
 %
-where $I_{\xi}^0$ is the specific intensity at each point on the star 
+where $I_0$ is the specific intensity at each point on the star 
 in the surface rest frame and 
 %
 \begin{align}
     \label{eq:intro:xi0}
-    \xi_0(\mathbf{x}, \mathbf{d}) &= \xi + \mathcal{D}(\mathbf{x}, \mathbf{d})
+    \xi_0(\xi, \mathbf{x}, \mathbf{d}) &= 
+    \xi + \mathcal{D}(\mathbf{x}, \mathbf{d})
 \end{align}
 %
 is the log wavelength in the rest frame. The quantity $\mathcal{D}$ is
@@ -62,7 +63,8 @@ computed from the formula for the Doppler shift and is equal to
     \mathcal{D}(\mathbf{x}, \mathbf{d}) 
         &=
         \frac{1}{2}\ln\left( 
-            \frac{1 - \beta(\mathbf{x}, \mathbf{d})}{1 + \beta(\mathbf{x}, \mathbf{d})} 
+            \frac{1 - \beta(\mathbf{x}, \mathbf{d})}{1 + \beta(\mathbf{x}, 
+            \mathbf{d})} 
         \right)
 \end{align}
 %
@@ -79,19 +81,19 @@ computing the spectrum at a single \emph{point} on the surface, but not
 ideal when one is interested in the \emph{integral} over the visible
 surface of the star $\mathcal{S}$, which is typically all we can observe:
 %
-% TODO: We may need to divide by the distance ^ 2 for unit consistency
 \begin{align}
     \label{eq:intro:Fxi}
-    F_\xi(\xi, t) 
+    F(\xi, t) 
         &\equiv
         \iint\limits_{\mathcal{S}(\mathbf{x})}
                 I(\xi, \mathbf{x}, t, \mathbf{d})
         \mathrm{d}{\mathcal{S}(\mathbf{x})}
-        \quad .
+        \quad ,
 \end{align}
 %
 The difficulty in solving Equation~(\ref{eq:intro:Fxi}) stems from the fact
-that $I_\xi(\xi, \mathbf{x}, t, \mathbf{d})$ is difficult to write down in closed form, given
+that $I(\xi, \mathbf{x}, t, \mathbf{d})$ is difficult to write down in 
+closed form, given
 the non-linearity of the Doppler shift.
 The standard approach to solving this integral is therefore
 to discretize the surface of the star with a fine grid, evaluate the
@@ -113,7 +115,7 @@ specific intensity in terms of spherical harmonics on the unit disk:
 %
 \begin{align}
     \label{eq:solution:Ixi0}
-    I_{\xi}^0(\xi_0, \mathbf{x}, t) 
+    I_0(\xi_0, \mathbf{x}, t) 
         &=
         \sum_{l=0}^\infty\sum_{m=-l}^{l} a_{lm}(\xi_0, t) Y_{lm}(\mathbf{x})
     \quad ,
@@ -126,7 +128,7 @@ convenience, we may write this equation in vector form:
 %
 \begin{align}
     \label{eq:solution:Ixi0vec}
-    I_{\xi}^0(\xi_0, \mathbf{x}, t) &=
+    I_0(\xi_0, \mathbf{x}, t) &=
     \tilde{\bvec{y}}^\top(\mathbf{x})
     \bvec{a}(\xi_0, t)
     \quad ,
@@ -183,7 +185,7 @@ The equation for the specific intensity now reads
 %
 \begin{align}
     \label{eq:solution:Ixi0vecfull}
-    I_{\xi}^0(\xi_0, \mathbf{x}, t) &=
+    I_0(\xi_0, \mathbf{x}, t) &=
     \tilde{\bvec{y}}^\top(\mathbf{x})
     \mathbf{R}(t)
     \bvec{a}(\xi_0)
@@ -198,15 +200,14 @@ shift as a convolution
 of the spectrum in the rest frame with a delta function:
 %
 \begin{align}
-    I_\xi(\xi, \mathbf{x}, t) &= 
-        I_{\xi}^0(\zeta, \mathbf{x}, t) 
-        * \delta\big(\zeta - \mathcal{D}(\mathbf{x}, \mathbf{d})\big)
+    I(\xi, \mathbf{x}, t) &= 
+        I_0(\xi_0, \mathbf{x}, t) 
+        * \delta\big(\xi_0 - \xi - \mathcal{D}(\mathbf{x}, \mathbf{d})\big)
         \quad,
 \end{align}
 %
-where $*$ denotes the convolution operation over a dummy (log wavelength-like)
-parameter
-$\zeta$, returning a function of the shifted log wavelength, $\xi$.
+where $*$ denotes the convolution operation, 
+returning a function of the shifted log wavelength, $\xi$.
 Inserting this into Equation~(\ref{eq:solution:Ixi0vecfull}) and integrating
 over the visible portion of the star, we arrive at the expression for the 
 observed spectrum:
@@ -214,21 +215,21 @@ observed spectrum:
 %
 \begin{align}
     \label{eq:solution:Fxi}
-    F_{\xi}(\xi, t) &=
+    F(\xi, t) &=
     \iint\limits_{\mathcal{S}(\mathbf{x})}
     \tilde{\bvec{y}}^\top(\mathbf{x})
     \mathbf{R}(t)
-    \bvec{a}(\zeta)
-    * \delta\big(\zeta - \mathcal{D}(\mathbf{x}, \mathbf{d})\big)
+    \bvec{a}(\xi_0)
+    * \delta\big(\xi_0 - \xi - \mathcal{D}(\mathbf{x}, \mathbf{d})\big)
     \mathrm{d}\mathcal{S}(\mathbf{x})
     \nonumber \\[0.5em]
     &=
-    \mathbf{g}^\top(\zeta, \mathbf{d})
+    \mathbf{g}^\top(\mathcal{D})
     *
     \,
     \mathbf{R}(t)
     \,
-    \bvec{a}(\zeta)
+    \bvec{a}(\xi_0)
     \quad ,
 \end{align}
 %
@@ -239,11 +240,11 @@ We further define
 %
 \begin{align}
     \label{eq:solution:g}
-    \mathbf{g}^\top(\zeta, \mathbf{d})
+    \mathbf{g}^\top(\mathcal{D})
     &\equiv
     \iint\limits_{\mathcal{S}(\mathbf{x})}
     \tilde{\bvec{y}}^\top(\mathbf{x})
-    \delta\big(\zeta - \mathcal{D}(\mathbf{x}, \mathbf{d})\big)
+    \delta\big(\xi_0 - \xi - \mathcal{D}(\mathbf{x}, \mathbf{d})\big)
     \mathrm{d}\mathcal{S}(\mathbf{x})
     \nonumber \\[0.5em]
     &=  
@@ -256,7 +257,7 @@ We further define
 where the integral in the second line denotes the line integral about
 some function $\mathcal{C}(\mathbf{x}, \mathbf{d})$ corresponding to the
 set of all points on the visible disk where 
-$\zeta = \mathcal{D}(\mathbf{x}, \mathbf{d})$.
+$\xi_0 - \xi = \mathcal{D}(\mathbf{x}, \mathbf{d})$.
 
 Equation~(\ref{eq:solution:Fxi}) is the complete deconvolution of the
 observed spectrum into velocity terms, temporal terms, and spectral/spatial
@@ -298,8 +299,8 @@ spherical harmonics to polynomials on the sphere:
 %
 \begin{align}
     \label{eq:rigid:g}
-    \mathbf{g}^\top(\zeta, \mathbf{d}) &\equiv
-    \bvec{s}^\top(\zeta, \mathbf{d})
+    \mathbf{g}^\top(\mathcal{D}) &\equiv
+    \bvec{s}^\top(\mathcal{D})
     \bvec{A_1}
 \end{align}
 %
@@ -307,7 +308,7 @@ where
 %
 \begin{align}
     \label{eq:rigid:sTdef}
-    \mathbf{s}^\top(\zeta, \mathbf{d})
+    \mathbf{s}^\top(\mathcal{D})
     &\equiv
     \int\limits_{\mathcal{C}(\mathbf{x}, \mathbf{d})}
     \tilde{\bvec{p}}^\top(\mathbf{x})
@@ -342,19 +343,17 @@ If
 we assume the star is unocculted, the region of integration $\mathcal{S}$ 
 is simply the unit disk, so $\mathcal{C}(\mathbf{x}, \mathbf{d})$ 
 is the set of all points
-that satisfy both $\mathcal{D}(\mathbf{x}, \mathbf{d}) = \zeta$ and 
+that satisfy both $\xi_0 - \xi = \mathcal{D}(\mathbf{x}, \mathbf{d})$ and 
 $x^2 + y^2 \le 1$.
-Solving Equation~(\ref{eq:rigid:D}) for $x$ and 
-setting $\mathcal{D}(\mathbf{x}, \mathbf{d}) = \zeta$, we find that 
+Solving Equation~(\ref{eq:rigid:D}) for $x$, we find that 
 the curves $\mathcal{C}(\mathbf{x}, \mathbf{d})$ 
 are simply vertical lines on the unit disk given by
 %
 \begin{align}
-    x &= 
+    x(\mathcal{D}) &= 
         \Bigg(\frac{c}{\omega\sin i}\Bigg) 
-        \Bigg(\frac{1 - \mathrm{e}^{2\zeta}}{1 + \mathrm{e}^{2\zeta}}\Bigg)
-    \nonumber \\
-    &\equiv \gamma(\zeta, \mathbf{d})
+        \Bigg(\frac{1 - \mathrm{e}^{2\mathcal{D}}}
+                   {1 + \mathrm{e}^{2\mathcal{D}}}\Bigg)
     \quad .
 \end{align}
 %
@@ -363,12 +362,12 @@ over $y$:
 %
 \begin{align}
     \label{eq:rigid:sT}
-    \bvec{s}^\top(\zeta, \mathbf{d}) 
+    \bvec{s}^\top(\mathcal{D}) 
     &=    
-    \int\limits_{-\sqrt{1 - \gamma(\zeta, \mathbf{d})^2}}^
-                {\sqrt{1 - \gamma(\zeta, \mathbf{d})^2}}
+    \int\limits_{-\sqrt{1 - x(\mathcal{D})^2}}^
+                {\sqrt{1 - x(\mathcal{D})^2}}
     \tilde{\bvec{p}}^\top
-    \Big(\gamma(\zeta, \mathbf{d}), y\Big)
+    \Big(x(\mathcal{D}), y\Big)
     \mathrm{d}y
     \quad .
 \end{align}
@@ -406,13 +405,13 @@ We may now explicitly write down the $n^\mathrm{th}$ term of
 Equation~(\ref{eq:rigid:sT}),
 %
 \begin{align}
-    s_n(\zeta, \mathbf{d}) 
+    s_n(\mathcal{D}) 
     &=    
-    \gamma(\zeta, \mathbf{d})^i
-    \int\limits_{-\sqrt{1 - \gamma(\zeta, \mathbf{d})^2}}^
-                {\sqrt{1 - \gamma(\zeta, \mathbf{d})^2}}
+    x(\mathcal{D})^i
+    \int\limits_{-\sqrt{1 - x(\mathcal{D})^2}}^
+                {\sqrt{1 - x(\mathcal{D})^2}}
         y^j
-        \sqrt{1 - \gamma(\zeta, \mathbf{d})^2 - y^2}^k \,
+        \left(1 - x(\mathcal{D})^2 - y^2\right)^{\frac{k}{2}} \,
     \mathrm{d}y 
     \quad ,
 \end{align}
@@ -421,29 +420,29 @@ and solve it analytically:
 %
 \begin{align}
         \label{eq:rigid:sTAnalytic}
-        s_n(\zeta, \mathbf{d}) 
+        s_n(\mathcal{D}) 
         &=     
     \begin{dcases}
         0
         &
         \qquad j \, \mathrm{odd}
         \\[1em]
-        \frac{2 \gamma(\zeta, \mathbf{d})^i 
-        \big(1 - \gamma(\zeta, \mathbf{d})^ 2\big)^{\frac{j + 1}{2}}}{j + 1}
+        \frac{2 x(\mathcal{D})^i 
+        \big(1 - x(\mathcal{D})^ 2\big)^{\frac{j + 1}{2}}}{j + 1}
         &
         \qquad k = 0
         \\[1em]
-        \gamma(\zeta, \mathbf{d})^{i} \mathcal{I}_{j}
-        \big(\gamma(\zeta, \mathbf{d})\big)
+        x(\mathcal{D})^{i} \mathcal{I}_{j}
+        \big(x(\mathcal{D})\big)
         &
         \qquad k = 1
         \quad ,
     \end{dcases}
 \end{align}
 %
-where $\mathcal{I}_j(\gamma)$ is computed analytically
+where $\mathcal{I}_j(x)$ is computed analytically
 from the upward recurrence relation given by Equation~(\ref{eq:app:Ij}),
-with $\mathcal{I}_0(\gamma)$ given by Equation~(\ref{eq:app:I0}).
+with $\mathcal{I}_0(x)$ given by Equation~(\ref{eq:app:I0}).
 
 \appendix
 
@@ -454,28 +453,28 @@ When $k = 1$, we may write the $n^\mathrm{th}$ component
 of Equation~(\ref{eq:rigid:sTAnalytic}) as
 %
 \begin{align}
-    s_n(\zeta, \mathbf{d}) = 
-        \gamma(\zeta, \mathbf{d})^{i}
-        \mathcal{I}_{j}\big(\gamma(\zeta, \mathbf{d})\big)
+    s_n(\mathcal{D}) = 
+        x(\mathcal{D})^{i}
+        \mathcal{I}_{j}\big(x(\mathcal{D})\big)
 \end{align}
 %
 where
 %
 \begin{align}
-    \mathcal{I}_j(\gamma) &\equiv
-    \int\limits_{-\sqrt{1-\gamma^2}}^{\sqrt{1-\gamma^2}}
+    \mathcal{I}_j(x) &\equiv
+    \int\limits_{-\sqrt{1-x^2}}^{\sqrt{1-x^2}}
         y^{j}
-        \sqrt{1 - \gamma^2 - y^2} \,
+        \sqrt{1 - x^2 - y^2} \,
     \mathrm{d}y
     \quad.
 \end{align}
 %
-Substituting $y = \sin\psi\sqrt{1 - \gamma^2}$, we have
+Substituting $y = \sin\psi\sqrt{1 - x^2}$, we have
 %
 \begin{align}
-    \mathcal{I}_j(\gamma) &=
+    \mathcal{I}_j(x) &=
     %
-    (1 - \gamma^2)^{\frac{j + 2}{2}}
+    (1 - x^2)^{\frac{j + 2}{2}}
     \int\limits_{-\frac{\pi}{2}}^{\frac{\pi}{2}}
         \sin^j\psi
         \cos^2\psi \,
@@ -513,10 +512,10 @@ We thus arrive at the recurrence relation
 %
 \begin{align}
     \label{eq:app:Ij}
-    \mathcal{I}_j(\gamma) &=
+    \mathcal{I}_j(x) &=
     \frac{j - 1}{j + 2}
-    (1 - \gamma^2)
-    \mathcal{I}_{j-2}(\gamma)
+    (1 - x^2)
+    \mathcal{I}_{j-2}(x)
     \quad.
 \end{align}
 %
@@ -525,12 +524,12 @@ initial condition for upward recursion:
 %
 \begin{align}
     \label{eq:app:I0}
-    \mathcal{I}_0(\gamma) &\equiv
-    \int\limits_{-\sqrt{1-\gamma^2}}^{\sqrt{1-\gamma^2}}
-        \sqrt{1 - \gamma^2 - y^2} \,
+    \mathcal{I}_0(x) &\equiv
+    \int\limits_{-\sqrt{1-x^2}}^{\sqrt{1-x^2}}
+        \sqrt{1 - x^2 - y^2} \,
     \mathrm{d}y
     \nonumber \\
-    &= \frac{\pi}{2}(1 - \gamma^2)
+    &= \frac{\pi}{2}(1 - x^2)
     \quad.
 \end{align}
 
