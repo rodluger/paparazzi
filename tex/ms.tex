@@ -20,7 +20,7 @@
 \author{Megan Bedell}
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 %
-\author{Probably David W. Hogg}
+\author{David W. Hogg}
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 
 %
@@ -32,65 +32,66 @@ Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.
 \section{The problem}
 \label{sec:the_problem}
 %
-Let $I(\xi, x, y)$ be the Doppler-shifted intensity observed at log wavelength 
-$\xi \equiv \ln\lambda$ at sky-projected Cartesian position $x, y$ on the 
-surface of the star. We may express it as
+Let $I_\xi(\xi, \mathbf{x}, t, \mathbf{d})$ be the specific 
+intensity observed 
+at log wavelength $\xi \equiv \ln\lambda$ and at sky-projected 
+Cartesian position $\mathbf{x} = (x, y, z)$ on the surface of the 
+star at time $t$, where
+$\mathbf{d}$ is a set of arbitrary parameters of the Doppler field.
+We may express this intensity as
 %
 \begin{align}
-    \label{eq:I}
-    I(\xi, x, y) &= I_0(\xi_0, x, y)
+    \label{eq:intro:Ixi}
+    I_\xi(\xi, \mathbf{x}, t, \mathbf{d}) &= 
+        I_{\xi}^0(\xi_0(\mathbf{x}, \mathbf{d}), \mathbf{x}, t)
 \end{align}
 %
-where $I_0$ is the spectrum at each point on the star in the surface rest
-frame and 
+where $I_{\xi}^0$ is the specific intensity at each point on the star 
+in the surface rest frame and 
 %
 \begin{align}
-    \label{eq:xi0}
-    \xi_0 &= \xi + \alpha(x, y)
+    \label{eq:intro:xi0}
+    \xi_0(\mathbf{x}, \mathbf{d}) &= \xi + \mathcal{D}(\mathbf{x}, \mathbf{d})
 \end{align}
 %
-is the log wavelength in the unshifted frame. The quantity $\alpha$ is
+is the log wavelength in the rest frame. The quantity $\mathcal{D}$ is
 computed from the formula for the Doppler shift and is equal to
 %
 \begin{align}
-    \label{eq:alpha}
-    \alpha(x, y) 
+    \label{eq:intro:D}
+    \mathcal{D}(\mathbf{x}, \mathbf{d}) 
         &=
         \frac{1}{2}\ln\left( 
-            \frac{1 - \beta}{1 + \beta} 
-        \right) 
-        \nonumber \\
-        &\approx
-        \ln(1 - \beta)
+            \frac{1 - \beta(\mathbf{x}, \mathbf{d})}{1 + \beta(\mathbf{x}, \mathbf{d})} 
+        \right)
 \end{align}
 %
-where $\beta = v(x, y) / c$ is the ratio of the 
-radial velocity at a point on the surface of the star to the speed of light
-and the second line is valid when $\beta \ll 1$ (i.e., the non-relativistic
-Doppler shift). Throughout this paper, we will assume the non-relativistic 
-limit, as it greatly simplifies the math.
+where $\beta = v(\mathbf{x}, \mathbf{d}) / c$ is the ratio of the 
+radial velocity at a point on the surface of the star to the speed of light.
 In keeping with the literature, we take positive values of $v$ to mean 
 redshifts.
 
 A common approach to computing the Doppler-shifted spectrum is to
-evaluate the spectrum at the rest frame wavelength (Equation~\ref{eq:xi0})
+evaluate the spectrum at the rest frame wavelength 
+(Equation~\ref{eq:intro:xi0})
 and interpolate back to the grid in $\xi$. This is practical when
 computing the spectrum at a single \emph{point} on the surface, but not
-ideal when one is interested in the \emph{integral} over the entire
+ideal when one is interested in the \emph{integral} over the visible
 surface of the star $\mathcal{S}$, which is typically all we can observe:
 %
+% TODO: We may need to divide by the distance ^ 2 for unit consistency
 \begin{align}
-    \label{eq:S}
-    S(\xi) 
+    \label{eq:intro:Fxi}
+    F_\xi(\xi, t) 
         &\equiv
-        \iint\limits_{\mathcal{S}(x, y)}
-                I(\xi, x, y)
-        \mathrm{d}{\mathcal{S}(x, y)}
+        \iint\limits_{\mathcal{S}(\mathbf{x})}
+                I(\xi, \mathbf{x}, t, \mathbf{d})
+        \mathrm{d}{\mathcal{S}(\mathbf{x})}
         \quad .
 \end{align}
 %
-The difficulty in solving Equation~(\ref{eq:S}) stems from the fact
-that $I(\xi, x, y)$ is difficult to write down in closed form, given
+The difficulty in solving Equation~(\ref{eq:intro:Fxi}) stems from the fact
+that $I_\xi(\xi, \mathbf{x}, t, \mathbf{d})$ is difficult to write down in closed form, given
 the non-linearity of the Doppler shift.
 The standard approach to solving this integral is therefore
 to discretize the surface of the star with a fine grid, evaluate the
@@ -99,150 +100,224 @@ to approximate the integral. Depending on the resolution of the grid,
 this is either numerically inaccurate or computationally inefficient 
 (and often both).
 
+
 \section{The Solution}
 
-In this section, we consider two alternative methods to solving
-Equation~(\ref{eq:S}) to improve the speed and accuracy of the
-computation, both of which rely on the Fourier transform of the
-spectrum.
-Recall the definition of the Fourier transform of a function $f(\xi)$,
+The observed spectrum is a complex function
+of spatial, spectral, temporal, and velocity terms. The goal in this
+section is to deconvolve each of these terms to make solving the integral
+in Equation~(\ref{eq:intro:Fxi}) easier.
+%
+The first thing we will do is to expand the spatial dependence of the
+specific intensity in terms of spherical harmonics on the unit disk:
 %
 \begin{align}
-    \label{eq:fourier:FT}
-    \mathcal{F}\Big[f(\xi)\Big](k) 
-    &\equiv
-    \int_{-\infty}^\infty
-        f(\xi)
-        \mathrm{e}^{-2\pi \imag k \xi} \mathrm{d}\xi
-    \nonumber \\
-    &=
-    \hat{f}(k)
-    \quad ,
-\end{align}
-%
-and the corresponding inverse Fourier transform,
-%
-\begin{align}
-    \label{eq:fourier:IFT}
-    \mathcal{F}^{-1}\Big[\hat{f}(k)\Big](\xi) 
-    &\equiv
-    \int_{-\infty}^\infty
-        \hat{f}(k)
-        \mathrm{e}^{2\pi \imag k \xi} \mathrm{d}k
-    \nonumber \\
-    &=
-    f(\xi)
-    \quad .
-\end{align}
-%
-Consider what happens when we take the
-Fourier transform of the spectrum $I(\xi, x, y)$ to obtain
-a function $\hat{I}(k, x, y)$, where we refer to $k$ as a ``wavenumber''. 
-A useful property of the
-Fourier transform is that a translation of $I(\xi, x, y)$ by
-an amount $\Delta\xi$ corresponds to a linear scaling
-of $\hat{I}(k, x, y)$ by an amount $\mathrm{e}^{-2\pi \imag k \Delta\xi}$
-\citep[e.g.,][]{Schoenstadt2006}.
-Specifically, if the Doppler-shifted spectrum is given by
-%
-\begin{align}
-    I(\xi, x, y) &= I_0\big(\xi + \alpha(x, y)\big), x, y) \quad,
-\end{align}
-%
-its Fourier transform is equal to 
-%
-\begin{align}
-    \label{eq:fourier:translation}
-    \hat{I}(\xi, x, y) 
-    &= 
-    \mathrm{e}^{2\pi \imag k \alpha(x, y)}\hat{I_0}(k, x, y)
-    \quad ,
-\end{align}
-%
-where $\hat{I_0}(k, x, y) \equiv \mathcal{F}\left[ I_0(\xi, x, y) \right]$.
-%
-To obtain the Fourier transform of the observed spectrum, we first
-expand $\hat{I_0}(k, x, y)$ in terms of spherical harmonics,
-%
-\begin{align}
-    \label{eq:fourier:I0}
-    \hat{I_0}(k, x, y) 
+    \label{eq:solution:Ixi0}
+    I_{\xi}^0(\xi_0, \mathbf{x}, t) 
         &=
-        \sum_{l=0}^\infty\sum_{m=-l}^{l} Y_{lm}(x, y) \hat{a}_{lm}(k)
-    \nonumber \\
-    &= 
-    \tilde{\bvec{y}}^\top(x, y) \cdot \bvec{\hat{a}}(k)
+        \sum_{l=0}^\infty\sum_{m=-l}^{l} a_{lm}(\xi_0, t) Y_{lm}(\mathbf{x})
+    \quad ,
+\end{align}
+%
+where $Y_{lm}(\mathbf{x})$ is a spherical harmonic on the projected disk
+and $a_{lm}(\xi_0, t)$ is the corresponding spherical harmonic 
+coefficient at log wavelength in the rest frame $\xi_0$ and time $t$. For 
+convenience, we may write this equation in vector form:
+%
+\begin{align}
+    \label{eq:solution:Ixi0vec}
+    I_{\xi}^0(\xi_0, \mathbf{x}, t) &=
+    \tilde{\bvec{y}}^\top(\mathbf{x})
+    \bvec{a}(\xi_0, t)
     \quad ,
 \end{align}
 %
 where
 %
 \begin{align}
-    \bvec{\hat{a}}(k) \equiv
+    \bvec{a}(\xi_0, t) \equiv
 \Big( 
-    \hat{a}_{0,0}(k) \quad\quad\quad\quad\quad\quad 
-    \hat{a}_{1,-1}(k) \quad\quad\quad\quad\quad\quad 
-    \hat{a}_{1,0}(k) \quad\quad\quad\quad\quad\quad
-    \hat{a}_{1,1}(k) \quad\quad\quad\quad\quad\quad 
+    a_{0,0}(\xi_0, t) \quad\quad\quad\quad\quad\quad 
+    a_{1,-1}(\xi_0, t) \quad\quad\quad\quad\quad\quad 
+    a_{1,0}(\xi_0, t) \quad\quad\quad\quad\quad\quad
+    a_{1,1}(\xi_0, t) \quad\quad\quad\quad\quad\quad 
     ... 
 \Big)^\top
 \end{align}
 %
-is the column vector of spherical harmonic coefficients at wavenumber $k$, and
+is the vector of spherical harmonic coefficients and
 %
 \begin{align}
-    \tilde{\bvec{y}}^\top(x, y) \equiv 
+    \tilde{\bvec{y}}^\top(\mathbf{x}) \equiv 
 \Big( 
-    Y_{0,0}(x, y) \quad\quad\quad\quad\quad\quad 
-    Y_{1,-1}(x, y) \quad\quad\quad\quad\quad\quad 
-    Y_{1,0}(x, y) \quad\quad\quad\quad\quad\quad 
-    Y_{1,1}(x, y) \quad\quad\quad\quad\quad\quad 
+    Y_{0,0}(\mathbf{x}) \quad\quad\quad\quad\quad\quad 
+    Y_{1,-1}(\mathbf{x}) \quad\quad\quad\quad\quad\quad 
+    Y_{1,0}(\mathbf{x}) \quad\quad\quad\quad\quad\quad 
+    Y_{1,1}(\mathbf{x}) \quad\quad\quad\quad\quad\quad 
     ... 
 \Big)
 \end{align}
 %
-is the corresponding row vector of spherical harmonics at a point $(x, y)$ 
-on the sphere.
-%
-We then take the integral of Equation~(\ref{eq:fourier:translation})
-over the visible disk $\mathcal{S}$ of the star:
+is the corresponding vector of spherical harmonics. We may further
+decompose our expression by linearizing the time dependence of the
+spherical harmonic coefficients:
 %
 \begin{align}
-    \label{eq:fourier:SYlm}
-    \hat{S}(k) 
-    &=
-        \iint\limits_{\mathcal{S}(x, y)}
-        \tilde{\bvec{y}}^\top(x, y)
-        \mathrm{e}^{2\pi \imag k \alpha(x, y)}
-        \mathrm{d}\mathcal{S}(x, y)
-        \cdot
-        \bvec{\hat{a}}(k)
+    \label{eq:solution:R}
+    \bvec{a}(\xi_0, t) = \mathbf{R}(t) \bvec{a}(\xi_0)
     \quad ,
 \end{align}
 %
-In order to tackle the integrals in 
-Equation~(\ref{eq:fourier:SYlm}), let us change bases from spherical
-harmonics to polynomials on the sphere:
+where $\bvec{a}(\xi_0) = \bvec{a}(\xi_0, t=t_0)$ for some reference time $t_0$.
+For rigid body rotation, the result is exact and $\mathbf{R}(t)$ is the Wigner 
+rotation matrix for real spherical harmonics 
+\citep[e.g.][]{AlvarezCollado1989}, which is implicitly a 
+function of the inclination, obliquity, and rotation period of the star.
+In the case that other processes such as differential rotation or spot 
+evolution are significant
+over the course of an observation, Equation~(\ref{eq:solution:R}) can be
+made to hold approximately for some effective rotation matrix 
+$\mathbf{R}(t)$; we discuss this further below.
+
+The equation for the specific intensity now reads
 %
 \begin{align}
-    \label{eq:fourier:S}
-    \hat{S}(k) 
+    \label{eq:solution:Ixi0vecfull}
+    I_{\xi}^0(\xi_0, \mathbf{x}, t) &=
+    \tilde{\bvec{y}}^\top(\mathbf{x})
+    \mathbf{R}(t)
+    \bvec{a}(\xi_0)
+    \quad ,
+\end{align}
+%
+where it is clear that we have fully separated the spatial, temporal, and
+spectral terms. However, in order to compute the observed spectrum, we must
+still Doppler shift this expression and integrate it over the visible
+portion of the star. To this end, it is convenient to express the Doppler
+shift as a convolution
+of the spectrum in the rest frame with a delta function:
+%
+\begin{align}
+    I_\xi(\xi, \mathbf{x}, t) &= 
+        I_{\xi}^0(\zeta, \mathbf{x}, t) 
+        * \delta\big(\zeta - \mathcal{D}(\mathbf{x}, \mathbf{d})\big)
+        \quad,
+\end{align}
+%
+where $*$ denotes the convolution operation over a dummy (log wavelength-like)
+parameter
+$\zeta$, returning a function of the shifted log wavelength, $\xi$.
+Inserting this into Equation~(\ref{eq:solution:Ixi0vecfull}) and integrating
+over the visible portion of the star, we arrive at the expression for the 
+observed spectrum:
+%
+%
+\begin{align}
+    \label{eq:solution:Fxi}
+    F_{\xi}(\xi, t) &=
+    \iint\limits_{\mathcal{S}(\mathbf{x})}
+    \tilde{\bvec{y}}^\top(\mathbf{x})
+    \mathbf{R}(t)
+    \bvec{a}(\zeta)
+    * \delta\big(\zeta - \mathcal{D}(\mathbf{x}, \mathbf{d})\big)
+    \mathrm{d}\mathcal{S}(\mathbf{x})
+    \nonumber \\[0.5em]
     &=
-        \iint\limits_{\mathcal{S}(x, y)}
-        \tilde{\bvec{p}}^\top(x, y)
-        \mathrm{e}^{2\pi \imag k \alpha(x, y)}
-        \mathrm{d}\mathcal{S}(x, y)
-        \cdot
-        \bvec{A_1}
-        \cdot
-        \bvec{\hat{a}}(k)
-    \quad .
+    \mathbf{g}^\top(\zeta, \mathbf{d})
+    *
+    \,
+    \mathbf{R}(t)
+    \,
+    \bvec{a}(\zeta)
+    \quad ,
+\end{align}
+%
+%
+where we made use of the commutativity of the convolution operator and 
+the fact that the integral is taken only over the spatial dimensions.
+We further define
+%
+\begin{align}
+    \label{eq:solution:g}
+    \mathbf{g}^\top(\zeta, \mathbf{d})
+    &\equiv
+    \iint\limits_{\mathcal{S}(\mathbf{x})}
+    \tilde{\bvec{y}}^\top(\mathbf{x})
+    \delta\big(\zeta - \mathcal{D}(\mathbf{x}, \mathbf{d})\big)
+    \mathrm{d}\mathcal{S}(\mathbf{x})
+    \nonumber \\[0.5em]
+    &=  
+    \int\limits_{\mathcal{C}(\mathbf{x}, \mathbf{d})}
+    \tilde{\bvec{y}}^\top(\mathbf{x})
+    \mathrm{d}\mathcal{C}(\mathbf{x}, \mathbf{d})
+    \quad.
+\end{align}
+%
+where the integral in the second line denotes the line integral about
+some function $\mathcal{C}(\mathbf{x}, \mathbf{d})$ corresponding to the
+set of all points on the visible disk where 
+$\zeta = \mathcal{D}(\mathbf{x}, \mathbf{d})$.
+
+Equation~(\ref{eq:solution:Fxi}) is the complete deconvolution of the
+observed spectrum into velocity terms, temporal terms, and spectral/spatial
+terms, respectively. In the following sections, we will discuss how to
+efficiently solve Equation~(\ref{eq:solution:g}).
+
+\section{Doppler imaging of rigid rotators}
+\label{sec:rigid}
+%
+In the case that the star's rotation is rigid (i.e., differential rotation
+is negligible) and other effects such as convective blueshift
+may be ignored, the radial velocity at any point on the surface is 
+simply proportional to the distance to the axis of rotation. Without loss
+of generality, if we assume the axis of rotation lies along the $y-z$ plane,
+we have
+%
+\begin{align}
+    \beta(\mathbf{x}, \mathbf{d}) = \frac{\omega \sin i \, x}{c}
+\end{align}
+%
+and
+%
+\begin{align}
+    \label{eq:rigid:D}
+    \mathcal{D}(\mathbf{x}, \mathbf{d}) &= 
+        \frac{1}{2}\ln\left( 
+            \dfrac{1 - \dfrac{\omega \sin i \, x}{c}}
+                 {1 + \dfrac{\omega \sin i \, x}{c}}
+        \right)
+    \quad ,
+\end{align}
+%
+where the parameters $\mathbf{d}$ of the Doppler field are the
+angular velocity, $\omega$, and the inclination of the star with
+respect to $\hat{y}$, $i$. 
+
+In order to solve Equation~(\ref{eq:solution:g}), let us change basis from
+spherical harmonics to polynomials on the sphere:
+%
+\begin{align}
+    \label{eq:rigid:g}
+    \mathbf{g}^\top(\zeta, \mathbf{d}) &\equiv
+    \bvec{s}^\top(\zeta, \mathbf{d})
+    \bvec{A_1}
 \end{align}
 %
 where
 %
 \begin{align}
-    \tilde{\bvec{p}}^\top(x, y) \equiv 
+    \label{eq:rigid:sTdef}
+    \mathbf{s}^\top(\zeta, \mathbf{d})
+    &\equiv
+    \int\limits_{\mathcal{C}(\mathbf{x}, \mathbf{d})}
+    \tilde{\bvec{p}}^\top(\mathbf{x})
+    \mathrm{d}\mathcal{C}(\mathbf{x}, \mathbf{d})
+\end{align}
+%
+is the vector of integral solutions for each spherical harmonic,
+%
+\begin{align}
+    \tilde{\bvec{p}}(\mathbf{x}) \equiv 
 \Big( 
     1 \quad\quad\quad\quad\quad\quad 
     x \quad\quad\quad\quad\quad\quad 
@@ -254,195 +329,46 @@ where
     yz \quad\quad\quad\quad\quad\quad 
     y^2 \quad\quad\quad\quad\quad\quad
     ... 
-\Big)
+\Big)^\top
 \end{align}
 %
-is the polynomial basis \citep[Equation 7 in][]{Luger2019}
+is the polynomial basis \citep[Equation 7 in][]{Luger2019},
 and $\bvec{A_1}$ is the change of basis matrix from spherical harmonics
 to polynomials 
 \citep[Equation B11 in][]{Luger2019}. On the observer-facing surface of 
 the unit sphere, the coordinate $z$ is given by $\sqrt{1 - x^2 - y^2}$.
 
-At this point, we have two options: we can remain in Fourier space and
-attempt to solve the surface integral in Equation~(\ref{eq:fourier:S})
-directly, or we can take the inverse Fourier transform of  
-Equation~(\ref{eq:fourier:S}) and attempt to solve the integral in
-log wavelength space. As we will see, there are advantages (and
-disadvantages) to both methods. We do the former in \S\ref{sec:analytic}
-in the latter in \S\ref{sec:convolve}.
-
-\subsection{Analytic solutions}
-\label{sec:analytic}
-In the case that the integration area $\mathcal{S}$ is the entire surface of
-the star, the integrals in Equation~(\ref{eq:fourier:S}) are
-\emph{analytic}. \xxx{Show here how the result can be computed from the 
-hypergeometric function $_3F_2.$}
-
-\subsection{Doppler shifts as a convolution}
-\label{sec:convolve}
-
-If we take the inverse Fourier transform of Equation~(\ref{eq:fourier:S}),
-we arrive at an expression for the observed spectrum:
-%
-\begin{align}
-    \label{eq:convolve:SUgly1}
-    S(\xi) 
-    &=
-    \mathcal{F}^{-1} \Bigg[\,\,\,
-        \iint\limits_{\mathcal{S}(x, y)}
-        \tilde{\bvec{p}}^\top(x, y)
-        \mathrm{e}^{2\pi \imag k \alpha(x, y)}
-        \mathrm{d}\mathcal{S}(x, y)
-        \cdot
-        \bvec{A_1}
-        \cdot
-        \bvec{\hat{a}}(k)
-    \Bigg] \nonumber \\
-    &=
-    \mathcal{F}^{-1} \Bigg[\,\,\,
-        \iint\limits_{\mathcal{S}(x, y)}
-        \tilde{\bvec{p}}^\top(x, y)
-        \mathrm{e}^{2\pi \imag k \alpha(x, y)}
-        \mathrm{d}\mathcal{S}(x, y)
-        \cdot
-        \bvec{A_1}
-    \Bigg]
-    *
-    \bvec{a}(\xi)
-    \quad ,
-\end{align}
-%
-where the second line follows from the convolution theorem, with
-$\bvec{a}(\xi) \equiv \mathcal{F}^{-1}\left[ \bvec{\hat{a}}(k) \right]$
-and $*$ denoting the convolution operator over $\xi$:
-%
-\begin{align}
-    (f * g)(\xi) \equiv \int\limits_{-\infty}^{\infty}f(\tau)g(\xi - \tau)\mathrm{d}\tau
-\end{align}
-%
-Since only the exponential term in the integrand depends on $k$, we may 
-further simplify this expression:
-%
-\begin{align}
-    \label{eq:convolve:SUgly2}
-    S(\xi) 
-    &=    
-    \iint\limits_{\mathcal{S}(x, y)}
-    \tilde{\bvec{p}}^\top(x, y)
-    \mathcal{F}^{-1} \Big[
-        \mathrm{e}^{2\pi \imag k \alpha(x, y)}
-    \Big]
-    \mathrm{d}\mathcal{S}(x, y)
-    \cdot
-    \bvec{A_1}
-    *
-    \bvec{a}(\xi)
-    \nonumber \\
-    &=    
-    \iint\limits_{\mathcal{S}(x, y)}
-    \tilde{\bvec{p}}^\top(x, y)
-    \delta\big(\xi - \alpha(x, y)\big)
-    \mathrm{d}\mathcal{S}(x, y)
-    \cdot
-    \bvec{A_1}
-    *
-    \bvec{a}(\xi)
-    \quad,
-\end{align}
-%
-where $\delta$ is the Dirac delta function. Since the integrand in the
-equation above is zero everywhere except where the argument of the
-$\delta$ function is zero, the equation may be written as a line integral 
-along some curve $\mathcal{C}(x, y)$ whose points satisfy 
-$\alpha(x, y) = \xi$
-and lie within $\mathcal{S}$:
-%
-\begin{align}
-    \label{eq:convolve:S}
-    S(\xi) 
-    &=    
-    \mathbf{g}(\xi)
-    *
-    \bvec{a}(\xi)
-    \quad,
-\end{align}
-%
-where we define
-%
-\begin{align}
-    \label{eq:convolve:g}
-    \mathbf{g}(\xi) 
-    &\equiv    
-    \mathbf{s}^\top(\xi) 
-    \cdot
-    \bvec{A_1}
-\end{align}
-%
-and
-%
-\begin{align}
-    \label{eq:convolve:sT}
-    \mathbf{s}^\top(\xi) 
-    &\equiv    
-    \int\limits_{\mathcal{C}(x, y)}
-    \tilde{\bvec{p}}^\top(x, y)
-    \mathrm{d}\mathcal{C}(x, y)
-    \quad.
-\end{align}
-
-In order to solve Equation~(\ref{eq:convolve:S}), we must assume 
-explicit functional
-forms for the velocity field $\alpha(x, y)$ and the region of integration
-$\mathcal{S}$, which we do in the following sections.
-
-\section{Doppler imaging of rigid rotators}
-\label{sec:rigid}
-%
-In the case that the star's rotation is rigid (i.e., differential rotation
-is negligible), the radial velocity at any point on the surface is 
-simply proportional to the distance to the axis of rotation. Without loss
-of generality, if we assume the axis of rotation lies along the $y-z$ plane,
-we have
-%
-\begin{align}
-    \beta(x, y) = \frac{\omega \sin i \, x}{c}
-\end{align}
-%
-and
-%
-\begin{align}
-    \label{eq:rigid:alpha}
-    \alpha(x, y) = \ln\left( 1 - \frac{\omega \sin i \, x}{c} \right)
-    \quad ,
-\end{align}
-%
-where $\omega$ is the angular velocity of the star and $i$ is the
-inclination relative to $\hat{y}$. Furthermore, if
+If
 we assume the star is unocculted, the region of integration $\mathcal{S}$ 
-is simply the unit disk, so $\mathcal{C}(x, y)$ is the set of all points
-that satisfy both $\alpha(x, y) = \xi$ and $x^2 + y^2 \le 1$.
-Solving Equation~(\ref{eq:rigid:alpha}) for $x$ and 
-setting $\alpha(x, y) = \xi$, we find that the curves $\mathcal{C}(x, y)$ 
+is simply the unit disk, so $\mathcal{C}(\mathbf{x}, \mathbf{d})$ 
+is the set of all points
+that satisfy both $\mathcal{D}(\mathbf{x}, \mathbf{d}) = \zeta$ and 
+$x^2 + y^2 \le 1$.
+Solving Equation~(\ref{eq:rigid:D}) for $x$ and 
+setting $\mathcal{D}(\mathbf{x}, \mathbf{d}) = \zeta$, we find that 
+the curves $\mathcal{C}(\mathbf{x}, \mathbf{d})$ 
 are simply vertical lines on the unit disk given by
 %
 \begin{align}
     x &= 
-        \frac{c}{\omega\sin i} \left(1 - \mathrm{e}^{\xi}\right)
+        \Bigg(\frac{c}{\omega\sin i}\Bigg) 
+        \Bigg(\frac{1 - \mathrm{e}^{2\zeta}}{1 + \mathrm{e}^{2\zeta}}\Bigg)
     \nonumber \\
-    &\equiv \gamma(\xi)
+    &\equiv \gamma(\zeta, \mathbf{d})
     \quad .
 \end{align}
 %
-The integral in Equation~(\ref{eq:convolve:sT}) is therefore just an integral
+The integral in Equation~(\ref{eq:rigid:sTdef}) is therefore just an integral
 over $y$:
 %
 \begin{align}
     \label{eq:rigid:sT}
-    \bvec{s}^\top(\xi) 
+    \bvec{s}^\top(\zeta, \mathbf{d}) 
     &=    
-    \int\limits_{-\sqrt{1 - \gamma(\xi)^2}}^{\sqrt{1 - \gamma(\xi)^2}}
+    \int\limits_{-\sqrt{1 - \gamma(\zeta, \mathbf{d})^2}}^
+                {\sqrt{1 - \gamma(\zeta, \mathbf{d})^2}}
     \tilde{\bvec{p}}^\top
-    \Big(\gamma(\xi), y\Big)
+    \Big(\gamma(\zeta, \mathbf{d}), y\Big)
     \mathrm{d}y
     \quad .
 \end{align}
@@ -480,44 +406,38 @@ We may now explicitly write down the $n^\mathrm{th}$ term of
 Equation~(\ref{eq:rigid:sT}),
 %
 \begin{align}
-    s_n(\xi) 
+    s_n(\zeta, \mathbf{d}) 
     &=    
-    \begin{dcases}
-        \gamma(\xi)^i
-        \int\limits_{-\sqrt{1 - \gamma(\xi)^2}}^{\sqrt{1 - \gamma(\xi)^2}}
-            y^j
-        \mathrm{d}y
-        &
-        \qquad k = 0
-        \\[1em]
-        \gamma(\xi)^i
-        \int\limits_{-\sqrt{1 - \gamma(\xi)^2}}^{\sqrt{1 - \gamma(\xi)^2}}
-            y^j
-            \sqrt{1 - \gamma(\xi)^2 - y^2} \,
-        \mathrm{d}y 
-        & 
-        \qquad k = 1 \quad ,
-    \end{dcases}
+    \gamma(\zeta, \mathbf{d})^i
+    \int\limits_{-\sqrt{1 - \gamma(\zeta, \mathbf{d})^2}}^
+                {\sqrt{1 - \gamma(\zeta, \mathbf{d})^2}}
+        y^j
+        \sqrt{1 - \gamma(\zeta, \mathbf{d})^2 - y^2}^k \,
+    \mathrm{d}y 
+    \quad ,
 \end{align}
 %
 and solve it analytically:
 %
 \begin{align}
         \label{eq:rigid:sTAnalytic}
-        s_n(\xi) 
+        s_n(\zeta, \mathbf{d}) 
         &=     
     \begin{dcases}
-        \frac{2 \gamma(\xi)^i \big(1 - \gamma(\xi)^ 2\big)^{\frac{j + 1}{2}}}{j + 1}
-        &
-        \qquad k = 0 \,\,\, \& \,\,\, j \, \mathrm{even}
-        \\[1em]
-        \gamma(\xi)^{i} \mathcal{I}_{j}\big(\gamma(\xi)\big)
-        &
-        \qquad k = 1 \,\,\, \& \,\,\, j \, \mathrm{even}
-        \\[1em]
         0
         &
-        \qquad j \, \mathrm{odd} \quad,
+        \qquad j \, \mathrm{odd}
+        \\[1em]
+        \frac{2 \gamma(\zeta, \mathbf{d})^i 
+        \big(1 - \gamma(\zeta, \mathbf{d})^ 2\big)^{\frac{j + 1}{2}}}{j + 1}
+        &
+        \qquad k = 0
+        \\[1em]
+        \gamma(\zeta, \mathbf{d})^{i} \mathcal{I}_{j}
+        \big(\gamma(\zeta, \mathbf{d})\big)
+        &
+        \qquad k = 1
+        \quad ,
     \end{dcases}
 \end{align}
 %
@@ -534,9 +454,9 @@ When $k = 1$, we may write the $n^\mathrm{th}$ component
 of Equation~(\ref{eq:rigid:sTAnalytic}) as
 %
 \begin{align}
-    s_n(\xi) = 
-        \gamma(\xi)^{i}
-        \mathcal{I}_{j}\big(\gamma(\xi)\big)
+    s_n(\zeta, \mathbf{d}) = 
+        \gamma(\zeta, \mathbf{d})^{i}
+        \mathcal{I}_{j}\big(\gamma(\zeta, \mathbf{d})\big)
 \end{align}
 %
 where

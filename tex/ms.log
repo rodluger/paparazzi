@@ -1117,12 +1117,11 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 (se-ascii-print.def
 File: se-ascii-print.def 2016/05/16 v1.11 stringenc: Printable ASCII characters
 
-) [1] [2] [3] [4] <<<PolynomialBasis: 25>>>
-<<<PolynomialBasis: 26>>> <<<PolynomialBasis: 27>>> [5] [6] (ms.bbl) [7]
-Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 620.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 620.
-
-(ms.aux)
-Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 620.
+) [1] [2] [3] <<<PolynomialBasis: 21>>> [4]
+<<<PolynomialBasis: 22>>> <<<PolynomialBasis: 23>>> [5] (ms.bbl) [6]
+Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 540.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 540.
+ (ms.aux)
+Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 540.
  )
-Output written on ms.xdv (7 pages, 94504 bytes).
+Output written on ms.xdv (6 pages, 91856 bytes).
