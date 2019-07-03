@@ -52,26 +52,26 @@ in the surface rest frame and
 \begin{align}
     \label{eq:intro:xi0}
     \xi_0(\xi, \mathbf{x}, \mathbf{d}) &= 
-    \xi + \mathcal{D}(\mathbf{x}, \mathbf{d})
+    \xi - \mathcal{D}(\mathbf{x}, \mathbf{d})
 \end{align}
 %
 is the log wavelength in the rest frame. The quantity $\mathcal{D}$ is
-computed from the formula for the Doppler shift and is equal to
+the Doppler shift in log wavelength space:
 %
 \begin{align}
     \label{eq:intro:D}
     \mathcal{D}(\mathbf{x}, \mathbf{d}) 
         &=
         \frac{1}{2}\ln\left( 
-            \frac{1 - \beta(\mathbf{x}, \mathbf{d})}{1 + \beta(\mathbf{x}, 
+            \frac{1 + \beta(\mathbf{x}, \mathbf{d})}{1 - \beta(\mathbf{x}, 
             \mathbf{d})} 
         \right)
 \end{align}
 %
 where $\beta = v(\mathbf{x}, \mathbf{d}) / c$ is the ratio of the 
 radial velocity at a point on the surface of the star to the speed of light.
-In keeping with the literature, we take positive values of $v$ to mean 
-redshifts.
+In keeping with the literature, we take positive values of $v$ (and
+$\mathcal{D}$) to mean redshifts.
 
 A common approach to computing the Doppler-shifted spectrum is to
 evaluate the spectrum at the rest frame wavelength 
@@ -202,7 +202,7 @@ of the spectrum in the rest frame with a delta function:
 \begin{align}
     I(\xi, \mathbf{x}, t) &= 
         I_0(\xi_0, \mathbf{x}, t) 
-        * \delta\big(\xi_0 - \xi - \mathcal{D}(\mathbf{x}, \mathbf{d})\big)
+        * \delta\big(\mathcal{D}(\mathbf{x}, \mathbf{d}) - (\xi - \xi_0)\big)
         \quad,
 \end{align}
 %
@@ -220,7 +220,7 @@ observed spectrum:
     \tilde{\bvec{y}}^\top(\mathbf{x})
     \mathbf{R}(t)
     \bvec{a}(\xi_0)
-    * \delta\big(\xi_0 - \xi - \mathcal{D}(\mathbf{x}, \mathbf{d})\big)
+    * \delta\big(\mathcal{D}(\mathbf{x}, \mathbf{d}) - (\xi - \xi_0)\big)
     \mathrm{d}\mathcal{S}(\mathbf{x})
     \nonumber \\[0.5em]
     &=
@@ -239,12 +239,12 @@ the fact that the integral is taken only over the spatial dimensions.
 We further define
 %
 \begin{align}
-    \label{eq:solution:g}
+    \label{eq:solution:gT}
     \mathbf{g}^\top(\mathcal{D})
     &\equiv
     \iint\limits_{\mathcal{S}(\mathbf{x})}
     \tilde{\bvec{y}}^\top(\mathbf{x})
-    \delta\big(\xi_0 - \xi - \mathcal{D}(\mathbf{x}, \mathbf{d})\big)
+    \delta\big(\mathcal{D}(\mathbf{x}, \mathbf{d}) - (\xi - \xi_0)\big)
     \mathrm{d}\mathcal{S}(\mathbf{x})
     \nonumber \\[0.5em]
     &=  
@@ -257,12 +257,12 @@ We further define
 where the integral in the second line denotes the line integral about
 some function $\mathcal{C}(\mathbf{x}, \mathbf{d})$ corresponding to the
 set of all points on the visible disk where 
-$\xi_0 - \xi = \mathcal{D}(\mathbf{x}, \mathbf{d})$.
+$\mathcal{D}(\mathbf{x}, \mathbf{d}) = \xi - \xi_0$.
 
 Equation~(\ref{eq:solution:Fxi}) is the complete deconvolution of the
 observed spectrum into velocity terms, temporal terms, and spectral/spatial
 terms, respectively. In the following sections, we will discuss how to
-efficiently solve Equation~(\ref{eq:solution:g}).
+efficiently solve Equation~(\ref{eq:solution:gT}).
 
 \section{Doppler imaging of rigid rotators}
 \label{sec:rigid}
@@ -284,8 +284,8 @@ and
     \label{eq:rigid:D}
     \mathcal{D}(\mathbf{x}, \mathbf{d}) &= 
         \frac{1}{2}\ln\left( 
-            \dfrac{1 - \dfrac{\omega \sin i \, x}{c}}
-                 {1 + \dfrac{\omega \sin i \, x}{c}}
+            \dfrac{1 + \dfrac{\omega \sin i \, x}{c}}
+                 {1 - \dfrac{\omega \sin i \, x}{c}}
         \right)
     \quad ,
 \end{align}
@@ -294,11 +294,11 @@ where the parameters $\mathbf{d}$ of the Doppler field are the
 angular velocity, $\omega$, and the inclination of the star with
 respect to $\hat{y}$, $i$. 
 
-In order to solve Equation~(\ref{eq:solution:g}), let us change basis from
+In order to solve Equation~(\ref{eq:solution:gT}), let us change basis from
 spherical harmonics to polynomials on the sphere:
 %
 \begin{align}
-    \label{eq:rigid:g}
+    \label{eq:rigid:gT}
     \mathbf{g}^\top(\mathcal{D}) &\equiv
     \bvec{s}^\top(\mathcal{D})
     \bvec{A_1}
@@ -339,11 +339,28 @@ to polynomials
 \citep[Equation B11 in][]{Luger2019}. On the observer-facing surface of 
 the unit sphere, the coordinate $z$ is given by $\sqrt{1 - x^2 - y^2}$.
 
-If
-we assume the star is unocculted, the region of integration $\mathcal{S}$ 
+\begin{figure}[h!]
+    \begin{centering}
+    \includegraphics[width=\linewidth]{figures/g_rigid.pdf}
+    \oscaption{g_rigid}{%
+        The Doppler $\mathbf{g}$ basis for a rigidly rotating star
+        computed from Equation~(\ref{eq:rigid:gT}) and
+        Equation~(\ref{eq:rigid:sTAnalytic}) up to spherical 
+        harmonic degree $l=10$. Rows correspond to the degree $l$ and
+        columns correspond to the order $m$. These functions encode
+        the contribution of each spherical harmonic to the rotational
+        broadening of features in the stellar spectrum. Because the
+        rotational axis is chosen to be aligned with $\hat{y}$,
+        none of the $m < 0$ harmonics contribute
+        \label{fig:g_rigid}
+    }
+    \end{centering}
+\end{figure}
+
+If we assume the star is unocculted, the region of integration $\mathcal{S}$ 
 is simply the unit disk, so $\mathcal{C}(\mathbf{x}, \mathbf{d})$ 
 is the set of all points
-that satisfy both $\xi_0 - \xi = \mathcal{D}(\mathbf{x}, \mathbf{d})$ and 
+that satisfy both $\mathcal{D}(\mathbf{x}, \mathbf{d}) = \xi - \xi_0$ and 
 $x^2 + y^2 \le 1$.
 Solving Equation~(\ref{eq:rigid:D}) for $x$, we find that 
 the curves $\mathcal{C}(\mathbf{x}, \mathbf{d})$ 
@@ -352,8 +369,8 @@ are simply vertical lines on the unit disk given by
 \begin{align}
     x(\mathcal{D}) &= 
         \Bigg(\frac{c}{\omega\sin i}\Bigg) 
-        \Bigg(\frac{1 - \mathrm{e}^{2\mathcal{D}}}
-                   {1 + \mathrm{e}^{2\mathcal{D}}}\Bigg)
+        \Bigg(\frac{\mathrm{e}^{2\mathcal{D}} - 1}
+                   {\mathrm{e}^{2\mathcal{D}} + 1}\Bigg)
     \quad .
 \end{align}
 %
@@ -443,8 +460,40 @@ and solve it analytically:
 where $\mathcal{I}_j(x)$ is computed analytically
 from the upward recurrence relation given by Equation~(\ref{eq:app:Ij}),
 with $\mathcal{I}_0(x)$ given by Equation~(\ref{eq:app:I0}).
+%
+Figure~\ref{fig:g_rigid} shows the $\mathbf{g}$ basis computed from
+the formulae above and Equation~(\ref{eq:rigid:gT}) up to spherical 
+harmonic degree $l=10$.
 
+\begin{figure}[p!]
+    \begin{centering}
+    \includegraphics[width=0.6\linewidth]{figures/spot_rigid.pdf}
+    \oscaption{spot_rigid}{%
+        A caption.
+        \label{fig:spot_rigid}
+    }
+    \end{centering}
+\end{figure}
+
+\begin{figure}[h!]
+    \begin{centering}
+    \includegraphics[width=0.65\linewidth]{figures/compare_rigid.pdf}
+    \oscaption{compare_rigid}{%
+        A caption.
+        \label{fig:compare_rigid}
+    }
+    \end{centering}
+\end{figure}
+
+%
+%
+%
+%
 \appendix
+%
+%
+%
+%
 
 \section{Integrals}
 \subsection{Equation~(\ref{eq:rigid:sTAnalytic})}
@@ -504,7 +553,8 @@ which, in our case, simplifies to
         \cos^2\psi \,
     \mathrm{d}\psi
     &=
-    \frac{j - 1}{j + 2}\int\limits_{-\frac{\pi}{2}}^{\frac{\pi}{2}}\sin^{j-2}\psi \cos^2\psi \mathrm{d}\psi
+    \frac{j - 1}{j + 2}\int\limits_{-\frac{\pi}{2}}^
+        {\frac{\pi}{2}}\sin^{j-2}\psi \cos^2\psi \mathrm{d}\psi
     \quad.
 \end{align}
 %

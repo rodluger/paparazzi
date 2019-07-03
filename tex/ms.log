@@ -1117,11 +1117,31 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 (se-ascii-print.def
 File: se-ascii-print.def 2016/05/16 v1.11 stringenc: Printable ASCII characters
 
-) [1] [2] [3] <<<PolynomialBasis: 21>>> [4]
-<<<PolynomialBasis: 22>>> <<<PolynomialBasis: 23>>> [5] (ms.bbl) [6]
-Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 539.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 539.
+) [1] [2] [3]
+File: figures/g_rigid.pdf Graphic file (type pdf)
+<use figures/g_rigid.pdf>
+
+
+LaTeX Warning: `!h' float specifier changed to `!ht'.
+
+<<<PolynomialBasis: 21>>> [4] <<<PolynomialBasis: 22>>>
+<<<PolynomialBasis: 23>>> [5]
+File: figures/spot_rigid.pdf Graphic file (type pdf)
+<use figures/spot_rigid.pdf>
+File: figures/compare_rigid.pdf Graphic file (type pdf)
+<use figures/compare_rigid.pdf>
+
+
+LaTeX Warning: `!h' float specifier changed to `!ht'.
+
+[6]
+
+LaTeX Warning: A float is stuck (cannot be placed) on input line 579.
+
+[7] (ms.bbl) [8]
+Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 584.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 584.
  (ms.aux)
-Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 539.
+Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 584.
  )
-Output written on ms.xdv (6 pages, 90584 bytes).
+Output written on ms.xdv (8 pages, 96644 bytes).

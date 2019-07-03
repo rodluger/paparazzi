@@ -15,6 +15,7 @@ matrix:
 install:
     # Install conda and tectonic
     - source .ci/install.sh
+    - pip install git+git://github.com/rodluger/starry/@dev
 
 cache:
     directories:
