@@ -351,7 +351,8 @@ the unit sphere, the coordinate $z$ is given by $\sqrt{1 - x^2 - y^2}$.
         the contribution of each spherical harmonic to the rotational
         broadening of features in the stellar spectrum. Because the
         rotational axis is chosen to be aligned with $\hat{y}$,
-        none of the $m < 0$ harmonics contribute
+        none of the $m < 0$ harmonics contribute to the observed
+        spectrum.
         \label{fig:g_rigid}
     }
     \end{centering}
@@ -469,7 +470,18 @@ harmonic degree $l=10$.
     \begin{centering}
     \includegraphics[width=0.6\linewidth]{figures/spot_rigid.pdf}
     \oscaption{spot_rigid}{%
-        A caption.
+        Time evolution of a Gaussian absorption line on a rigidly rotating, 
+        spotted star computed from the analytic formulae in \S\ref{sec:rigid}.
+        The stellar surface is modeled as a spherical harmonic expansion
+        up to $l=20$, and the line shape is assumed to be the same everywhere;
+        the spot simply downweights the local intensity at all wavelengths.
+        As the spot rotates into view (left panel), the line shape changes
+        slightly (center panel). The residuals between the line when the
+        spot is in view (solid) and when it is on the backside of the star
+        (dotted) are shown in the right panel, where
+        a Gaussian-like feature can be seen tracking the spot as it rotates
+        from the blueshifted hemisphere to the redshifted hemisphere of
+        the star.
         \label{fig:spot_rigid}
     }
     \end{centering}
@@ -479,7 +491,13 @@ harmonic degree $l=10$.
     \begin{centering}
     \includegraphics[width=0.65\linewidth]{figures/compare_rigid.pdf}
     \oscaption{compare_rigid}{%
-        A caption.
+        The observed spectrum when the spot is in view computed with
+        \starry (blue) and numerically (orange). The problem setup
+        is the same as that in Figure~\ref{fig:spot_rigid}. The bottom
+        panel shows the absolute value of the difference between the 
+        two spectra for different grid resolutions in the numerical solution.
+        As the number of grid points increases, the numerical solution
+        converges to the \starry solution.
         \label{fig:compare_rigid}
     }
     \end{centering}

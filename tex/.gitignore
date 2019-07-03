@@ -3,6 +3,7 @@
 *.DS_Store
 *.ipynb_checkpoints
 *.pdf
+*__pycache__*
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

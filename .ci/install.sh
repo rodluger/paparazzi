@@ -14,8 +14,18 @@ if ! command -v conda > /dev/null; then
       conda create --yes -n test python=$PYTHON_VERSION;
       conda activate test;
       conda install tectonic;
-      conda install -c conda-forge numpy=$NUMPY_VERSION scipy matplotlib setuptools pytest pytest-cov pip sympy;
+      conda install -c conda-forge numpy=$NUMPY_VERSION scipy matplotlib setuptools pytest pytest-cov pip sympy pybind11;
 fi
 
 # Display some debugging info
 conda info -a
+
+# Install exoplanet
+pip install astropy
+pip install exoplanet
+
+# Install the dev version of starry
+git clone --single-branch --branch dev https://github.com/rodluger/starry.git
+pushd starry
+      python setup.py develop
+popd
