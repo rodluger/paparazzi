@@ -44,10 +44,10 @@ S /= S[obs][0]
 res_arr = [50, 100, 300] #, 600]
 Snum = [np.zeros_like(xi) for i in range(len(res_arr))]
 for i, res in enumerate(res_arr):
-    image = np.tile(map.render(res=res).reshape(-1, 1), len(xi))
     x, y, z = map.ops.compute_ortho_grid(res).eval()
     D = 0.5 * np.log((1 + wsini_c * x) / (1 - wsini_c * x))
     spec = np.interp(xi + D.reshape(-1, 1), xi, a0)
+    image = map.render(res=res).reshape(-1, 1)
     Snum[i] = np.nansum(image * spec, axis=0)
     Snum[i] /= Snum[i][0]
 
@@ -71,7 +71,7 @@ ax[1].set_ylabel(r"residuals")
 # Show the image
 aximg = inset_axes(ax[0], width="15%", height="45%", loc=4, borderpad=1)
 img = map.render(res=300).reshape(300, 300)
-aximg.imshow(img, origin="lower", cmap="plasma")
+aximg.imshow(img, origin="lower", cmap="plasma", vmin=0.042, vmax=0.353)
 aximg.axis('off')
 
 fig.savefig("compare_rigid.pdf", bbox_inches="tight")
