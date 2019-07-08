@@ -18,9 +18,9 @@ ylm = np.array(map.y)
 assert np.nanmin(map.render()) > 0
 
 # Log wavelength array
-xi = np.linspace(-2e-5, 2e-5, 9999)
+xi = np.linspace(-7e-6, 7e-6, 499)
 dxi = xi[1] - xi[0]
-obs = np.abs(xi) < 1e-5
+obs = np.abs(xi) < 4e-6
 
 # A Gaussian absorption line
 amp = 1.0
@@ -42,14 +42,14 @@ S /= S[obs][0]
 
 # Numerical
 res_arr = [50, 100, 300] #, 600]
-Snum = [np.zeros_like(xi) for i in range(len(res_arr))]
+Snum = np.array([np.zeros_like(xi) for i in range(len(res_arr))])
 for i, res in enumerate(res_arr):
     x, y, z = map.ops.compute_ortho_grid(res).eval()
     D = 0.5 * np.log((1 + wsini_c * x) / (1 - wsini_c * x))
-    spec = np.interp(xi + D.reshape(-1, 1), xi, a0)
     image = map.render(res=res).reshape(-1, 1)
+    spec = np.interp(xi + D.reshape(-1, 1), xi, a0)
     Snum[i] = np.nansum(image * spec, axis=0)
-    Snum[i] /= Snum[i][0]
+    Snum[i] /= Snum[i, 0]
 
 # Compare
 fig, ax = plt.subplots(2, sharex=True, figsize=(8, 8))
