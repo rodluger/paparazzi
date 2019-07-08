@@ -25,6 +25,7 @@ pip install astropy
 pip install exoplanet
 
 # Install the dev version of starry
+pip install pybind11
 git clone --single-branch --branch dev https://github.com/rodluger/starry.git
 pushd starry
       python setup.py develop
