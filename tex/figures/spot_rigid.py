@@ -92,8 +92,8 @@ for t in range(nt):
                     extent=(-1, 1, -1, 1),
                     cmap=cmap, vmin=vmin,
                     vmax=vmax)
-    ax[t, 0].set_xlim(-3, 1)
-    ax[t, 0].set_ylim(-1, 1)
+    ax[t, 0].set_xlim(-3, 1.05)
+    ax[t, 0].set_ylim(-1.05, 1.05)
     ax[t, 0].axis('off')
 
 ax[0, 1].set_title("spectrum", y=1.4)
