@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import matplotlib.pyplot as plt; plt.switch_backend("Qt5Agg") # DEBUG
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.linalg import toeplitz
 import starry
@@ -7,8 +7,14 @@ from utils import RigidRotationSolver
 from tqdm import tqdm
 
 
+# DEBUG
+plt.switch_backend("Qt5Agg")
+import os
+if int(os.getenv('TRAVIS', 0)): 
+    quit()
+
 # Params
-lmax = 5
+lmax = 10
 lam_max = 2e-5
 K = 999                 # Number of wavs in model
 Ko = 799                # Number of wavs actually observed
@@ -22,8 +28,8 @@ spot_lon = 0.0
 inc = 90.0
 w_c = 2.e-6
 P = 1.0
-t_min = -0.25
-t_max = 0.25
+t_min = -0.5
+t_max = 0.5
 M = 11                  # Number of observations
 N = (lmax + 1) ** 2     # Number of Ylms
 
@@ -45,6 +51,10 @@ a = A.reshape(-1)
 # The Doppler `g` functions
 solver = RigidRotationSolver(lmax)
 g = solver.g(lam, w_c * np.sin(inc * np.pi / 180.0)).T
+
+# Normalize them (?) Check if this is
+# the best way to do this
+g /= np.trapz(g[0])
 
 # Toeplitz convolve
 T = np.empty((N, K, K))
@@ -72,10 +82,10 @@ for t in tqdm(range(M)):
 D = D[:, (K - Ko) // 2:-(K - Ko) // 2, :]
 D = D.reshape(M * Ko, N * K)
 
-foo = np.log10(np.abs(D))
-foo[foo < -12] = np.nan
-plt.imshow(foo, aspect='auto')
-plt.colorbar()
+#foo = np.log10(np.abs(D))
+#foo[foo < -12] = np.nan
+#plt.imshow(foo, aspect='auto')
+#plt.colorbar()
 
 plt.figure()
 f = np.dot(D, a)
