@@ -10,8 +10,8 @@ from tqdm import tqdm
 # Params
 lmax = 5
 lam_max = 2e-5
-K = 999                 # Number of wavs observed
-#Kp = K + 200            # Number of wavs in padded array
+K = 999                 # Number of wavs in model
+Ko = 799                # Number of wavs actually observed
 line_amp = 1.0
 line_mu = 0.0
 line_sigma = 3e-7
@@ -24,12 +24,11 @@ w_c = 2.e-6
 P = 1.0
 t_min = -0.25
 t_max = 0.25
-M = 11                   # Number of observations
+M = 11                  # Number of observations
 N = (lmax + 1) ** 2     # Number of Ylms
 
 # Log wavelength array
 lam = np.linspace(-lam_max, lam_max, K)
-obs = np.abs(lam) < 0.5 * lam_max
 
 # A Gaussian absorption line
 I0 = 1 - line_amp * np.exp(-0.5 * (lam - line_mu) ** 2 / line_sigma ** 2)
@@ -68,7 +67,10 @@ for t in tqdm(range(M)):
         idx = slice(l ** 2, (l + 1) ** 2)
         TR[idx] = np.dot(T[idx].T, R[t][l].T).T
     D[t] = TR.reshape(N * K, K).T
-D = D.reshape(M * K, N * K)
+
+# Trim and reshape
+D = D[:, (K - Ko) // 2:-(K - Ko) // 2, :]
+D = D.reshape(M * Ko, N * K)
 
 foo = np.log10(np.abs(D))
 foo[foo < -12] = np.nan
