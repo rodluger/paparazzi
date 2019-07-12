@@ -75,6 +75,12 @@ for t in tqdm(range(M)):
     TR = np.empty_like(T)
     for l in range(lmax + 1):
         idx = slice(l ** 2, (l + 1) ** 2)
+
+        if l == 1:
+            plt.imshow(T[idx], apect='auto')
+            plt.show()
+            quit()
+
         TR[idx] = np.tensordot(R[t][l], T[idx], axes=1)
     D[t] = TR.reshape(N * K, K).T
 
