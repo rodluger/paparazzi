@@ -14,7 +14,7 @@ if int(os.getenv('TRAVIS', 0)):
     quit()
 
 # Params
-lmax = 10
+lmax = 3
 lam_max = 2e-5
 K = 999                 # Number of wavs in model
 Ko = 799                # Number of wavs actually observed
@@ -25,7 +25,7 @@ spot_amp = -0.1
 spot_sigma = 0.05
 spot_lat = 30.0
 spot_lon = 0.0
-inc = 90.0
+inc = 60.0
 w_c = 2.e-6
 P = 1.0
 t_min = -0.5
@@ -75,17 +75,19 @@ for t in tqdm(range(M)):
     TR = np.empty_like(T)
     for l in range(lmax + 1):
         idx = slice(l ** 2, (l + 1) ** 2)
-        TR[idx] = np.dot(T[idx].T, R[t][l].T).T
+        TR[idx] = np.tensordot(R[t][l], T[idx], axes=1)
     D[t] = TR.reshape(N * K, K).T
 
 # Trim and reshape
 D = D[:, (K - Ko) // 2:-(K - Ko) // 2, :]
 D = D.reshape(M * Ko, N * K)
 
-#foo = np.log10(np.abs(D))
-#foo[foo < -12] = np.nan
-#plt.imshow(foo, aspect='auto')
-#plt.colorbar()
+# DEBUG
+DTD = np.dot(D.T, D)
+foo = np.log10(np.abs(DTD))
+foo[foo < -12] = np.nan
+plt.imshow(foo, aspect='auto')
+plt.colorbar()
 
 plt.figure()
 f = np.dot(D, a)
