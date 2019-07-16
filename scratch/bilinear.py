@@ -8,14 +8,8 @@ from utils import RigidRotationSolver
 from tqdm import tqdm
 import exoplanet as xo
 import theano.tensor as tt
+import theano.sparse as ts
 import pymc3 as pm
-
-
-# DEBUG
-plt.switch_backend("Qt5Agg")
-import os
-if int(os.getenv('TRAVIS', 0)): 
-    quit()
 
 
 # Params
@@ -69,8 +63,8 @@ for n in range(N):
 
 # Rotation matrices
 axis = [0, np.sin(inc * np.pi / 180), np.cos(inc * np.pi / 180)]
-time = np.linspace(t_min, t_max, M)
-theta = 2 * np.pi / P * time
+t = np.linspace(t_min, t_max, M)
+theta = 2 * np.pi / P * t
 R = [map.ops.R(axis, t) for t in theta]
 
 # The design matrix
@@ -82,19 +76,20 @@ for t in tqdm(range(M)):
         TR[idx] = np.tensordot(R[t][l].T, T[idx], axes=1)
     Dt[t] = hstack(TR)
 D = vstack(Dt)
-
-# DEBUG: for some reason the sparse dot is much slower
-D = np.array(D.todense())
-
-# Synthetic spectrum
-f = D.dot(spot.reshape(-1, 1).dot(I0.reshape(1, -1)).reshape(-1))
-ferr = 0.0001
-np.random.seed(12)
-f += ferr * np.random.randn(M * K)
+D = D.tocsr()
 
 # Mask the edges
 inds = np.tile(np.arange(K), M)
-obs = (inds > Kpad) & (inds < K - Kpad)
+obs = (inds >= Kpad) & (inds < K - Kpad)
+Kobs = K - 2 * Kpad
+D = D[obs]
+
+# Synthetic spectrum
+a = spot.reshape(-1, 1).dot(I0.reshape(1, -1)).reshape(-1)
+f = D.dot(a)
+ferr = 0.0001
+np.random.seed(13)
+f += ferr * np.random.randn(M * Kobs)
 
 # Set up the model
 with pm.Model() as model:
@@ -114,8 +109,8 @@ with pm.Model() as model:
     vT = tt.reshape(vT, (1, K))
     
     # Compute the model
-    uvT = tt.reshape(tt.dot(u, vT), (N * K,))
-    f_model = tt.dot(D, uvT)
+    uvT = tt.reshape(tt.dot(u, vT), (N * K, 1))
+    f_model = tt.reshape(ts.dot(D, uvT), (M * Kobs,))
 
     # Track some values for plotting later
     pm.Deterministic("f_model", f_model)
@@ -124,8 +119,7 @@ with pm.Model() as model:
     f_model_guess = xo.eval_in_model(f_model)
 
     # The likelihood function assuming known Gaussian uncertainty
-    pm.Normal("obs", mu=f_model[obs], sd=ferr, observed=f[obs])
-
+    pm.Normal("obs", mu=f_model, sd=ferr, observed=f)
 
 # Maximum likelihood solution
 with model:
@@ -137,15 +131,11 @@ ax.plot(lam, I0)
 ax.plot(lam, map_soln["vT"].reshape(-1))
 
 fig, ax = plt.subplots(M, figsize=(3, 8), sharex=True, sharey=True)
-F = f.reshape(M, K)
-F_model = map_soln["f_model"].reshape(M, K)
-if Kpad == 0:
-    inds = slice(None)
-else:
-    inds = slice(Kpad, K - Kpad)
+F = f.reshape(M, Kobs)
+F_model = map_soln["f_model"].reshape(M, Kobs)
 for m in range(M): 
-    ax[m].plot(lam[inds], F[m][inds] / F[m][Kpad])
-    ax[m].plot(lam[inds], F_model[m][inds] / F[m][Kpad])
+    ax[m].plot(lam[Kpad:-Kpad], F[m] / F[m][0])
+    ax[m].plot(lam[Kpad:-Kpad], F_model[m] / F[m][0])
     ax[m].axis('off')
 
 ntheta = 12

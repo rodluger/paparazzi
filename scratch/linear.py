@@ -8,13 +8,6 @@ from utils import RigidRotationSolver
 from tqdm import tqdm
 
 
-# DEBUG
-plt.switch_backend("Qt5Agg")
-import os
-if int(os.getenv('TRAVIS', 0)): 
-    quit()
-
-
 # Params
 lmax = 5
 lam_max = 2e-5
