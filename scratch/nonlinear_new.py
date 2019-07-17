@@ -15,14 +15,13 @@ import pymc3 as pm
 # Params
 lmax = 8
 lam_max = 2e-5
-K = 199                 # Number of wavs in model
-Kpad = 15
+K = 199                 # Number of wavs observed
 inc = 60.0
 v_c = 2.e-6
 P = 1.0
 t_min = -0.5
 t_max = 0.5
-M = 99                  # Number of observations
+M = 99                 # Number of observations
 N = (lmax + 1) ** 2     # Number of Ylms
 
 # Log wavelength array
@@ -43,48 +42,19 @@ I0 = np.interp(lam, lam_hr, I0)
 map = starry.Map(lmax, lazy=False)
 map.inc = inc
 map.load("vogtstar.jpg")
-spot = np.array(map.y)
+ylms = np.array(map.y)
 
-# The Doppler `g` functions
+# The Doppler design matrix
 solver = RigidRotationSolver(lmax)
-g = solver.g(lam, v_c * np.sin(inc * np.pi / 180.0))
-
-# Toeplitz convolve
-T = [None for n in range(N)]
-for n in range(N):
-    col0 = np.pad(g[n, :K // 2 + 1][::-1], (0, K // 2), mode='constant')
-    row0 = np.pad(g[n, K // 2:], (0, K // 2), mode='constant')
-    T[n] = csr_matrix(toeplitz(col0, row0))
-
-# Rotation matrices
-axis = [0, np.sin(inc * np.pi / 180), np.cos(inc * np.pi / 180)]
-t = np.linspace(t_min, t_max, M)
-theta = 2 * np.pi / P * t
-R = [map.ops.R(axis, t) for t in theta]
-
-# The design matrix
-Dt = [None for t in range(M)]
-for t in tqdm(range(M)):
-    TR = [None for n in range(N)]
-    for l in range(lmax + 1):
-        idx = slice(l ** 2, (l + 1) ** 2)
-        TR[idx] = np.tensordot(R[t][l].T, T[idx], axes=1)
-    Dt[t] = hstack(TR)
-D = vstack(Dt)
-D = D.tocsr()
-
-# Mask the edges
-inds = np.tile(np.arange(K), M)
-obs = (inds >= Kpad) & (inds < K - Kpad)
-Kobs = K - 2 * Kpad
-D = D[obs]
+theta = 2 * np.pi / P * np.linspace(t_min, t_max, M)
+solver.compute(lam, v_c=v_c, inc=inc, theta=theta)
 
 # Synthetic spectrum
-a = spot.reshape(-1, 1).dot(I0.reshape(1, -1)).reshape(-1)
-f = D.dot(a)
+a = ylms.reshape(-1, 1).dot(solver.pad(I0).reshape(1, -1)).reshape(-1)
+f = solver.D.dot(a)
 ferr = 0.0001
 np.random.seed(13)
-f += ferr * np.random.randn(M * Kobs)
+f += ferr * np.random.randn(M * K)
 
 # Set up the model
 with pm.Model() as model:
@@ -95,30 +65,17 @@ with pm.Model() as model:
     cov_u = 1e-2 * np.eye(N)
     cov_u[0, 0] = 1e-10
     u = pm.MvNormal("u", mu_u, cov_u, shape=(N,))
-    u = tt.reshape(u, (N, 1))
+    u = tt.reshape(u, (-1, 1))
 
     # The spectral basis
-    if False:
-
-        mu_vT_ = np.ones(K - 2 * Kpad)
-        cov_vT_ = 1e-2 * np.eye(K - 2 * Kpad)
-        vT_ = pm.MvNormal("vT_", mu_vT_, cov_vT_, shape=(K - 2 * Kpad,))
-        vT = tt.concatenate((tt.ones(Kpad),
-                            vT_,
-                            tt.ones(Kpad)))
-        pm.Deterministic("vT", vT)
-        vT = tt.reshape(vT, (1, K))
-
-    else:
-
-        mu_vT = np.ones(K)
-        cov_vT = 1e-2 * np.eye(K)
-        vT = pm.MvNormal("vT", mu_vT, cov_vT, shape=(K,))
-        vT = tt.reshape(vT, (1, K))
+    mu_vT = np.ones(K)
+    cov_vT = 1e-2 * np.eye(K)
+    vT = pm.MvNormal("vT", mu_vT, cov_vT, shape=(K,))
+    vT_ = tt.reshape(solver.pad(vT), (1, -1))
     
     # Compute the model
-    uvT = tt.reshape(tt.dot(u, vT), (N * K, 1))
-    f_model = tt.reshape(ts.dot(D, uvT), (M * Kobs,))
+    uvT = tt.reshape(tt.dot(u, vT_), (-1, 1))
+    f_model = tt.reshape(ts.dot(solver.D, uvT), (-1,))
 
     # Track some values for plotting later
     pm.Deterministic("f_model", f_model)
@@ -139,11 +96,11 @@ ax.plot(lam, I0)
 ax.plot(lam, map_soln["vT"].reshape(-1))
 
 fig, ax = plt.subplots(M, figsize=(3, 8), sharex=True, sharey=True)
-F = f.reshape(M, Kobs)
-F_model = map_soln["f_model"].reshape(M, Kobs)
+F = f.reshape(M, K)
+F_model = map_soln["f_model"].reshape(M, K)
 for m in range(M): 
-    ax[m].plot(lam[Kpad:-Kpad], F[m] / F[m][0])
-    ax[m].plot(lam[Kpad:-Kpad], F_model[m] / F[m][0])
+    ax[m].plot(lam, F[m] / F[m][0])
+    ax[m].plot(lam, F_model[m] / F[m][0])
     ax[m].axis('off')
 
 ntheta = 12
