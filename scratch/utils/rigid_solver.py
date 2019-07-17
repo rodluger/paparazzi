@@ -28,6 +28,10 @@ class RigidRotationSolver(object):
         # Grab the rotation matrix op
         self._R = map.ops.R
 
+        #
+        self.kernel_width = None
+        self.D = None
+
     def _Ij(self, j, x):
         """
         
@@ -104,9 +108,9 @@ class RigidRotationSolver(object):
             T[n] = csr_matrix(toeplitz(col0, row0))
         return T
 
-    def D(self, lam, v_c=2.e-6, inc=90.0, theta=0.0, quiet=False):
+    def compute(self, lam, v_c=2.e-6, inc=90.0, theta=0.0, quiet=False):
         """
-        The Doppler design matrix.
+        Compute the Doppler design matrix.
 
         """
         # Compute some stuff
@@ -124,6 +128,7 @@ class RigidRotationSolver(object):
         W = (np.abs(0.5 * np.log((1 + vsini_c) / (1 - vsini_c)))) 
         W /= dlam
         W = int(np.ceil(W))
+        self.kernel_width = 2 * W
 
         # Pad the wavelength array
         pad_l = np.linspace(lam[0] - W * dlam, lam[0], W + 1)[:-1]
@@ -152,6 +157,14 @@ class RigidRotationSolver(object):
                               np.ones_like(lam), np.zeros_like(pad_r)))
         obs = np.array(obs, dtype=bool)
         obs = np.tile(obs, M)
-        D = D[obs]
-        
-        return D
+        self.D = D[obs]
+    
+    def pad(self, array, value=1.0):
+        """
+
+        """
+        return np.concatenate((
+                    value * np.ones(self.kernel_width // 2),
+                    array,
+                    value * np.ones(self.kernel_width // 2)
+                ))
