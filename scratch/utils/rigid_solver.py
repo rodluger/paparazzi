@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import starry
+from starry.ops.utils import is_theano
+import theano.tensor as tt
 from scipy.linalg import toeplitz
 from scipy.sparse import csr_matrix, hstack, vstack, diags
 from tqdm import tqdm
@@ -163,8 +165,15 @@ class RigidRotationSolver(object):
         """
 
         """
-        return np.concatenate((
-                    value * np.ones(self.kernel_width // 2),
-                    array,
-                    value * np.ones(self.kernel_width // 2)
-                ))
+        if is_theano(array):
+            return tt.concatenate((
+                        value * tt.ones(self.kernel_width // 2),
+                        array,
+                        value * tt.ones(self.kernel_width // 2)
+                    ))
+        else:
+            return np.concatenate((
+                        value * np.ones(self.kernel_width // 2),
+                        array,
+                        value * np.ones(self.kernel_width // 2)
+                    ))

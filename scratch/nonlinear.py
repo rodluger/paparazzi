@@ -42,7 +42,7 @@ I0 = np.interp(lam, lam_hr, I0)
 map = starry.Map(lmax, lazy=False)
 map.inc = inc
 map.load("vogtstar.jpg")
-spot = np.array(map.y)
+ylms = np.array(map.y)
 
 # The Doppler design matrix
 solver = RigidRotationSolver(lmax)
@@ -50,15 +50,11 @@ theta = 2 * np.pi / P * np.linspace(t_min, t_max, M)
 solver.compute(lam, v_c=v_c, inc=inc, theta=theta)
 
 # Synthetic spectrum
-a = spot.reshape(-1, 1).dot(solver.pad(I0).reshape(1, -1)).reshape(-1)
+a = ylms.reshape(-1, 1).dot(solver.pad(I0).reshape(1, -1)).reshape(-1)
 f = solver.D.dot(a)
 ferr = 0.0001
 np.random.seed(13)
 f += ferr * np.random.randn(M * K)
-
-plt.plot(lam, f)
-plt.show()
-quit()
 
 # Set up the model
 with pm.Model() as model:
@@ -69,17 +65,17 @@ with pm.Model() as model:
     cov_u = 1e-2 * np.eye(N)
     cov_u[0, 0] = 1e-10
     u = pm.MvNormal("u", mu_u, cov_u, shape=(N,))
-    u = tt.reshape(u, (N, 1))
+    u = tt.reshape(u, (-1, 1))
 
     # The spectral basis
     mu_vT = np.ones(K)
     cov_vT = 1e-2 * np.eye(K)
-    vT = pm.MvNormal("vT", mu_vT, cov_vT, shape=(1, K))
-    vT = tt.reshape(vT, (1, K))
+    vT = pm.MvNormal("vT", mu_vT, cov_vT, shape=(K,))
+    vT_ = tt.reshape(solver.pad(vT), (1, -1))
     
     # Compute the model
-    uvT = tt.reshape(tt.dot(u, vT), (N * K, 1))
-    f_model = tt.reshape(ts.dot(D, uvT), (M * K,))
+    uvT = tt.reshape(tt.dot(u, vT_), (-1, 1))
+    f_model = tt.reshape(ts.dot(solver.D, uvT), (-1,))
 
     # Track some values for plotting later
     pm.Deterministic("f_model", f_model)
