@@ -100,12 +100,14 @@ with pm.Model() as model:
     # The spectral basis
     if False:
 
+        baseline = pm.Normal("baseline", 1.0, 1e-2)
+
         mu_vT_ = np.ones(K - 2 * Kpad)
         cov_vT_ = 1e-2 * np.eye(K - 2 * Kpad)
         vT_ = pm.MvNormal("vT_", mu_vT_, cov_vT_, shape=(K - 2 * Kpad,))
-        vT = tt.concatenate((tt.ones(Kpad),
+        vT = tt.concatenate((baseline * tt.ones(Kpad),
                             vT_,
-                            tt.ones(Kpad)))
+                            baseline * tt.ones(Kpad)))
         pm.Deterministic("vT", vT)
         vT = tt.reshape(vT, (1, K))
 
@@ -113,6 +115,7 @@ with pm.Model() as model:
 
         mu_vT = np.ones(K)
         cov_vT = 1e-2 * np.eye(K)
+        cov_vT[0, 0] = 1e-10
         vT = pm.MvNormal("vT", mu_vT, cov_vT, shape=(K,))
         vT = tt.reshape(vT, (1, K))
     
@@ -136,7 +139,7 @@ with model:
 # Plot some stuff
 fig, ax = plt.subplots(1)
 ax.plot(lam, I0)
-ax.plot(lam, map_soln["vT"].reshape(-1))
+ax.plot(lam, map_soln["vT"].reshape(-1), 'o')
 
 fig, ax = plt.subplots(M, figsize=(3, 8), sharex=True, sharey=True)
 F = f.reshape(M, Kobs)

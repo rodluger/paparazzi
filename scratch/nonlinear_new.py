@@ -68,10 +68,11 @@ with pm.Model() as model:
     u = tt.reshape(u, (-1, 1))
 
     # The spectral basis
+    baseline = pm.Normal("baseline", 1.0, 1e-1)
     mu_vT = np.ones(K)
     cov_vT = 1e-2 * np.eye(K)
     vT = pm.MvNormal("vT", mu_vT, cov_vT, shape=(K,))
-    vT_ = tt.reshape(solver.pad(vT), (1, -1))
+    vT_ = tt.reshape(solver.pad(vT, baseline), (1, -1))
     
     # Compute the model
     uvT = tt.reshape(tt.dot(u, vT_), (-1, 1))
