@@ -47,31 +47,8 @@ spot = np.array(map.y)
 
 # The Doppler `g` functions
 solver = RigidRotationSolver(lmax)
-g = solver.g(lam, v_c * np.sin(inc * np.pi / 180.0))
-
-# Toeplitz convolve
-T = [None for n in range(N)]
-for n in range(N):
-    col0 = np.pad(g[n, :K // 2 + 1][::-1], (0, K // 2), mode='constant')
-    row0 = np.pad(g[n, K // 2:], (0, K // 2), mode='constant')
-    T[n] = csr_matrix(toeplitz(col0, row0))
-
-# Rotation matrices
-axis = [0, np.sin(inc * np.pi / 180), np.cos(inc * np.pi / 180)]
-t = np.linspace(t_min, t_max, M)
-theta = 2 * np.pi / P * t
-R = [map.ops.R(axis, t) for t in theta]
-
-# The design matrix
-Dt = [None for t in range(M)]
-for t in tqdm(range(M)):
-    TR = [None for n in range(N)]
-    for l in range(lmax + 1):
-        idx = slice(l ** 2, (l + 1) ** 2)
-        TR[idx] = np.tensordot(R[t][l].T, T[idx], axes=1)
-    Dt[t] = hstack(TR)
-D = vstack(Dt)
-D = D.tocsr()
+theta = 360.0 / P * np.linspace(t_min, t_max, M)
+D = solver.D(lam, v_c=v_c, inc=inc, theta=theta)
 
 # Mask the edges
 inds = np.tile(np.arange(K), M)
@@ -98,26 +75,10 @@ with pm.Model() as model:
     u = tt.reshape(u, (N, 1))
 
     # The spectral basis
-    if False:
-
-        baseline = pm.Normal("baseline", 1.0, 1e-2)
-
-        mu_vT_ = np.ones(K - 2 * Kpad)
-        cov_vT_ = 1e-2 * np.eye(K - 2 * Kpad)
-        vT_ = pm.MvNormal("vT_", mu_vT_, cov_vT_, shape=(K - 2 * Kpad,))
-        vT = tt.concatenate((baseline * tt.ones(Kpad),
-                            vT_,
-                            baseline * tt.ones(Kpad)))
-        pm.Deterministic("vT", vT)
-        vT = tt.reshape(vT, (1, K))
-
-    else:
-
-        mu_vT = np.ones(K)
-        cov_vT = 1e-2 * np.eye(K)
-        cov_vT[0, 0] = 1e-10
-        vT = pm.MvNormal("vT", mu_vT, cov_vT, shape=(K,))
-        vT = tt.reshape(vT, (1, K))
+    mu_vT = np.ones(K)
+    cov_vT = 1e-2 * np.eye(K)
+    vT = pm.MvNormal("vT", mu_vT, cov_vT, shape=(K,))
+    vT = tt.reshape(vT, (1, K))
     
     # Compute the model
     uvT = tt.reshape(tt.dot(u, vT), (N * K, 1))

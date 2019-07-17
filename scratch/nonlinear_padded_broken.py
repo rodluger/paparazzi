@@ -46,7 +46,7 @@ ylms = np.array(map.y)
 
 # The Doppler design matrix
 solver = RigidRotationSolver(lmax)
-theta = 2 * np.pi / P * np.linspace(t_min, t_max, M)
+theta = 360.0 / P * np.linspace(t_min, t_max, M)
 solver.compute(lam, v_c=v_c, inc=inc, theta=theta)
 
 # Synthetic spectrum
@@ -69,7 +69,7 @@ with pm.Model() as model:
 
     # The spectral basis
     baseline = pm.Normal("baseline", 1.0, 1e-1)
-    mu_vT = np.ones(K)
+    mu_vT = baseline * np.ones(K)
     cov_vT = 1e-2 * np.eye(K)
     vT = pm.MvNormal("vT", mu_vT, cov_vT, shape=(K,))
     vT_ = tt.reshape(solver.pad(vT, baseline), (1, -1))
