@@ -2,7 +2,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.linalg import toeplitz
-from scipy.sparse import csr_matrix, hstack, vstack, diags
+from scipy.sparse import csr_matrix, hstack, vstack
 import starry
 from utils import RigidRotationSolver
 from tqdm import tqdm
@@ -17,42 +17,39 @@ lmax = 5
 lam_max = 2e-5
 K = 199                 # Number of wavs in model
 Kpad = 15
-line_amp = 0.1
-line_mu = 0.0
-line_sigma = 3e-7
-spot_amp = -0.1
-spot_sigma = 0.05
-spot_lat = 0.0
-spot_lon = 0.0
 inc = 60.0
-w_c = 2.e-6
+v_c = 2.e-6
 P = 1.0
 t_min = -0.5
 t_max = 0.5
-l2sig = 0.03
-M = 11                  # Number of observations
+M = 31                  # Number of observations
 N = (lmax + 1) ** 2     # Number of Ylms
 
 # Log wavelength array
 lam = np.linspace(-lam_max, lam_max, K)
 
-# A Gaussian absorption line
-I0 = 1 - line_amp * np.exp(-0.5 * (lam - line_mu) ** 2 / line_sigma ** 2)
+# A fake spectrum w/ a bunch of lines
+lam_hr = np.linspace(-lam_max, lam_max, 10 * K)
+I0 = np.ones_like(lam_hr)
+np.random.seed(12)
+for i in range(30):
+    line_amp = np.random.random()
+    line_mu = 1.5 * (0.5 - np.random.random()) * lam_max
+    line_sigma = 1e-8 + np.abs(1e-7 * np.random.randn())
+    I0 -= line_amp * np.exp(-0.5 * (lam_hr - line_mu) ** 2 / line_sigma ** 2)
+I0 = np.interp(lam, lam_hr, I0)
 
-# Instantiate a map with a single Gaussian spot
+# Instantiate a map
 map = starry.Map(lmax, lazy=False)
 map.inc = inc
-map.add_spot(amp=spot_amp, sigma=spot_sigma, 
-             lat=spot_lat, lon=spot_lon)
+map.load("vogtstar.jpg")
 spot = np.array(map.y)
 
 # The Doppler `g` functions
 solver = RigidRotationSolver(lmax)
-g = solver.g(lam, w_c * np.sin(inc * np.pi / 180.0)).T
 
-# Normalize them (?) Check if this is
-# the best way to do this
-g /= np.trapz(g[0])
+
+g = solver.g(lam, v_c * np.sin(inc * np.pi / 180.0))
 
 # Toeplitz convolve
 T = [None for n in range(N)]
@@ -77,12 +74,23 @@ for t in tqdm(range(M)):
     Dt[t] = hstack(TR)
 D = vstack(Dt)
 D = D.tocsr()
+# (6169, 7164)
 
 # Mask the edges
 inds = np.tile(np.arange(K), M)
 obs = (inds >= Kpad) & (inds < K - Kpad)
 Kobs = K - 2 * Kpad
 D = D[obs]
+# (5239, 7164)
+
+
+# DEBUG broken
+#theta = 2 * np.pi / P * np.linspace(t_min, t_max, M)
+#D_new = solver.D(lam, v_c=v_c, inc=inc, theta=theta)
+# (6169, 7812)
+
+
+#import pdb; pdb.set_trace()
 
 # Synthetic spectrum
 a = spot.reshape(-1, 1).dot(I0.reshape(1, -1)).reshape(-1)
@@ -97,14 +105,14 @@ with pm.Model() as model:
     # The spherical harmonic basis
     mu_u = np.zeros(N)
     mu_u[0] = 1.0
-    cov_u = 0.03 * np.eye(N)
-    cov_u[0] = 1.0
+    cov_u = 1e-2 * np.eye(N)
+    cov_u[0, 0] = 1e-10
     u = pm.MvNormal("u", mu_u, cov_u, shape=(N,))
     u = tt.reshape(u, (N, 1))
 
     # The spectral basis
     mu_vT = np.ones(K)
-    cov_vT = 0.001 * np.eye(K)
+    cov_vT = 1e-2 * np.eye(K)
     vT = pm.MvNormal("vT", mu_vT, cov_vT, shape=(1, K))
     vT = tt.reshape(vT, (1, K))
     
@@ -122,7 +130,7 @@ with pm.Model() as model:
     pm.Normal("obs", mu=f_model, sd=ferr, observed=f)
 
 # Maximum likelihood solution
-with model:
+with model: 
     map_soln = xo.optimize()
 
 # Plot some stuff
@@ -150,13 +158,15 @@ vmin = min(np.nanmin(img), np.nanmin(map_img))
 vmax = max(np.nanmax(img), np.nanmax(map_img))
 fig, ax = plt.subplots(2, ntheta, figsize=(ntheta, 4))
 for n in range(ntheta):
-    ax[0, n].imshow(img[:, :, n], extent=(-1, 1, -1, 1), 
+    ax[0, n].imshow(img[n], extent=(-1, 1, -1, 1), 
                     origin="lower", cmap="plasma", vmin=vmin,
                     vmax=vmax)
-    ax[1, n].imshow(map_img[:, :, n], extent=(-1, 1, -1, 1), 
+    ax[1, n].imshow(map_img[n], extent=(-1, 1, -1, 1), 
                     origin="lower", cmap="plasma", vmin=vmin,
                     vmax=vmax)
     ax[0, n].axis('off')
     ax[1, n].axis('off')
+
+map_map.show(theta=np.linspace(-180, 180, 50))
 
 plt.show()
