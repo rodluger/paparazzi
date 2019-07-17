@@ -13,7 +13,7 @@ import pymc3 as pm
 
 
 # Params
-lmax = 5
+lmax = 8
 lam_max = 2e-5
 K = 199                 # Number of wavs observed
 inc = 60.0
@@ -21,7 +21,7 @@ v_c = 2.e-6
 P = 1.0
 t_min = -0.5
 t_max = 0.5
-M = 31                  # Number of observations
+M = 99                 # Number of observations
 N = (lmax + 1) ** 2     # Number of Ylms
 
 # Log wavelength array
