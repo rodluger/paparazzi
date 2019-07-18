@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.linalg import toeplitz
-from scipy.sparse import csr_matrix, hstack, vstack
 import starry
 from utils import RigidRotationSolver
 from tqdm import tqdm
@@ -13,48 +11,65 @@ import pymc3 as pm
 
 
 # Params
-lmax = 8
+ydeg = 6
 lam_max = 2e-5
-K = 199                 # Number of wavs observed
+K = 399                 # Number of wavs observed
 inc = 60.0
-v_c = 2.e-6
+beta = 2.e-6
 P = 1.0
 t_min = -0.5
 t_max = 0.5
-M = 99                 # Number of observations
-N = (lmax + 1) ** 2     # Number of Ylms
-
-# Log wavelength array
-lam = np.linspace(-lam_max, lam_max, K)
-
-# A fake spectrum w/ a bunch of lines
-lam_hr = np.linspace(-lam_max, lam_max, 10 * K)
-I0 = np.ones_like(lam_hr)
-np.random.seed(12)
-for i in range(30):
-    line_amp = np.random.random()
-    line_mu = 1.5 * (0.5 - np.random.random()) * lam_max
-    line_sigma = 1e-8 + np.abs(1e-7 * np.random.randn())
-    I0 -= line_amp * np.exp(-0.5 * (lam_hr - line_mu) ** 2 / line_sigma ** 2)
-I0 = np.interp(lam, lam_hr, I0)
+M = 99                  # Number of observations
+N = (ydeg + 1) ** 2     # Number of Ylms
 
 # Instantiate a map
-map = starry.Map(lmax, lazy=False)
+map = starry.Map(ydeg, lazy=False)
 map.inc = inc
 map.load("vogtstar.jpg")
 ylms = np.array(map.y)
 
-# The Doppler design matrix
-solver = RigidRotationSolver(lmax)
-theta = 360.0 / P * np.linspace(t_min, t_max, M)
-solver.compute(lam, v_c=v_c, inc=inc, theta=theta)
+# Log wavelength array
+lam = np.linspace(-lam_max, lam_max, K)
 
-# Synthetic spectrum
-a = ylms.reshape(-1, 1).dot(solver.pad(I0).reshape(1, -1)).reshape(-1)
-f = solver.D.dot(a)
+# Instantiate the solver
+solver = RigidRotationSolver(lam, ydeg=ydeg, beta=beta, inc=inc, P=P)
+lam_padded = solver.lam_padded
+
+# Create a fake spectrum w/ a bunch of lines
+# Note that we generate it on a *padded* wavelength grid
+# so we can control the behavior at the edges
+I0_padded = np.ones_like(lam_padded)
+np.random.seed(12)
+for i in range(30):
+    line_amp = 0.5 * np.random.random()
+    line_mu = 2.1 * (0.5 - np.random.random()) * lam_max
+    line_sigma = 2.e-7
+    I0_padded -= line_amp * np.exp(-0.5 * (lam_padded - line_mu) ** 2 / 
+                                   line_sigma ** 2)
+I0 = I0_padded[solver.mask]
+
+# Compute the *true* map matrix
+A = ylms.reshape(-1, 1).dot(I0_padded.reshape(1, -1))
+a = A.reshape(-1)
+
+# Generate the synthetic spectral timeseries
+t = np.linspace(t_min, t_max, M)
+D = solver.D(t=t)
+f_true = D.dot(a)
+F_true = f_true.reshape(M, K)
+
+# Add some noise
 ferr = 0.0001
 np.random.seed(13)
-f += ferr * np.random.randn(M * K)
+f = f_true + ferr * np.random.randn(M * K)
+F = f.reshape(M, K)
+
+# Show
+'''
+plt.plot(solver.lam_padded, I0_padded)
+plt.plot(lam, F[0])
+plt.show()
+'''
 
 # Set up the model
 with pm.Model() as model:
@@ -68,15 +83,14 @@ with pm.Model() as model:
     u = tt.reshape(u, (-1, 1))
 
     # The spectral basis
-    baseline = pm.Normal("baseline", 1.0, 1e-1)
-    mu_vT = baseline * np.ones(K)
-    cov_vT = 1e-2 * np.eye(K)
-    vT = pm.MvNormal("vT", mu_vT, cov_vT, shape=(K,))
-    vT_ = tt.reshape(solver.pad(vT, baseline), (1, -1))
+    mu_vT = np.ones(solver.Kp)
+    cov_vT = 1e-1 * np.eye(solver.Kp)
+    vT = pm.MvNormal("vT", mu_vT, cov_vT, shape=(solver.Kp,), testval=I0_padded)
+    vT_ = tt.reshape(vT, (1, -1))
     
     # Compute the model
     uvT = tt.reshape(tt.dot(u, vT_), (-1, 1))
-    f_model = tt.reshape(ts.dot(solver.D, uvT), (-1,))
+    f_model = tt.reshape(ts.dot(D, uvT), (-1,))
 
     # Track some values for plotting later
     pm.Deterministic("f_model", f_model)
@@ -93,11 +107,13 @@ with model:
 
 # Plot some stuff
 fig, ax = plt.subplots(1)
-ax.plot(lam, I0)
-ax.plot(lam, map_soln["vT"].reshape(-1))
+ax.plot(lam_padded, I0_padded)
+ax.plot(lam_padded, map_soln["vT"].reshape(-1))
+ax.axvspan(lam_padded[0], lam[0], color="k", alpha=0.3)
+ax.axvspan(lam[-1], lam_padded[-1], color="k", alpha=0.3)
+ax.set_xlim(lam_padded[0], lam_padded[-1])
 
 fig, ax = plt.subplots(M, figsize=(3, 8), sharex=True, sharey=True)
-F = f.reshape(M, K)
 F_model = map_soln["f_model"].reshape(M, K)
 for m in range(M): 
     ax[m].plot(lam, F[m] / F[m][0])
@@ -108,7 +124,7 @@ ntheta = 12
 img = map.render(theta=np.linspace(-180, 180, ntheta))
 coeff = map_soln["u"]
 coeff /= coeff[0]
-map_map = starry.Map(lmax, lazy=False)
+map_map = starry.Map(ydeg, lazy=False)
 map_map.inc = inc
 map_map[1:, :] = coeff[1:]
 map_img = map_map.render(theta=np.linspace(-180, 180, ntheta))

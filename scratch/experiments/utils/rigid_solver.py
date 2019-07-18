@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import starry
-from starry.ops.utils import is_theano
-import theano.tensor as tt
 from scipy.linalg import toeplitz
-from scipy.sparse import csr_matrix, hstack, vstack, diags
+from scipy.sparse import csr_matrix, hstack, vstack
 from tqdm import tqdm
 
 
@@ -29,10 +27,6 @@ class RigidRotationSolver(object):
 
         # Grab the rotation matrix op
         self._R = map.ops.R
-
-        #
-        self.kernel_width = None
-        self.D = None
 
     def _Ij(self, j, x):
         """
@@ -110,9 +104,9 @@ class RigidRotationSolver(object):
             T[n] = csr_matrix(toeplitz(col0, row0))
         return T
 
-    def compute(self, lam, v_c=2.e-6, inc=90.0, theta=0.0, quiet=False):
+    def D(self, lam, v_c=2.e-6, inc=90.0, theta=0.0, quiet=False):
         """
-        Compute the Doppler design matrix.
+        Return the Doppler design matrix.
 
         """
         # Compute some stuff
@@ -122,23 +116,9 @@ class RigidRotationSolver(object):
         cosi = np.cos(inc * np.pi / 180)
         vsini_c = v_c * sini
         theta = np.atleast_1d(theta) * np.pi / 180
-        
-        # Compute the kernel half-width in wavelength bins.
-        # We must pad our operator by this much on either side
-        # to circumvent edge effects
-        dlam = (lam[1] - lam[0])
-        W = (np.abs(0.5 * np.log((1 + vsini_c) / (1 - vsini_c)))) 
-        W /= dlam
-        W = int(np.ceil(W))
-        self.kernel_width = 2 * W
 
-        # Pad the wavelength array
-        pad_l = np.linspace(lam[0] - W * dlam, lam[0], W + 1)[:-1]
-        pad_r = np.linspace(lam[-1], lam[-1] + W * dlam, W + 1)[1:]
-        lam_ = np.concatenate((pad_l, lam, pad_r))
-        
         # Toeplitz matrices
-        T = self.T(lam_, vsini_c)
+        T = self.T(lam, vsini_c)
 
         # Rotation matrices
         axis = [0, sini, cosi]
@@ -154,27 +134,4 @@ class RigidRotationSolver(object):
             Dt[t] = hstack(TR)
         D = vstack(Dt).tocsr()
 
-        # Remove the padded region we added above
-        obs = np.concatenate((np.zeros_like(pad_l), 
-                              np.ones_like(lam), 
-                              np.zeros_like(pad_r)))
-        obs = np.array(obs, dtype=bool)
-        obs = np.tile(obs, M)
-        self.D = D[obs]
-    
-    def pad(self, array, value=1.0):
-        """
-
-        """
-        if is_theano(array):
-            return tt.concatenate((
-                        value * tt.ones(self.kernel_width // 2),
-                        array,
-                        value * tt.ones(self.kernel_width // 2)
-                    ))
-        else:
-            return np.concatenate((
-                        value * np.ones(self.kernel_width // 2),
-                        array,
-                        value * np.ones(self.kernel_width // 2)
-                    ))
+        return D
