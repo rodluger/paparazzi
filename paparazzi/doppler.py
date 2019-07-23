@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import starry
+import scipy
 from scipy.linalg import toeplitz
+from scipy.linalg import block_diag as dense_block_diag
 from scipy.sparse import csr_matrix, hstack, vstack, diags, block_diag
 from tqdm import tqdm
 import celerite
@@ -222,7 +224,8 @@ class LinearSolver(object):
 
     """
 
-    def __init__(self, lam, D, F, F_sig, N, Kp, u_sig, u_mu, vT_sig, vT_rho, vT_mu):
+    def __init__(self, lam, D, F, F_sig, N, Kp, u_sig, u_mu, vT_sig, vT_rho, 
+                 vT_mu, fit_baseline=False):
         """
 
         """
@@ -231,6 +234,8 @@ class LinearSolver(object):
         self.F = F
         self.N = N
         self.Kp = Kp
+        self.M = self.F.shape[0]
+        self.K = self.F.shape[1]
         self.f = self.F.reshape(-1, 1)
         if np.ndim(F_sig) == 0:
             self.CInv = np.ones_like(self.f) / F_sig ** 2
@@ -257,12 +262,25 @@ class LinearSolver(object):
             cho_C = cho_factor(vT_C)
             self.vT_CInv = cho_solve(cho_C, np.eye(self.Kp))
             self.vT_CInvmu = cho_solve(cho_C, self.vT_mu.reshape(-1)).reshape(-1, 1)
-            self.lndet2pC_vT = 2 * np.sum(np.log(2 * np.pi * np.diag(cho_C[0])))
+            self.lndet2pC_vT = -2 * np.sum(np.log(2 * np.pi * np.diag(cho_C[0])))
         else:
             self.vT_CInv = np.ones(self.Kp) / vT_sig ** 2
             self.vT_CInvmu = (self.vT_CInv * self.vT_mu).reshape(-1, 1)
             self.lndet2pC_vT = np.sum(np.log(2 * np.pi * self.vT_CInv))
             self.vT_CInv = np.diag(self.vT_CInv)
+
+        # Baseline
+        self.fit_baseline = fit_baseline
+        self.baseline = 0.0
+
+        if self.fit_baseline:
+
+            # DEBUG
+            b_sig = 0.1
+            self.B = np.array(block_diag([np.ones(self.K).reshape(-1, 1) 
+                                          for n in range(self.M)]).todense())
+            self.b_CInv = np.ones(self.M) / b_sig ** 2
+            self.lndet2pC_b = self.M * np.log(2 * np.pi / b_sig ** 2)
 
     def u(self, vT):
         """
@@ -273,7 +291,7 @@ class LinearSolver(object):
         A = np.array(self.D.dot(V).todense())
         ATCInv = np.multiply(A.T, self.CInv)
         ATCInvA = ATCInv.dot(A)
-        ATCInvf = np.dot(ATCInv, self.f)
+        ATCInvf = np.dot(ATCInv, self.f - self.baseline)
         np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + self.u_CInv)
         return np.linalg.solve(ATCInvA, ATCInvf + self.u_CInvmu).reshape(-1, 1)
 
@@ -289,10 +307,21 @@ class LinearSolver(object):
         A = np.array(self.D.dot(U).todense())
         ATCInv = np.multiply(A.T, self.CInv)
         ATCInvA = ATCInv.dot(A)
-        ATCInvf = np.dot(ATCInv, self.f)
+        ATCInvf = np.dot(ATCInv, self.f - self.baseline)
         return np.linalg.solve(ATCInvA + self.vT_CInv, 
                                ATCInvf + self.vT_CInvmu).reshape(1, -1)
     
+    def b(self, r):
+        """
+        Linear solve for the baseline given the residuals.
+
+        """
+        ATCInv = np.multiply(self.B.T, self.CInv)
+        ATCInvA = ATCInv.dot(self.B)
+        ATCInvf = np.dot(ATCInv, r)
+        np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + self.b_CInv)
+        return np.linalg.solve(ATCInvA, ATCInvf).reshape(-1, 1)
+
     def step(self, u=None, vT=None):
         """
 
@@ -305,10 +334,26 @@ class LinearSolver(object):
             vT = self.vT(u)
             u = self.u(vT)
         
-        # Compute the model & likelihood
+        # Compute the model & residuals
         a = u.dot(vT).reshape(-1)
         model = self.D.dot(a)
         r = self.f.reshape(-1) - model.reshape(-1)
+
+        # Compute the baseline
+        if self.fit_baseline:
+            b = self.b(r)
+            self.baseline = self.B.dot(b).reshape(-1, 1)
+            lnprior_b = -0.5 * np.dot(
+                            np.multiply(b.reshape(1, -1), self.b_CInv),
+                            b.reshape(-1, 1)
+                        ) - 0.5 * self.lndet2pC_b
+            r -= self.baseline.reshape(-1)
+            model += self.baseline.reshape(-1)
+        else:
+            b = np.zeros(self.M)
+            lnprior_b = 0.0
+
+        # Compute the likelihood
         lnlike = -0.5 * np.dot(
                             np.multiply(r.reshape(1, -1), self.CInv),
                             r.reshape(-1, 1)
@@ -323,19 +368,25 @@ class LinearSolver(object):
                             np.dot(r.reshape(1, -1), self.vT_CInv),
                             r.reshape(-1, 1)
                         ) - 0.5 * self.lndet2pC_vT
-        return u, vT, model, lnlike, lnprior_u + lnprior_vT
-    
+        lnprior = lnprior_u + lnprior_vT + lnprior_b
+        return u, vT, b, model, lnlike, lnprior
+
     def solve(self, u=None, vT=None, maxiter=200, quiet=False):
         """
-        
+        TODO: Convergence criterion
+
         """
         lnlike = np.zeros(maxiter)
         lnprior = np.zeros(maxiter)
-        for n in tqdm(range(maxiter), total=maxiter, disable=quiet):
-            u, vT, model, lnlike[n], lnprior[n] = self.step(u, vT)
+        for n in tqdm(range(maxiter - 1), total=maxiter - 1, disable=quiet):
+
+            # Linear solve
+            u, vT, b, model, lnlike[n], lnprior[n] = self.step(u, vT)
+
+            # Adjust the continuum; this helps convergence
+            norm = vT[0, np.argsort(vT[0])[int(0.95 * vT.shape[1]) - 1]]
+            vT /= norm
         
-        # TODO: Convergence criterion
-
-        print((lnlike + lnprior)[-1])
-
-        return u, vT, model, lnlike, lnprior
+        # Final step
+        u, vT, b, model, lnlike[n + 1], lnprior[n + 1] = self.step(u, vT)
+        return u, vT, b, model, lnlike, lnprior

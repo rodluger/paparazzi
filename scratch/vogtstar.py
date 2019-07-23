@@ -13,11 +13,12 @@ class VogtStar(object):
 
     """
 
-    def __init__(self, ydeg=4, beta=2.e-6, inc=60., P=1.0,
+    def __init__(self, ydeg=15, beta=2.e-6, inc=60., P=1.0,
                  lam_max=2.e-5, K=399, line_sigma=2.e-7,
-                 nlines=30, ferr=3.e-3, vT_mu=1.0, u_mu=0.0,
+                 nlines=30, ferr=1.e-3, vT_mu=1.0, u_mu=0.0,
                  vT_sig=0.3, u_sig=0.01, vT_rho=1e-6,
-                 M=31, maxiter=100, seed=43, 
+                 M=99, maxiter=100, seed=43, 
+                 fit_baseline=False,
                  clobber=False):
         """
         
@@ -43,12 +44,14 @@ class VogtStar(object):
         self.t = np.linspace(-0.5 * self.P, 0.5 * self.P, self.M + 1)[:-1]
         self.maxiter = maxiter
         self.seed = seed
+        self.fit_baseline = fit_baseline
 
         # Figure out the cache path
         params = (ydeg, beta, inc, P, lam_max, K, 
                   line_sigma, nlines,
                   ferr, vT_mu, vT_sig, vT_rho,
-                  u_mu, u_sig, M, maxiter, seed)
+                  u_mu, u_sig, M, maxiter, seed,
+                  fit_baseline)
         self._path = ".vogtstar%s" % hex(abs(hash(params)))[2:]
         if not os.path.exists(self._path):
             os.mkdir(self._path)
@@ -70,9 +73,11 @@ class VogtStar(object):
                      u_true=self.u_true,
                      vT_true=self.vT_true,
                      f_true=self.f_true,
+                     b_true=self.b_true,
                      f=self.f,
                      u=self.u,
                      vT=self.vT,
+                     b=self.b,
                      lam_padded=self.lam_padded,
                      model=self.model,
                      lnlike=self.lnlike,
@@ -84,9 +89,11 @@ class VogtStar(object):
             self.u_true = data["u_true"]
             self.vT_true = data["vT_true"]
             self.f_true = data["f_true"]
+            self.b_true = data["b_true"]
             self.f = data["f"]
             self.u = data["u"]
             self.vT = data["vT"]
+            self.b = data["b"]
             self.lam_padded = data["lam_padded"]
             self.model = data["model"]
             self.lnlike = data["lnlike"]
@@ -122,6 +129,15 @@ class VogtStar(object):
         # Generate the synthetic spectral timeseries
         self.f_true = self._D.dot(a)
 
+        # Remove baseline information if we're fitting for it
+        if self.fit_baseline:
+            F = self.f_true.reshape(self.M, self.K)
+            self.b_true = np.max(F, axis=1) - 1
+            F /= (1 + self.b_true.reshape(-1, 1))
+            self.f = F.reshape(-1)
+        else:
+            self.b_true = np.zeros(self.M)
+
         # Add some noise
         self.f = self.f_true + \
             self.ferr * np.random.randn(self.M * self.K)
@@ -135,10 +151,12 @@ class VogtStar(object):
                                  self.ferr, self.N, self._doppler.Kp,
                                  self.u_sig, self.u_mu, 
                                  self.vT_sig, self.vT_rho,
-                                 self.vT_mu)
+                                 self.vT_mu,
+                                 self.fit_baseline)
         if u is None and vT is None:
-            vT = 1.0 + 0.1 * np.random.randn(self._doppler.Kp)
-        self.u, self.vT, self.model, self.lnlike, self.lnprior = \
+            vT = 1.0 + 0.01 * np.random.randn(self._doppler.Kp)
+        
+        self.u, self.vT, self.b, self.model, self.lnlike, self.lnprior = \
             solver.solve(u=u, vT=vT, maxiter=self.maxiter)
 
     def plot(self, nframes=11, open_plots=False):
@@ -231,5 +249,11 @@ class VogtStar(object):
                 subprocess.run(["open", "%s/%s" % (self._path, file)])
 
 
-vogt = VogtStar(clobber=True)
+vogt = VogtStar(clobber=True, ydeg=5, M=31, fit_baseline=True)
 vogt.plot(open_plots=True)
+
+
+# DEBUG
+plt.plot(vogt.b)
+plt.plot(vogt.b_true)
+plt.show()
