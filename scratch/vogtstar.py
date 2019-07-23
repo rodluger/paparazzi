@@ -18,7 +18,7 @@ class VogtStar(object):
                  nlines=30, ferr=1.e-3, vT_mu=1.0, u_mu=0.0,
                  vT_sig=0.3, u_sig=0.01, vT_rho=1e-6,
                  M=99, maxiter=100, seed=43, 
-                 fit_baseline=False,
+                 remove_baseline=False, b_sig=0.1,
                  clobber=False):
         """
         
@@ -44,14 +44,19 @@ class VogtStar(object):
         self.t = np.linspace(-0.5 * self.P, 0.5 * self.P, self.M + 1)[:-1]
         self.maxiter = maxiter
         self.seed = seed
-        self.fit_baseline = fit_baseline
+        self.remove_baseline = remove_baseline
+        if self.remove_baseline:
+            self.b_sig = b_sig
+        else:
+            # Don't fit for b
+            self.b_sig = 0.0
 
         # Figure out the cache path
         params = (ydeg, beta, inc, P, lam_max, K, 
                   line_sigma, nlines,
                   ferr, vT_mu, vT_sig, vT_rho,
                   u_mu, u_sig, M, maxiter, seed,
-                  fit_baseline)
+                  remove_baseline, b_sig)
         self._path = ".vogtstar%s" % hex(abs(hash(params)))[2:]
         if not os.path.exists(self._path):
             os.mkdir(self._path)
@@ -68,7 +73,14 @@ class VogtStar(object):
             print("Generating synthetic dataset...")
             self._generate()
             print("Solving the bilinear problem...")
-            self._solve()
+            vT_guess = 1.0 + 0.01 * np.random.randn(self._doppler.Kp)
+            b_guess = np.zeros(self.M)
+
+            # DEBUG
+            #vT_guess = self.vT_true
+            #b_guess = self.b_true
+
+            self._solve(vT_guess, b_guess)
             np.savez("%s/vogtstar.npz" % self._path,
                      u_true=self.u_true,
                      vT_true=self.vT_true,
@@ -130,11 +142,12 @@ class VogtStar(object):
         self.f_true = self._D.dot(a)
 
         # Remove baseline information if we're fitting for it
-        if self.fit_baseline:
+        if self.remove_baseline:
             F = self.f_true.reshape(self.M, self.K)
-            self.b_true = np.max(F, axis=1) - 1
-            F /= (1 + self.b_true.reshape(-1, 1))
+            maxF = np.max(F, axis=1)
+            F /= maxF.reshape(-1, 1)
             self.f = F.reshape(-1)
+            self.b_true = 1 - maxF
         else:
             self.b_true = np.zeros(self.M)
 
@@ -142,7 +155,7 @@ class VogtStar(object):
         self.f = self.f_true + \
             self.ferr * np.random.randn(self.M * self.K)
 
-    def _solve(self, u=None, vT=None):
+    def _solve(self, vT_guess, b_guess):
         """
 
         """
@@ -152,12 +165,9 @@ class VogtStar(object):
                                  self.u_sig, self.u_mu, 
                                  self.vT_sig, self.vT_rho,
                                  self.vT_mu,
-                                 self.fit_baseline)
-        if u is None and vT is None:
-            vT = 1.0 + 0.01 * np.random.randn(self._doppler.Kp)
-        
+                                 self.b_sig)
         self.u, self.vT, self.b, self.model, self.lnlike, self.lnprior = \
-            solver.solve(u=u, vT=vT, maxiter=self.maxiter)
+            solver.solve(vT_guess, b_guess, maxiter=self.maxiter)
 
     def plot(self, nframes=11, open_plots=False):
         """
@@ -249,11 +259,11 @@ class VogtStar(object):
                 subprocess.run(["open", "%s/%s" % (self._path, file)])
 
 
-vogt = VogtStar(clobber=True, ydeg=5, M=31, fit_baseline=True)
+vogt = VogtStar(clobber=True, ydeg=5, M=99, remove_baseline=True, b_sig=0.1)
 vogt.plot(open_plots=True)
 
-
+print((vogt.lnlike + vogt.lnprior)[-1])
 # DEBUG
-plt.plot(vogt.b)
 plt.plot(vogt.b_true)
+plt.plot(vogt.b)
 plt.show()

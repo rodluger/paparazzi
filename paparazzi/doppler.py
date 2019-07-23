@@ -225,7 +225,7 @@ class LinearSolver(object):
     """
 
     def __init__(self, lam, D, F, F_sig, N, Kp, u_sig, u_mu, vT_sig, vT_rho, 
-                 vT_mu, fit_baseline=False):
+                 vT_mu, b_sig):
         """
 
         """
@@ -269,35 +269,33 @@ class LinearSolver(object):
             self.lndet2pC_vT = np.sum(np.log(2 * np.pi * self.vT_CInv))
             self.vT_CInv = np.diag(self.vT_CInv)
 
-        # Baseline
-        self.fit_baseline = fit_baseline
-        self.baseline = 0.0
-
-        if self.fit_baseline:
-
-            # DEBUG
-            b_sig = 0.1
-            self.B = np.array(block_diag([np.ones(self.K).reshape(-1, 1) 
-                                          for n in range(self.M)]).todense())
+        # Prior on the baseline
+        self.B = np.array(block_diag([np.ones(self.K).reshape(-1, 1) 
+                                      for n in range(self.M)]).todense())
+        if b_sig == 0.0:
+            self.fit_baseline = False
+        else:
+            self.fit_baseline = True
             self.b_CInv = np.ones(self.M) / b_sig ** 2
             self.lndet2pC_b = self.M * np.log(2 * np.pi / b_sig ** 2)
 
-    def u(self, vT):
+    def u(self, vT, baseline):
         """
-        Linear solve for `u` given `v^T`.
+        Linear solve for `u` given `v^T` and the baseline.
 
         """
         V = block_diag([vT.reshape(-1, 1) for n in range(self.N)])
         A = np.array(self.D.dot(V).todense())
         ATCInv = np.multiply(A.T, self.CInv)
         ATCInvA = ATCInv.dot(A)
-        ATCInvf = np.dot(ATCInv, self.f - self.baseline)
+        ATCInvf = np.dot(ATCInv, self.f - baseline)
         np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + self.u_CInv)
-        return np.linalg.solve(ATCInvA, ATCInvf + self.u_CInvmu).reshape(-1, 1)
+        u = np.linalg.solve(ATCInvA, ATCInvf + self.u_CInvmu).reshape(-1, 1)
+        return u
 
-    def vT(self, u):
+    def vT(self, u, baseline):
         """
-        Linear solve for `v^T` given `u`.
+        Linear solve for `v^T` given `u` and the baseline.
 
         """
         offsets = -np.arange(0, self.N) * self.Kp
@@ -307,53 +305,43 @@ class LinearSolver(object):
         A = np.array(self.D.dot(U).todense())
         ATCInv = np.multiply(A.T, self.CInv)
         ATCInvA = ATCInv.dot(A)
-        ATCInvf = np.dot(ATCInv, self.f - self.baseline)
+        ATCInvf = np.dot(ATCInv, self.f - baseline)
         return np.linalg.solve(ATCInvA + self.vT_CInv, 
                                ATCInvf + self.vT_CInvmu).reshape(1, -1)
-    
-    def b(self, r):
+
+    def b(self, model):
         """
-        Linear solve for the baseline given the residuals.
+        Linear solve for the baseline given the model.
 
         """
         ATCInv = np.multiply(self.B.T, self.CInv)
         ATCInvA = ATCInv.dot(self.B)
-        ATCInvf = np.dot(ATCInv, r)
+        ATCInvf = np.dot(ATCInv, self.f - model)
         np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + self.b_CInv)
         return np.linalg.solve(ATCInvA, ATCInvf).reshape(-1, 1)
 
-    def step(self, u=None, vT=None):
+    def step(self, vT, b):
         """
 
         """
         # Take a step
-        if vT is not None:
-            u = self.u(vT)
-            vT = self.vT(u)
-        else:
-            vT = self.vT(u)
-            u = self.u(vT)
-        
+        baseline = self.B.dot(b).reshape(-1, 1)
+        u = self.u(vT, baseline)
+        vT = self.vT(u, baseline)
+
         # Compute the model & residuals
         a = u.dot(vT).reshape(-1)
-        model = self.D.dot(a)
-        r = self.f.reshape(-1) - model.reshape(-1)
-
+        model = self.D.dot(a).reshape(-1, 1)
+        
         # Compute the baseline
         if self.fit_baseline:
-            b = self.b(r)
-            self.baseline = self.B.dot(b).reshape(-1, 1)
-            lnprior_b = -0.5 * np.dot(
-                            np.multiply(b.reshape(1, -1), self.b_CInv),
-                            b.reshape(-1, 1)
-                        ) - 0.5 * self.lndet2pC_b
-            r -= self.baseline.reshape(-1)
-            model += self.baseline.reshape(-1)
+            b = self.b(model)
+            baseline = self.B.dot(b).reshape(-1, 1)
         else:
-            b = np.zeros(self.M)
-            lnprior_b = 0.0
+            baseline = np.zeros_like(self.f)
 
         # Compute the likelihood
+        r = (self.f - model - baseline).reshape(-1)
         lnlike = -0.5 * np.dot(
                             np.multiply(r.reshape(1, -1), self.CInv),
                             r.reshape(-1, 1)
@@ -368,25 +356,34 @@ class LinearSolver(object):
                             np.dot(r.reshape(1, -1), self.vT_CInv),
                             r.reshape(-1, 1)
                         ) - 0.5 * self.lndet2pC_vT
-        lnprior = lnprior_u + lnprior_vT + lnprior_b
-        return u, vT, b, model, lnlike, lnprior
+        if self.fit_baseline:
+            lnprior_b = -0.5 * np.dot(
+                            np.multiply(b.reshape(1, -1), self.b_CInv),
+                            b.reshape(-1, 1)
+                        ) - 0.5 * self.lndet2pC_b
+        else:
+            lnprior_b = 0.0
 
-    def solve(self, u=None, vT=None, maxiter=200, quiet=False):
+        return u, vT, b, model + baseline, lnlike, lnprior_u + lnprior_vT + lnprior_b
+
+    def solve(self, vT_guess, b_guess, maxiter=200, quiet=False):
         """
         TODO: Convergence criterion
 
         """
         lnlike = np.zeros(maxiter)
         lnprior = np.zeros(maxiter)
+        vT = vT_guess
+        b = b_guess
         for n in tqdm(range(maxiter - 1), total=maxiter - 1, disable=quiet):
 
             # Linear solve
-            u, vT, b, model, lnlike[n], lnprior[n] = self.step(u, vT)
+            u, vT, b, model, lnlike[n], lnprior[n] = self.step(vT, b)
 
             # Adjust the continuum; this helps convergence
             norm = vT[0, np.argsort(vT[0])[int(0.95 * vT.shape[1]) - 1]]
             vT /= norm
-        
+
         # Final step
-        u, vT, b, model, lnlike[n + 1], lnprior[n + 1] = self.step(u, vT)
+        u, vT, b, model, lnlike[n + 1], lnprior[n + 1] = self.step(vT, b)
         return u, vT, b, model, lnlike, lnprior
