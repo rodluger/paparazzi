@@ -20,7 +20,7 @@ class Doppler(object):
     
     """
 
-    def __init__(self, lam, ydeg=10, beta=0, inc=90.0, P=1.0):
+    def __init__(self, lam, ydeg=10, vsini=0, inc=90.0, P=1.0):
         """
 
         """
@@ -36,8 +36,9 @@ class Doppler(object):
         self._R = map.ops.R
 
         # Doppler operator props
+        beta = vsini / np.sin(inc * np.pi / 180) / 3.e5
         self._beta = beta
-        self._inc = inc * 180.0 / np.pi
+        self._inc = inc * np.pi / 180.0
         self._P = P
         self.lam = lam
         self._compute = True
