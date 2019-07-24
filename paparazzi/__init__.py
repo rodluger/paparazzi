@@ -11,4 +11,4 @@ except NameError:
 if not __PAPARAZZI_SETUP__:
 
     # Import the main interface
-    from .doppler import Doppler, LinearSolver
+    from .doppler import Doppler

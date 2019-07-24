@@ -10,6 +10,10 @@ import celerite
 from scipy.linalg import cho_factor, cho_solve
 from scipy.sparse import block_diag, diags
 from scipy.linalg import block_diag as dense_block_diag
+from tqdm import tqdm
+
+
+__all__ = ["LinearSolver", "generate_data"]
 
 
 def plot(self, nframes=11, open_plots=False):
@@ -146,10 +150,79 @@ def plot(self, nframes=11, open_plots=False):
             subprocess.run(["open", "%s/%s" % (self._path, file)])
 
 
+def generate_data(R=3e5, nlam=200, sigma=7.5e-6, vsini=40.0, 
+                  nlines=20, inc=60.0, ydeg=5, nspec=11, ferr=1.e-4):
+    """Generate a synthetic Vogtstar dataset.
+    
+    Args:
+        R (float, optional): The spectral resolution. Defaults to 3e5.
+        nlam (int, optional): Number of observed wavelength bins. 
+            Defaults to 200.
+        sigma (float, optional): Line width in log space. Defaults to 7.5e-6,
+            equivalent to ~0.05A at 6430A.
+        vsini (float, optional): Equatorial projected velocity in km / s. 
+            Defaults to 40.0.
+        nlines (int, optional): Number of additional small lines to include. 
+            Defaults to 20.
+        inc (float, optional): Stellar inclination in degrees. 
+            Defaults to 60.0.
+        ydeg (int, optional): Degree of the Ylm expansion. Defaults to 5.
+        nspec (int, optional): Number of spectra. Defaults to 11.
+        ferr (float, optional): Gaussian error to add to the fluxes. 
+            Defaults to 1.e-3
+    """
+    # The time array in units of the period
+    t = np.linspace(-0.5, 0.5, nspec + 1)[:-1]
+
+    # The log-wavelength array
+    dlam = np.log(1.0 + 1.0 / R)
+    lam = np.arange(-(nlam // 2), nlam // 2 + 1) * dlam
+
+    # Pre-compute the Doppler basis
+    doppler = pp.Doppler(lam, ydeg=ydeg, vsini=vsini, inc=inc, P=1.0)
+    D = doppler.D(t=t)
+
+    # Now let's generate a synthetic spectrum. We do this on the
+    # *padded* wavelength grid to avoid convolution edge effects.
+    lam_padded = doppler.lam_padded
+
+    # A deep line at the center of the wavelength range
+    vT = np.ones_like(lam_padded)
+    vT = 1 - 0.5 * np.exp(-0.5 * lam_padded ** 2 / sigma ** 2)
+
+    # Scatter some smaller lines around for good measure
+    np.random.seed(12)
+    for _ in range(nlines):
+        amp = 0.1 * np.random.random()
+        mu = 2.1 * (0.5 - np.random.random()) * lam_padded.max()
+        vT -= amp * np.exp(-0.5 * (lam_padded - mu) ** 2 / sigma ** 2)
+
+    # Now generate our "Vogtstar" map
+    map = starry.Map(ydeg, lazy=False)
+    map.inc = inc
+    map.load("vogtstar.jpg")
+    u = np.array(map.y)
+
+    # Compute the map matrix & the flux matrix
+    A = u.reshape(-1, 1).dot(vT.reshape(1, -1))
+    F = D.dot(A.reshape(-1)).reshape(nspec, -1)
+
+    # Let's divide out the baseline flux. This is a bummer,
+    # since it contains really important information about
+    # the map, but unfortunately we can't typically
+    # measure it with a spectrograph.
+    b = np.max(F, axis=1)
+    F /= b.reshape(-1, 1)
+
+    # Finally, we add some noise
+    F += ferr * np.random.randn(*F.shape)
+
+    return u, vT, b, D, lam_padded, lam, F
+
 
 class LinearSolver(object):
 
-    def __init__(self, ydeg, lam_padded, F, D, ferr=1.e-4, u_mu=0.0, 
+    def __init__(self, ydeg, lam_padded, F, ferr, D, u_mu=0.0, 
                  u_sig=0.01, vT_mu=1.0, vT_sig=0.3, vT_rho=3.e-5, 
                  invb_sig=0.1):
         # Data and Doppler instance
@@ -281,81 +354,78 @@ class LinearSolver(object):
 
         return lnlike, lnprior_u, lnprior_vT, lnprior_invb
 
-def generate_data(R=3e5, nlam=200, sigma=7.5e-6, vsini=40.0, 
-                  nlines=20, inc=60.0, ydeg=5, nspec=11, ferr=1.e-4):
-    """Generate a synthetic Vogstar dataset.
-    
-    Args:
-        R (float, optional): The spectral resolution. Defaults to 3e5.
-        nlam (int, optional): Number of observed wavelength bins. 
-            Defaults to 200.
-        sigma (float, optional): Line width in log space. Defaults to 7.5e-6,
-            equivalent to ~0.05A at 6430A.
-        vsini (float, optional): Equatorial projected velocity in km / s. 
-            Defaults to 40.0.
-        nlines (int, optional): Number of additional small lines to include. 
-            Defaults to 20.
-        inc (float, optional): Stellar inclination in degrees. 
-            Defaults to 60.0.
-        ydeg (int, optional): Degree of the Ylm expansion. Defaults to 5.
-        nspec (int, optional): Number of spectra. Defaults to 11.
-        ferr (float, optional): Gaussian error to add to the fluxes. 
-            Defaults to 1.e-3
-    """
-    # The time array in units of the period
-    t = np.linspace(-0.5, 0.5, nspec + 1)[:-1]
+    def solve(self, u=None, vT=None, b=None, 
+              u_guess=None, vT_guess=None, b_guess=None,
+              niter=100):
+        """
+        
+        """
+        # Simple linear solves
+        if (u is not None) and (vT is not None):
+            b = self.b(u, vT)
+            return (u, vT, b,) + self.lnprob(u, vT, b)
+        elif (u is not None) and (b is not None):
+            vT = self.vT(u, b)
+            return (u, vT, b,) + self.lnprob(u, vT, b)
+        elif (vT is not None) and (b is not None):
+            u = self.u(vT, b)
+            return (u, vT, b,) + self.lnprob(u, vT, b)
 
-    # The log-wavelength array
-    dlam = np.log(1.0 + 1.0 / R)
-    lam = np.arange(-(nlam // 2), nlam // 2 + 1) * dlam
+        # Bi-linear
+        elif b is not None:
+            raise NotImplementedError("Case not implemented.")
+        elif u is not None:
+            raise NotImplementedError("Case not implemented.")
+        elif vT is not None:
+            # TODO
+            raise NotImplementedError("Case not yet implemented.")
 
-    # Pre-compute the Doppler basis
-    doppler = pp.Doppler(lam, ydeg=ydeg, vsini=vsini, inc=inc, P=1.0)
-    D = doppler.D(t=t)
+        # Full tri-linear solve
+        else:
+            # TODO
+            raise NotImplementedError("Case not yet implemented.")
 
-    # Now let's generate a synthetic spectrum. We do this on the
-    # *padded* wavelength grid to avoid convolution edge effects.
-    lam_padded = doppler.lam_padded
+# Generate a dataset
+ydeg = 5
+ferr = 1.e-3
+u_true, vT_true, b_true, D, lam_padded, lam, F = generate_data(ydeg=ydeg, ferr=ferr)
 
-    # A deep line at the center of the wavelength range
-    vT = np.ones_like(lam_padded)
-    vT = 1 - 0.5 * np.exp(-0.5 * lam_padded ** 2 / sigma ** 2)
+# Solve
+solver = LinearSolver(ydeg, lam_padded, F, ferr, D)
 
-    # Scatter some smaller lines around for good measure
-    np.random.seed(12)
-    for _ in range(nlines):
-        amp = 0.1 * np.random.random()
-        mu = 2.1 * (0.5 - np.random.random()) * lam_padded.max()
-        vT -= amp * np.exp(-0.5 * (lam_padded - mu) ** 2 / sigma ** 2)
+u, vT, b, lnlike, lnprior_u, lnprior_vT, lnprior_invb = solver.solve(vT=vT_true, b=b_true)
 
-    # Now generate our "Vogtstar" map
-    map = starry.Map(ydeg, lazy=False)
-    map.inc = inc
-    map.load("vogtstar.jpg")
-    u = np.array(map.y)
+fig, ax = plt.subplots(2, 2)
+ax[0, 0].plot(u_true)
+ax[0, 0].plot(u)
 
-    # Compute the map matrix & the flux matrix
-    A = u.reshape(-1, 1).dot(vT.reshape(1, -1))
-    F = D.dot(A.reshape(-1)).reshape(nspec, -1)
+ax[0, 1].plot(vT_true)
+ax[0, 1].plot(vT)
 
-    # Let's divide out the baseline flux. This is a bummer,
-    # since it contains really important information about
-    # the map, but unfortunately we can't typically
-    # measure it with a spectrograph.
-    b = np.max(F, axis=1)
-    F /= b.reshape(-1, 1)
+ax[1, 0].plot(b_true)
+ax[1, 0].plot(b)
 
-    # Finally, we add some noise
-    F += ferr * np.random.randn(*F.shape)
+ax[1, 1].plot(-lnlike)
+ax[1, 1].plot(-(lnprior_u + lnprior_vT + lnprior_invb))
+ax[1, 1].set_yscale("log")
 
-    return u, vT, b, D, lam_padded, lam, F
+lnlike, lnprior_u, lnprior_vT, lnprior_invb = solver.lnprob(u_true, vT_true, b_true)
+ax[1, 1].axhline(-lnlike, color="C0")
+ax[1, 1].axhline(-(lnprior_u + lnprior_vT + lnprior_invb), color="C1")
 
 
-u, vT, b, D, lam_padded, lam, F = generate_data()
-solver = LinearSolver(5, lam_padded, F, D)
-
-print(solver.lnprob(u, vT, b))
-
-plt.plot(b)
-plt.plot(solver.b(u, vT))
 plt.show()
+
+'''
+# Adjust the continuum; this helps convergence
+norm = vT[0, np.argsort(vT[0])[int(0.95 * vT.shape[1]) - 1]]
+vT /= norm
+
+# Perturb
+x = perturb_amp * ((maxiter - n) / maxiter) ** perturb_exp
+u *= (1 + x * np.random.randn(self.N)).reshape(-1, 1)
+vT *= (1 + x * np.random.randn(self.Kp)).reshape(1, -1)
+if self.fit_baseline:
+    b = b.reshape(-1)
+    b *= (1 + x * np.random.randn(self.M))
+'''
