@@ -221,6 +221,7 @@ class Doppler(object):
 
 class LinearSolver(object):
     """
+    TODO: Fix the shapes & all the mess.
 
     """
 
@@ -277,6 +278,7 @@ class LinearSolver(object):
         else:
             self.fit_baseline = True
             self.b_CInv = np.ones(self.M) / b_sig ** 2
+            self.b_CInvmu = self.b_CInv.reshape(-1, 1)
             self.lndet2pC_b = self.M * np.log(2 * np.pi / b_sig ** 2)
 
     def u(self, vT, baseline):
@@ -286,9 +288,9 @@ class LinearSolver(object):
         """
         V = block_diag([vT.reshape(-1, 1) for n in range(self.N)])
         A = np.array(self.D.dot(V).todense())
-        ATCInv = np.multiply(A.T, self.CInv)
+        ATCInv = np.multiply(A.T, self.CInv / baseline.reshape(-1) ** 2)
         ATCInvA = ATCInv.dot(A)
-        ATCInvf = np.dot(ATCInv, self.f - baseline)
+        ATCInvf = np.dot(ATCInv, self.f * baseline)
         np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + self.u_CInv)
         u = np.linalg.solve(ATCInvA, ATCInvf + self.u_CInvmu).reshape(-1, 1)
         return u
@@ -303,22 +305,25 @@ class LinearSolver(object):
                     for n in range(self.N)], offsets, 
                     shape=(self.N * self.Kp, self.Kp))
         A = np.array(self.D.dot(U).todense())
-        ATCInv = np.multiply(A.T, self.CInv)
+        ATCInv = np.multiply(A.T, self.CInv / baseline.reshape(-1) ** 2)
         ATCInvA = ATCInv.dot(A)
-        ATCInvf = np.dot(ATCInv, self.f - baseline)
+        ATCInvf = np.dot(ATCInv, self.f * baseline)
         return np.linalg.solve(ATCInvA + self.vT_CInv, 
                                ATCInvf + self.vT_CInvmu).reshape(1, -1)
 
     def b(self, model):
         """
-        Linear solve for the baseline given the model.
+        Linear solve for the (inverse) baseline given the model.
 
         """
-        ATCInv = np.multiply(self.B.T, self.CInv)
-        ATCInvA = ATCInv.dot(self.B)
-        ATCInvf = np.dot(ATCInv, self.f - model)
+
+        M = dense_block_diag(*(model.reshape(self.M, -1))).T
+        ATCInv = np.multiply(M.T, self.CInv)
+        ATCInvA = ATCInv.dot(M)
+        ATCInvf = np.dot(ATCInv, self.f)
         np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + self.b_CInv)
-        return np.linalg.solve(ATCInvA, ATCInvf).reshape(-1, 1)
+        inv_b = np.linalg.solve(ATCInvA, ATCInvf + self.b_CInvmu).reshape(-1, 1)
+        return 1.0 / inv_b
 
     def step(self, vT, b):
         """
@@ -338,12 +343,13 @@ class LinearSolver(object):
             b = self.b(model)
             baseline = self.B.dot(b).reshape(-1, 1)
         else:
-            baseline = np.zeros_like(self.f)
+            baseline = np.ones_like(self.f)
 
         # Compute the likelihood
-        r = (self.f - model - baseline).reshape(-1)
+        r = (self.f * baseline - model).reshape(-1)
         lnlike = -0.5 * np.dot(
-                            np.multiply(r.reshape(1, -1), self.CInv),
+                            np.multiply(r.reshape(1, -1), 
+                                        self.CInv / baseline.reshape(-1) ** 2),
                             r.reshape(-1, 1)
                         ) - 0.5 * self.lndet2pC
         r = u - self.u_mu
@@ -357,16 +363,55 @@ class LinearSolver(object):
                             r.reshape(-1, 1)
                         ) - 0.5 * self.lndet2pC_vT
         if self.fit_baseline:
+            inv_b = 1.0 / b
             lnprior_b = -0.5 * np.dot(
-                            np.multiply(b.reshape(1, -1), self.b_CInv),
-                            b.reshape(-1, 1)
+                            np.multiply(inv_b.reshape(1, -1), self.b_CInv),
+                            inv_b.reshape(-1, 1)
                         ) - 0.5 * self.lndet2pC_b
         else:
             lnprior_b = 0.0
 
-        return u, vT, b, model + baseline, lnlike, lnprior_u + lnprior_vT + lnprior_b
+        return u, vT, b, model / baseline, lnlike, lnprior_u + lnprior_vT + lnprior_b
 
-    def solve(self, vT_guess, b_guess, maxiter=200, quiet=False):
+    def lnprob(self, u, vT, b):
+        """
+
+        """
+        # Compute the model
+        a = u.dot(vT).reshape(-1)
+        model = self.D.dot(a).reshape(-1, 1)
+        baseline = self.B.dot(b).reshape(-1, 1)
+
+        # Compute the likelihood
+        r = (self.f * baseline - model).reshape(-1)
+        lnlike = -0.5 * np.dot(
+                            np.multiply(r.reshape(1, -1), 
+                                        self.CInv / baseline.reshape(-1) ** 2),
+                            r.reshape(-1, 1)
+                        ) - 0.5 * self.lndet2pC
+        r = u - self.u_mu
+        lnprior_u = -0.5 * np.dot(
+                            np.multiply(r.reshape(1, -1), self.u_CInv),
+                            r.reshape(-1, 1)
+                        ) - 0.5 * self.lndet2pC_u
+        r = vT - self.vT_mu
+        lnprior_vT = -0.5 * np.dot(
+                            np.dot(r.reshape(1, -1), self.vT_CInv),
+                            r.reshape(-1, 1)
+                        ) - 0.5 * self.lndet2pC_vT
+        if self.fit_baseline:
+            inv_b = 1.0 / b
+            lnprior_b = -0.5 * np.dot(
+                            np.multiply(inv_b.reshape(1, -1), self.b_CInv),
+                            inv_b.reshape(-1, 1)
+                        ) - 0.5 * self.lndet2pC_b
+        else:
+            lnprior_b = 0.0
+
+        return lnlike, lnprior_u + lnprior_vT + lnprior_b
+
+    def solve(self, vT_guess, b_guess, maxiter=200, 
+              perturb_amp=0.25, perturb_exp=2, quiet=False):
         """
         TODO: Convergence criterion
 
@@ -383,6 +428,14 @@ class LinearSolver(object):
             # Adjust the continuum; this helps convergence
             norm = vT[0, np.argsort(vT[0])[int(0.95 * vT.shape[1]) - 1]]
             vT /= norm
+
+            # Perturb
+            x = perturb_amp * ((maxiter - n) / maxiter) ** perturb_exp
+            u *= (1 + x * np.random.randn(self.N)).reshape(-1, 1)
+            vT *= (1 + x * np.random.randn(self.Kp)).reshape(1, -1)
+            if self.fit_baseline:
+                b = b.reshape(-1)
+                b *= (1 + x * np.random.randn(self.M))
 
         # Final step
         u, vT, b, model, lnlike[n + 1], lnprior[n + 1] = self.step(vT, b)
