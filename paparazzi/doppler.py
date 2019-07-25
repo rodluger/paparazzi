@@ -3,7 +3,7 @@ import numpy as np
 import starry
 import scipy
 from scipy.linalg import toeplitz
-from scipy.sparse import csr_matrix, hstack, vstack
+from scipy.sparse import csr_matrix, hstack, vstack, diags
 from tqdm import tqdm
 
 
@@ -84,10 +84,6 @@ class Doppler(object):
     def P(self, value):
         self._P = value
         self._compute = True
-
-    @property
-    def mask(self):
-        return self._lam_mask
     
     @property
     def lam_padded(self):
@@ -103,19 +99,25 @@ class Doppler(object):
         # Kernel width
         W = (np.abs(0.5 * np.log((1 + self._betasini) / (1 - self._betasini)))) 
         dlam = self.lam[1] - self.lam[0]
-        self._kernel_width = 2 * int(np.ceil(W / dlam))
+        self._kernel_width = 2 * int(np.ceil(W / dlam)) + 1
 
         # Pad the wavelength array to circumvent edge effects
         dlam = self.lam[1] - self.lam[0]
-        W = self._kernel_width // 2
+        W = (self._kernel_width - 1) // 2
         pad_l = np.linspace(self.lam[0] - W * dlam, self.lam[0], W + 1)[:-1]
         pad_r = np.linspace(self.lam[-1], self.lam[-1] + W * dlam, W + 1)[1:]
         self._lam_padded = np.concatenate((pad_l, self.lam, pad_r))
         self.Kp = self._lam_padded.shape[0]
-        self._lam_mask = np.concatenate((np.zeros_like(pad_l), 
-                                         np.ones_like(self.lam), 
-                                         np.zeros_like(pad_r)))
-        self._lam_mask = np.array(self._lam_mask, dtype=bool)
+        
+        # x coordinate of lines of constant Doppler shift
+        # NOTE: In starry, the z axis points *toward* the observer,
+        # which is the opposite of the convention used for Doppler
+        # shifts, so we need to include a factor of -1 below.
+        lam_kernel = self._lam_padded[self.Kp // 2 - W:self.Kp // 2 + W + 1]
+        self._x = -(1 / self._betasini) * (np.exp(2 * lam_kernel) - 1) / \
+                    (np.exp(2 * lam_kernel) + 1)
+        self._x[self._x < -1.0] = -1.0
+        self._x[self._x > 1.0] = 1.0
 
     def _Ij(self, j, x):
         """
@@ -136,27 +138,17 @@ class Doppler(object):
         i = int(np.floor(LAM - DEL))
         j = int(np.floor(DEL))
         k = int(np.ceil(DEL) - np.floor(DEL))
-        
-        # x coordinate of lines of constant Doppler shift
-        # NOTE: In starry, the z axis points *toward* the observer,
-        # which is the opposite of the convention used for Doppler
-        # shifts, so we need to include a factor of -1 below.
-        x = -(1 / self._betasini) * (np.exp(2 * self._lam_padded) - 1) / \
-             (np.exp(2 * self._lam_padded) + 1)
 
-        # Integral is only nonzero when we're
-        # inside the unit disk
-        idx = np.abs(x) < 1
-        
         # Solve the integral
-        res = np.zeros(self.Kp)
+        # TODO: Find the recursion relations
         if (k == 0) and (j % 2 == 0):
-            res[idx] = (2 * x[idx] ** i * \
-                (1 - x[idx] ** 2) ** (0.5 * (j + 1))) / (j + 1)
+            sn = (2 * self._x ** i * \
+                (1 - self._x ** 2) ** (0.5 * (j + 1))) / (j + 1)
         elif (k == 1) and (j % 2 == 0):
-            res[idx] = x[idx] ** i * self._Ij(j, x[idx])
-        
-        return res
+            sn = self._x ** i * self._Ij(j, self._x)
+        else:
+            sn = np.zeros_like(self._x)
+        return sn
 
     def _g(self):
         """
@@ -176,11 +168,9 @@ class Doppler(object):
         g = self._g()
         T = [None for n in range(self.N)]
         for n in range(self.N):
-            col0 = np.pad(g[n, :self.Kp // 2 + 1][::-1], 
-                          (0, self.Kp // 2), mode='constant')
-            row0 = np.pad(g[n, self.Kp // 2:], 
-                          (0, self.Kp // 2), mode='constant')
-            T[n] = csr_matrix(toeplitz(col0, row0)[self._lam_mask])
+            offsets = np.arange(self._kernel_width)
+            diagonals = np.tile(g[n].reshape(-1, 1), self.K)
+            T[n] = diags(diagonals, offsets, (self.K, self.Kp), format="csr")
         return T
 
     def D(self, t=0.0, quiet=False):

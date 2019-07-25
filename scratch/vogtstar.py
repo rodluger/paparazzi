@@ -11,6 +11,9 @@ from scipy.linalg import cho_factor, cho_solve
 from scipy.sparse import block_diag, diags
 from scipy.linalg import block_diag as dense_block_diag
 from tqdm import tqdm
+import theano.tensor as tt
+import theano.sparse as ts
+import theano
 
 
 __all__ = ["LinearSolver", "generate_data"]
@@ -191,7 +194,6 @@ def generate_data(R=3e5, nlam=200, sigma=7.5e-6, vsini=40.0,
     vT = 1 - 0.5 * np.exp(-0.5 * lam_padded ** 2 / sigma ** 2)
 
     # Scatter some smaller lines around for good measure
-    np.random.seed(12)
     for _ in range(nlines):
         amp = 0.1 * np.random.random()
         mu = 2.1 * (0.5 - np.random.random()) * lam_padded.max()
@@ -217,7 +219,32 @@ def generate_data(R=3e5, nlam=200, sigma=7.5e-6, vsini=40.0,
     # Finally, we add some noise
     F += ferr * np.random.randn(*F.shape)
 
-    return u, vT, b, D, lam_padded, lam, F
+    return u[1:], vT, b, D, lam_padded, lam, F
+
+
+def Adam(cost, params, lr=0.001, b1=0.9, b2=0.999, e=1e-8):
+    """https://gist.github.com/Newmu/acb738767acb4788bac3
+    
+    """
+    updates = []
+    grads = tt.grad(cost, params)
+    i = theano.shared(np.array(0.,dtype=theano.config.floatX))
+    i_t = i + 1.
+    fix1 = 1. - (1. - b1)**i_t
+    fix2 = 1. - (1. - b2)**i_t
+    lr_t = lr * (tt.sqrt(fix2) / fix1)
+    for p, g in zip(params, grads):
+        m = theano.shared(p.get_value() * 0.)
+        v = theano.shared(p.get_value() * 0.)
+        m_t = (b1 * g) + ((1. - b1) * m)
+        v_t = (b2 * tt.sqr(g)) + ((1. - b2) * v)
+        g_t = m_t / (tt.sqrt(v_t) + e)
+        p_t = p - (lr_t * g_t)
+        updates.append((m, m_t))
+        updates.append((v, v_t))
+        updates.append((p, p_t))
+    updates.append((i, i_t))
+    return updates
 
 
 class LinearSolver(object):
@@ -239,10 +266,8 @@ class LinearSolver(object):
 
         # The inverse prior variance of `u`
         # The zeroth coefficient is fixed
-        self.u_cinv = np.ones(self.N) / u_sig ** 2
-        self.u_mu = np.ones(self.N) * u_mu ** 2
-        self.u_cinv[0] = 1e12
-        self.u_mu[0] = 1.0
+        self.u_cinv = np.ones(self.N - 1) / u_sig ** 2
+        self.u_mu = np.ones(self.N - 1) * u_mu ** 2
         self.lndet2pC_u = np.sum(np.log(2 * np.pi * self.u_cinv))
 
         # Gaussian process prior on vT
@@ -272,11 +297,13 @@ class LinearSolver(object):
 
         """
         V = block_diag([vT.reshape(-1, 1) for n in range(self.N)])
-        A = np.array(self.D.dot(V).todense())
+        AFull = np.array(self.D.dot(V).todense())
+        A0 = AFull[:, 0]
+        A = AFull[:, 1:]
         ATCInv = np.multiply(A.T, 
             (self.F_CInv / b.reshape(-1, 1) ** 2).reshape(-1))
         ATCInvA = ATCInv.dot(A)
-        ATCInvf = np.dot(ATCInv, (self.F * b.reshape(-1, 1)).reshape(-1))
+        ATCInvf = np.dot(ATCInv, (self.F * b.reshape(-1, 1)).reshape(-1) - A0)
         np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + self.u_cinv)
         u = np.linalg.solve(ATCInvA, 
                             ATCInvf + self.u_cinv * self.u_mu)
@@ -288,9 +315,9 @@ class LinearSolver(object):
 
         """
         offsets = -np.arange(0, self.N) * self.Kp
-        U = diags([np.ones(self.Kp) * u[n] 
-                    for n in range(self.N)], offsets, 
-                    shape=(self.N * self.Kp, self.Kp))
+        U = diags([np.ones(self.Kp)] + 
+                  [np.ones(self.Kp) * u[n] for n in range(self.N - 1)], 
+                  offsets, shape=(self.N * self.Kp, self.Kp))
         A = np.array(self.D.dot(U).todense())
         ATCInv = np.multiply(A.T, 
             (self.F_CInv / b.reshape(-1, 1) ** 2).reshape(-1))
@@ -306,7 +333,7 @@ class LinearSolver(object):
         space in which the Gaussian priors are applied.
 
         """
-        A = u.reshape(-1, 1).dot(vT.reshape(1, -1))
+        A = (np.append([1], u)).reshape(-1, 1).dot(vT.reshape(1, -1))
         M = self.D.dot(A.reshape(-1)).reshape(self.M, -1)
         MT = dense_block_diag(*M)
         ATCInv = np.multiply(MT, self.F_CInv.reshape(-1))
@@ -322,7 +349,7 @@ class LinearSolver(object):
 
         """
         # Compute the model
-        A = u.reshape(-1, 1).dot(vT.reshape(1, -1))
+        A = (np.append([1], u)).reshape(-1, 1).dot(vT.reshape(1, -1))
         M = self.D.dot(A.reshape(-1)).reshape(self.M, -1)
 
         # Compute the likelihood
@@ -346,7 +373,7 @@ class LinearSolver(object):
                             r.reshape(-1, 1)
                         ) - 0.5 * self.lndet2pC_vT
 
-        inv_b = 1.0 / b
+        inv_b = 1.0 / b - self.invb_mu
         lnprior_invb = -0.5 * np.dot(
                         np.multiply(inv_b.reshape(1, -1), self.invb_cinv),
                         inv_b.reshape(-1, 1)
@@ -377,55 +404,81 @@ class LinearSolver(object):
         elif u is not None:
             raise NotImplementedError("Case not implemented.")
         elif vT is not None:
-            # TODO
-            raise NotImplementedError("Case not yet implemented.")
+            if u_guess is None and b_guess is None:
+                u_guess = np.random.randn(self.N - 1) / np.sqrt(self.u_cinv)
+                b_guess = self.b(u_guess, vT)
+            elif b_guess is None:
+                b_guess = self.b(u_guess, vT)
+            elif u_guess is None:
+                u_guess = self.b(vT, b_guess)
+
+            u = theano.shared(u_guess)
+            b = theano.shared(b_guess)
+            vT = tt.as_tensor_variable(vT)
+
+            # Compute the model
+            D = ts.as_sparse_variable(self.D)
+            a = tt.reshape(tt.dot(tt.reshape(tt.concatenate([[1.0], u]), (-1, 1)), 
+                                  tt.reshape(vT, (1, -1))), (-1,))
+            M = tt.reshape(ts.dot(D, a), (self.M, -1))
+
+            # Compute the likelihood
+            r = tt.reshape(self.F * tt.reshape(b, (-1, 1)) - M, (-1,))
+            cov = tt.reshape(self.F_CInv / tt.reshape(b ** 2, (-1, 1)), (-1,))
+            lnlike = -0.5 * (tt.sum(r ** 2 * cov) + self.lndet2pC)
+
+            # Compute the priors
+            r = u - self.u_mu
+            lnprior_u = -0.5 * (tt.sum(r ** 2 * self.u_cinv) + self.lndet2pC_u)
+            r = 1.0 / b - self.invb_mu
+            lnprior_invb = -0.5 * (tt.sum(r ** 2 * self.invb_cinv) + self.lndet2pC_invb)
+
+            # The full loss
+            loss = -(lnlike + lnprior_u + lnprior_invb)
+
+            # The optimizer
+            upd = Adam(loss, [u, b])
+            train = theano.function([], [lnlike, lnprior_u, lnprior_invb], updates=upd)
+            lnlike_val = np.zeros(niter)
+            lnprior_u_val = np.zeros(niter)
+            lnprior_invb_val = np.zeros(niter)
+            lnprior_vT_val = np.zeros(niter)
+            for n in tqdm(range(niter)):
+                lnlike_val[n], lnprior_u_val[n], lnprior_invb_val[n] = train()
+
+            # Evaluate and return
+            u = u.eval()
+            vT = vT.eval()
+            b = b.eval()
+            return u, vT, b, lnlike_val, lnprior_u_val, lnprior_vT_val, lnprior_invb_val
 
         # Full tri-linear solve
         else:
             # TODO
             raise NotImplementedError("Case not yet implemented.")
 
+
 # Generate a dataset
+np.random.seed(12)
 ydeg = 5
 ferr = 1.e-3
-u_true, vT_true, b_true, D, lam_padded, lam, F = generate_data(ydeg=ydeg, ferr=ferr)
+u_true, vT_true, b_true, D, lam_padded, lam, F = generate_data(ydeg=ydeg, ferr=ferr, nspec=31)
 
 # Solve
 solver = LinearSolver(ydeg, lam_padded, F, ferr, D)
-
-u, vT, b, lnlike, lnprior_u, lnprior_vT, lnprior_invb = solver.solve(vT=vT_true, b=b_true)
-
+u, vT, b, lnlike, lnprior_u, lnprior_vT, lnprior_invb = solver.solve(vT=vT_true, niter=99, u_guess=u_true, b_guess=b_true)
 fig, ax = plt.subplots(2, 2)
 ax[0, 0].plot(u_true)
 ax[0, 0].plot(u)
-
 ax[0, 1].plot(vT_true)
 ax[0, 1].plot(vT)
-
 ax[1, 0].plot(b_true)
 ax[1, 0].plot(b)
-
 ax[1, 1].plot(-lnlike)
 ax[1, 1].plot(-(lnprior_u + lnprior_vT + lnprior_invb))
 ax[1, 1].set_yscale("log")
-
 lnlike, lnprior_u, lnprior_vT, lnprior_invb = solver.lnprob(u_true, vT_true, b_true)
 ax[1, 1].axhline(-lnlike, color="C0")
 ax[1, 1].axhline(-(lnprior_u + lnprior_vT + lnprior_invb), color="C1")
-
-
 plt.show()
 
-'''
-# Adjust the continuum; this helps convergence
-norm = vT[0, np.argsort(vT[0])[int(0.95 * vT.shape[1]) - 1]]
-vT /= norm
-
-# Perturb
-x = perturb_amp * ((maxiter - n) / maxiter) ** perturb_exp
-u *= (1 + x * np.random.randn(self.N)).reshape(-1, 1)
-vT *= (1 + x * np.random.randn(self.Kp)).reshape(1, -1)
-if self.fit_baseline:
-    b = b.reshape(-1)
-    b *= (1 + x * np.random.randn(self.M))
-'''
