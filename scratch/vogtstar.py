@@ -350,7 +350,7 @@ class Solver(object):
             u = theano.shared(u_guess)
             self.map[1:, :] = u
             b = self.map.flux(theta=self.theta)
-            #b /= tt.mean(b)
+            b /= tt.mean(b)
 
             # Compute the model
             D = ts.as_sparse_variable(self.D)
@@ -550,7 +550,7 @@ class Solver(object):
 
 # Generate a dataset
 np.random.seed(12)
-solver = Solver(ydeg=5, inc=60.0, vsini=40.0, P=1.0)
-solver.generate_data(nt=11, ferr=1.e-4)
+solver = Solver(ydeg=15, inc=60.0, vsini=40.0, P=1.0)
+solver.generate_data(nt=31, ferr=1.e-4)
 solver.solve(vT=solver.vT_true, niter=999)
 solver.plot(render_movies=False, open_plots=True)
