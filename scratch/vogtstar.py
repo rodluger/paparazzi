@@ -279,7 +279,7 @@ class Solver(object):
 
     def solve(self, u=None, vT=None, b=None, u_guess=None, 
               vT_guess=None, b_guess=None, u_mu=0.0, u_sig=0.01, 
-              vT_mu=1.0, vT_sig=0.3, vT_rho=3.e-5, b_sig=0.1,
+              vT_mu=1.0, vT_sig=0.3, vT_rho=3.e-5, o_sig=0.1,
               niter=100, **kwargs):
         """
         
@@ -312,10 +312,9 @@ class Solver(object):
             self.lndet2pC_vT = np.sum(np.log(2 * np.pi * self.vT_CInv))
             self.vT_CInv = np.diag(self.vT_CInv)
 
-        # Prior on the (inverse) baseline
-        self.invb_cinv = np.ones(self.M) / b_sig ** 2
-        self.invb_mu = np.ones(self.M)
-        self.lndet2pC_invb = self.M * np.log(2 * np.pi / b_sig ** 2)
+        # Prior on the baseline offset
+        self.o_cinv = np.ones(self.M) / o_sig ** 2
+        self.lndet2pC_o = self.M * np.log(2 * np.pi / o_sig ** 2)
 
         # Simple linear solves
         if (u is not None) and (vT is not None):
@@ -340,17 +339,19 @@ class Solver(object):
         elif u is not None:
             raise NotImplementedError("Case not implemented.")
         elif vT is not None:
-            # Here we solve for `u` and set `b` to be
-            # the total flux given `u`
+            # Here we solve for `u` and `b`
+            self.vT = vT
             if u_guess is None and b_guess is None:
                 u_guess = np.random.randn(self.N - 1) / np.sqrt(self.u_cinv)
             elif u_guess is None:
-                self._compute_u(vT, b_guess)
+                self.b = b_guess
+                self._compute_u()
                 u_guess = self.u
+            offset_guess = np.zeros(self.M)
             u = theano.shared(u_guess)
+            offset = theano.shared(offset_guess)
             self.map[1:, :] = u
-            b = self.map.flux(theta=self.theta)
-            b /= tt.mean(b)
+            b = self.map.flux(theta=self.theta) * (1 + offset)
 
             # Compute the model
             D = ts.as_sparse_variable(self.D)
@@ -364,19 +365,15 @@ class Solver(object):
             cov = tt.reshape(self.F_CInv / tt.reshape(b ** 2, (-1, 1)), (-1,))
             lnlike = -0.5 * (tt.sum(r ** 2 * cov) + self.lndet2pC)
 
-            # Compute the priors
-            r = u - self.u_mu
-            lnprior_u = -0.5 * (tt.sum(r ** 2 * self.u_cinv) + self.lndet2pC_u)
-            r = 1.0 / b - self.invb_mu
-            lnprior_invb = -0.5 * (tt.sum(r ** 2 * self.invb_cinv) + \
-                self.lndet2pC_invb)
-            lnprior = lnprior_u + lnprior_invb
+            # Compute the prior
+            lnprior = -0.5 * (tt.sum((u - self.u_mu) ** 2 * self.u_cinv) + self.lndet2pC_u)
+            lnprior += -0.5 * (tt.sum(offset ** 2 * self.o_cinv) + self.lndet2pC_o)
 
             # The full loss
             loss = -(lnlike + lnprior)
 
             # The optimizer
-            upd = Adam(loss, [u,], **kwargs)
+            upd = Adam(loss, [u, offset], **kwargs)
             train = theano.function([], 
                 [u, b, loss, lnlike, lnprior], updates=upd)
             lnlike_val = np.zeros(niter)
@@ -390,7 +387,6 @@ class Solver(object):
                     best_b = b_val
 
             # We're done!
-            self.vT = vT
             self.u = best_u
             self.b = best_b
             self.lnlike = lnlike_val
@@ -550,7 +546,7 @@ class Solver(object):
 
 # Generate a dataset
 np.random.seed(12)
-solver = Solver(ydeg=15, inc=60.0, vsini=40.0, P=1.0)
-solver.generate_data(nt=31, ferr=1.e-4)
-solver.solve(vT=solver.vT_true, niter=999)
+solver = Solver(ydeg=15, inc=40.0, vsini=40.0, P=1.0)
+solver.generate_data(nt=51, ferr=1.e-3, image="vogtstar.jpg")
+solver.solve(vT=solver.vT_true, niter=200)
 solver.plot(render_movies=False, open_plots=True)
