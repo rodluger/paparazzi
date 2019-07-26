@@ -279,7 +279,7 @@ class Solver(object):
 
     def solve(self, u=None, vT=None, b=None, u_guess=None, 
               vT_guess=None, b_guess=None, u_mu=0.0, u_sig=0.01, 
-              vT_mu=1.0, vT_sig=0.3, vT_rho=3.e-5, o_sig=0.1,
+              vT_mu=1.0, vT_sig=0.3, vT_rho=3.e-5, b_sig=0.1, o_sig=0.1,
               niter=100, **kwargs):
         """
         
@@ -311,6 +311,11 @@ class Solver(object):
             self.vT_CInvmu = (self.vT_CInv * self.vT_mu)
             self.lndet2pC_vT = np.sum(np.log(2 * np.pi * self.vT_CInv))
             self.vT_CInv = np.diag(self.vT_CInv)
+
+        # Prior on the (inverse) baseline
+        self.invb_cinv = np.ones(self.M) / b_sig ** 2
+        self.invb_mu = np.ones(self.M)
+        self.lndet2pC_invb = self.M * np.log(2 * np.pi / b_sig ** 2)
 
         # Prior on the baseline offset
         self.o_cinv = np.ones(self.M) / o_sig ** 2
@@ -548,5 +553,5 @@ class Solver(object):
 np.random.seed(12)
 solver = Solver(ydeg=15, inc=40.0, vsini=40.0, P=1.0)
 solver.generate_data(nt=51, ferr=1.e-3, image="vogtstar.jpg")
-solver.solve(vT=solver.vT_true, niter=200)
+solver.solve(vT=solver.vT_true, b=solver.b_true, niter=200)
 solver.plot(render_movies=False, open_plots=True)
