@@ -338,25 +338,32 @@ class Solver(object):
             self._compute_u()
             self._compute_lnprob()
         
-        # Bi-linear
-        elif b is not None:
-            raise NotImplementedError("Case not implemented.")
-        elif u is not None:
-            raise NotImplementedError("Case not implemented.")
-        elif vT is not None:
-            # Here we solve for `u` and `b`
-            self.vT = vT
-            if u_guess is None and b_guess is None:
-                u_guess = np.random.randn(self.N - 1) / np.sqrt(self.u_cinv)
-            elif u_guess is None:
-                self.b = b_guess
-                self._compute_u()
-                u_guess = self.u
-            offset_guess = np.zeros(self.M)
-            u = theano.shared(u_guess)
-            offset = theano.shared(offset_guess)
-            self.map[1:, :] = u
-            b = self.map.flux(theta=self.theta) * (1 + offset)
+        # Non-linear
+        else:
+
+            if (vT is not None) and (u is None) and (b is None):
+                self.vT = vT
+                if b_guess is None:
+                    b_guess = np.ones(self.M)
+                if u_guess is None:
+                    self.b = b_guess
+                    self._compute_u()
+                    u_guess = self.u
+
+                offset_guess = np.zeros(self.M)
+                u = theano.shared(u_guess)
+                offset = theano.shared(offset_guess)
+                self.map[1:, :] = u
+                b = self.map.flux(theta=self.theta) * (1 + offset)
+
+            elif (vT is None) and (u is None) and (b is None):
+                
+                raise RuntimeError("Case not yet implemented.")
+                if u_guess is None and b_guess is None:
+                    u_guess = np.random.randn(self.N - 1) / np.sqrt(self.u_cinv)
+
+            else:
+                raise RuntimeError("Case not yet implemented.")
 
             # Compute the model
             D = ts.as_sparse_variable(self.D)
@@ -396,11 +403,6 @@ class Solver(object):
             self.b = best_b
             self.lnlike = lnlike_val
             self.lnprior = lnprior_val
-
-        # Full tri-linear solve
-        else:
-            # TODO
-            raise NotImplementedError("Case not yet implemented.")
 
         self._solved = True
 
@@ -552,6 +554,6 @@ class Solver(object):
 # Generate a dataset
 np.random.seed(12)
 solver = Solver(ydeg=15, inc=40.0, vsini=40.0, P=1.0)
-solver.generate_data(nt=51, ferr=1.e-3, image="vogtstar.jpg")
-solver.solve(vT=solver.vT_true, b=solver.b_true, niter=200)
+solver.generate_data(nt=16, ferr=1.e-3, image="vogtstar.jpg")
+solver.solve(vT=solver.vT_true, niter=200)
 solver.plot(render_movies=False, open_plots=True)
