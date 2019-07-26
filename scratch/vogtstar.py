@@ -73,6 +73,7 @@ class Solver(object):
         self.u_true = None
         self.vT_true = None
         self.b_true = None
+        self.d_true = None
         self.D = None
         self.t = None
         self.lam_padded = None
@@ -85,6 +86,7 @@ class Solver(object):
         self.u = None
         self.b = None
         self.vT = None
+        self.d = None
         self.lnlike = None
         self.lnprior = None
 
@@ -191,7 +193,7 @@ class Solver(object):
 
     def _compute_u(self):
         """
-        Linear solve for `u` given `v^T` and `b`.
+        Linear solve for `u` given `v^T`, `b`.
 
         """
         V = block_diag([self.vT.reshape(-1, 1) for n in range(self.N)])
@@ -204,11 +206,11 @@ class Solver(object):
         ATCInvf = np.dot(ATCInv, (self.F * self.b.reshape(-1, 1)).reshape(-1) - A0)
         np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + self.u_cinv)
         self.u = np.linalg.solve(ATCInvA, 
-                            ATCInvf + self.u_cinv * self.u_mu)
+                                 ATCInvf + self.u_cinv * self.u_mu)
 
     def _compute_vT(self):
         """
-        Linear solve for `v^T` given `u` and `b`.
+        Linear solve for `v^T` given `u`, `b`.
 
         """
         offsets = -np.arange(0, self.N) * self.Kp
@@ -223,7 +225,7 @@ class Solver(object):
         self.vT = np.linalg.solve(ATCInvA + self.vT_CInv, 
                                   ATCInvf + self.vT_CInvmu)
 
-    def _compute_b(self, u, vT):
+    def _compute_b(self):
         """
         Linear solve for `b` given `u` and `vT`.
         Note that the problem is linear in `1 / b`, so that's the
@@ -236,51 +238,15 @@ class Solver(object):
         ATCInv = np.multiply(MT, self.F_CInv.reshape(-1))
         ATCInvA = ATCInv.dot(MT.T)
         ATCInvf = np.dot(ATCInv, self.F.reshape(-1))
-        np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + self.invb_cinv)
+        np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + 1.0 / self.b_cinv)
         invb = np.linalg.solve(ATCInvA, 
-            ATCInvf + self.invb_cinv * self.invb_mu)
+                               ATCInvf + 1.0 / (self.b_cinv * self.b_mu))
         self.b = 1.0 / invb
-
-    def _compute_lnprob(self):
-        """
-
-        """
-        # Compute the model
-        A = (np.append([1], self.u)).reshape(-1, 1).dot(self.vT.reshape(1, -1))
-        M = self.D.dot(A.reshape(-1)).reshape(self.M, -1)
-
-        # Compute the likelihood
-        r = (self.F * self.b.reshape(-1, 1) - M).reshape(-1)
-        self.lnlike = -0.5 * np.dot(
-                            np.multiply(r.reshape(1, -1), 
-                            (self.F_CInv / 
-                                self.b.reshape(-1, 1) ** 2).reshape(-1)),
-                            r.reshape(-1, 1)
-                        ) - 0.5 * self.lndet2pC
-
-        # Compute the priors                
-        r = self.u - self.u_mu
-        self.lnprior = -0.5 * np.dot(
-                            np.multiply(r.reshape(1, -1), self.u_cinv),
-                            r.reshape(-1, 1)
-                        ) - 0.5 * self.lndet2pC_u
-
-        r = self.vT - self.vT_mu
-        self.lnprior += -0.5 * np.dot(
-                            np.dot(r.reshape(1, -1), self.vT_CInv),
-                            r.reshape(-1, 1)
-                        ) - 0.5 * self.lndet2pC_vT
-
-        inv_b = 1.0 / self.b - self.invb_mu
-        self.lnprior += -0.5 * np.dot(
-                        np.multiply(inv_b.reshape(1, -1), self.invb_cinv),
-                        inv_b.reshape(-1, 1)
-                    ) - 0.5 * self.lndet2pC_invb
 
     def solve(self, u=None, vT=None, b=None, u_guess=None, 
               vT_guess=None, b_guess=None, u_mu=0.0, u_sig=0.01, 
-              vT_mu=1.0, vT_sig=0.3, vT_rho=3.e-5, b_sig=0.1, o_sig=0.1,
-              niter=100, **kwargs):
+              vT_mu=1.0, vT_sig=0.3, vT_rho=3.e-5, b_mu=1.0, 
+              b_sig=0.1, niter=100, **kwargs):
         """
         
         """
@@ -289,14 +255,14 @@ class Solver(object):
 
         # Data covariance
         self.F_CInv = np.ones_like(self.F) / self.ferr ** 2
-        self.lndet2pC = np.sum(np.log(2 * np.pi * self.F_CInv.reshape(-1)))
+        self.F_lndet = np.sum(np.log(2 * np.pi * self.F_CInv.reshape(-1)))
 
-        # The inverse prior variance of `u`
+        # Prior on `u`
         self.u_cinv = np.ones(self.N - 1) / u_sig ** 2
         self.u_mu = np.ones(self.N - 1) * u_mu ** 2
-        self.lndet2pC_u = np.sum(np.log(2 * np.pi * self.u_cinv))
+        self.u_lndet = np.sum(np.log(2 * np.pi * self.u_cinv))
 
-        # Gaussian process prior on vT
+        # Gaussian process prior on `vT`
         self.vT_mu = (np.ones(self.Kp) * vT_mu).reshape(1, -1)
         if vT_rho > 0.0:
             kernel = celerite.terms.Matern32Term(np.log(vT_sig), np.log(vT_rho))
@@ -305,101 +271,177 @@ class Solver(object):
             cho_C = cho_factor(vT_C)
             self.vT_CInv = cho_solve(cho_C, np.eye(self.Kp))
             self.vT_CInvmu = cho_solve(cho_C, self.vT_mu.reshape(-1))
-            self.lndet2pC_vT = -2 * np.sum(np.log(2 * np.pi * np.diag(cho_C[0])))
+            self.vT_lndet = -2 * np.sum(np.log(2 * np.pi * np.diag(cho_C[0])))
         else:
             self.vT_CInv = np.ones(self.Kp) / vT_sig ** 2
             self.vT_CInvmu = (self.vT_CInv * self.vT_mu)
-            self.lndet2pC_vT = np.sum(np.log(2 * np.pi * self.vT_CInv))
+            self.vT_lndet = np.sum(np.log(2 * np.pi * self.vT_CInv))
             self.vT_CInv = np.diag(self.vT_CInv)
 
-        # Prior on the (inverse) baseline
-        self.invb_cinv = np.ones(self.M) / b_sig ** 2
-        self.invb_mu = np.ones(self.M)
-        self.lndet2pC_invb = self.M * np.log(2 * np.pi / b_sig ** 2)
-
-        # Prior on the baseline offset
-        self.o_cinv = np.ones(self.M) / o_sig ** 2
-        self.lndet2pC_o = self.M * np.log(2 * np.pi / o_sig ** 2)
+        # Prior on `b`
+        self.b_cinv = np.ones(self.M) / b_sig ** 2
+        self.b_mu = np.ones(self.M) * b_mu
+        self.b_lndet = self.M * np.log(2 * np.pi / b_sig ** 2)
 
         # Simple linear solves
         if (u is not None) and (vT is not None):
             self.u = u
             self.vT = vT
             self._compute_b()
-            self._compute_lnprob()
         elif (u is not None) and (b is not None):
             self.u = u
             self.b = b
             self._compute_vT()
-            self._compute_lnprob()
         elif (vT is not None) and (b is not None):
             self.b = b
             self.vT = vT
             self._compute_u()
-            self._compute_lnprob()
         
         # Non-linear
         else:
 
-            if (vT is not None) and (u is None) and (b is None):
+            # Get our guesses going
+            if u is not None:
+                self.u = u
+                var_names = ["vT", "b"]
+                if vT_guess is None and b_guess is None:
+                    self.b = self.b_mu + b_sig * np.random.randn(self.M)
+                    self._compute_vT()
+                elif vT_guess is not None:
+                    self.vT = vT_guess
+                    self._compute_b()
+                elif b_guess is not None:
+                    self.b = b_guess
+                    self._compute_vT()
+                else: raise ValueError("Unexpected branch!")
+            elif vT is not None:
                 self.vT = vT
-                if b_guess is None:
-                    b_guess = np.ones(self.M)
-                if u_guess is None:
+                var_names = ["u", "b"]
+                if u_guess is None and b_guess is None:
+                    self.b = self.b_mu + b_sig * np.random.randn(self.M)
+                    self._compute_u()
+                elif u_guess is not None:
+                    self.u = u_guess
+                    self._compute_b()
+                elif b_guess is not None:
                     self.b = b_guess
                     self._compute_u()
-                    u_guess = self.u
-
-                offset_guess = np.zeros(self.M)
-                u = theano.shared(u_guess)
-                offset = theano.shared(offset_guess)
-                self.map[1:, :] = u
-                b = self.map.flux(theta=self.theta) * (1 + offset)
-
-            elif (vT is None) and (u is None) and (b is None):
-                
-                raise RuntimeError("Case not yet implemented.")
-                if u_guess is None and b_guess is None:
-                    u_guess = np.random.randn(self.N - 1) / np.sqrt(self.u_cinv)
-
+                else: raise ValueError("Unexpected branch!")
+            elif b is not None:
+                self.b = b
+                var_names = ["u", "vT"]
+                if u_guess is None and vT_guess is None:
+                    self.u = self.u_mu + u_sig * np.random.randn(self.N - 1)
+                    self._compute_vT()
+                elif u_guess is not None:
+                    self.u = u_guess
+                    self._compute_vT()
+                elif vT_guess is not None:
+                    self.vT = vT_guess
+                    self._compute_u()
+                else: raise ValueError("")
             else:
-                raise RuntimeError("Case not yet implemented.")
+                var_names = ["u", "vT", "b"]
+                if vT_guess is None and b_guess is None and u_guess is None:
+                    self.b = self.b_mu + b_sig * np.random.randn(self.M)
+                    self.u = self.u_mu + u_sig * np.random.randn(self.N - 1)
+                    self._compute_vT()
+                elif u_guess is not None:
+                    self.u = u_guess
+                    if vT_guess is None and b_guess is None:
+                        self.b = self.b_mu + b_sig * np.random.randn(self.M)
+                        self._compute_vT()
+                    elif vT_guess is not None:
+                        self.vT = vT_guess
+                        self._compute_b()
+                    elif b_guess is not None:
+                        self.b = b_guess
+                        self._compute_vT()
+                    else: raise ValueError("Unexpected branch!")
+                elif vT_guess is not None:
+                    self.vT = vT_guess
+                    if b_guess is None:
+                        self.b = self.b_mu + b_sig * np.random.randn(self.M)
+                        self._compute_u()
+                    else:
+                        self.b = b_guess
+                        self._compute_u()
+                elif b_guess is not None:
+                    self.b = b_guess
+                    self.u = self.u_mu + u_sig * np.random.randn(self.N - 1)
+                    self._compute_vT()
+                else: raise ValueError("Unexpected branch!")
+
+            # Iterate a bit
+            for i in tqdm(range(100)):
+                self._compute_u()
+                self.map[1:, :] = self.u
+                self.b = self.map.flux(theta=self.theta).eval()
+                self._compute_vT()
+
+            # Initialize the variables to the guesses
+            vars = []
+            if "u" in var_names:
+                u = theano.shared(self.u)
+                vars += [u]
+            else:
+                u = tt.as_tensor_variable(self.u)
+            if "vT" in var_names:
+                vT = theano.shared(self.vT)
+                vars += [vT]
+            else:
+                vT = tt.as_tensor_variable(self.vT)
+            if "b" in var_names:
+                d_guess = np.zeros(self.M)
+                d = theano.shared(d_guess)  
+                vars += [d]
+            else:
+                d_guess = np.zeros(self.M)
+                d = tt.as_tensor_variable(d_guess)
+
+            # The baseline is special
+            self.map[1:, :] = u
+            b = self.map.flux(theta=self.theta) + d            
 
             # Compute the model
             D = ts.as_sparse_variable(self.D)
             a = tt.reshape(tt.dot(tt.reshape(
                                   tt.concatenate([[1.0], u]), (-1, 1)), 
                                   tt.reshape(vT, (1, -1))), (-1,))
-            M = tt.reshape(ts.dot(D, a), (self.M, -1))
+            B = tt.reshape(b, (-1, 1))
+            M = tt.reshape(ts.dot(D, a), (self.M, -1)) / B
 
             # Compute the likelihood
-            r = tt.reshape(self.F * tt.reshape(b, (-1, 1)) - M, (-1,))
-            cov = tt.reshape(self.F_CInv / tt.reshape(b ** 2, (-1, 1)), (-1,))
-            lnlike = -0.5 * (tt.sum(r ** 2 * cov) + self.lndet2pC)
+            r = tt.reshape(self.F - M, (-1,))
+            cov = tt.reshape(self.F_CInv, (-1,))
+            lnlike = -0.5 * (tt.sum(r ** 2 * cov) + self.F_lndet)
 
             # Compute the prior
-            lnprior = -0.5 * (tt.sum((u - self.u_mu) ** 2 * self.u_cinv) + self.lndet2pC_u)
-            lnprior += -0.5 * (tt.sum(offset ** 2 * self.o_cinv) + self.lndet2pC_o)
+            lnprior = -0.5 * (tt.sum((u - self.u_mu) ** 2 * self.u_cinv) + self.u_lndet)
+            lnprior += -0.5 * (tt.dot(tt.dot(tt.reshape((vT - self.vT_mu), (1, -1)), self.vT_CInv), tt.reshape((vT - self.vT_mu), (-1, 1)))[0, 0] + self.vT_lndet)
+            lnprior += -0.5 * (tt.sum((b - self.b_mu) ** 2 * self.b_cinv) + self.b_lndet)
 
             # The full loss
             loss = -(lnlike + lnprior)
 
             # The optimizer
-            upd = Adam(loss, [u, offset], **kwargs)
+            upd = Adam(loss, vars, **kwargs)
             train = theano.function([], 
-                [u, b, loss, lnlike, lnprior], updates=upd)
+                [u, vT, b, loss, lnlike, lnprior], updates=upd)
             lnlike_val = np.zeros(niter)
             lnprior_val = np.zeros(niter)
             best_loss = np.inf
             for n in tqdm(range(niter)):
-                u_val, b_val, loss_val, lnlike_val[n], lnprior_val[n] = train()
+                u_val, vT_val, b_val, loss_val, lnlike_val[n], lnprior_val[n] = train()
                 if loss_val < best_loss:
                     best_loss = loss_val
                     best_u = u_val
+                    best_vT = vT_val
                     best_b = b_val
 
             # We're done!
             self.u = best_u
+            self.vT = best_vT
             self.b = best_b
             self.lnlike = lnlike_val
             self.lnprior = lnprior_val
@@ -553,7 +595,7 @@ class Solver(object):
 
 # Generate a dataset
 np.random.seed(12)
-solver = Solver(ydeg=15, inc=40.0, vsini=40.0, P=1.0)
-solver.generate_data(nt=16, ferr=1.e-3, image="vogtstar.jpg")
-solver.solve(vT=solver.vT_true, niter=200)
+solver = Solver(ydeg=5, inc=40.0, vsini=40.0, P=1.0)
+solver.generate_data(nt=8, ferr=1.e-3, image="vogtstar.jpg")
+solver.solve(niter=200)
 solver.plot(render_movies=False, open_plots=True)
