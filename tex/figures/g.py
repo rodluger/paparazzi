@@ -42,4 +42,4 @@ for i, l in enumerate(range(ydeg + 1)):
                                rotation=45, labelpad=20, alpha=0.5)
 
 # Save
-fig.savefig("g_rigid.pdf", bbox_inches="tight")
+fig.savefig("g.pdf", bbox_inches="tight")

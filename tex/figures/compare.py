@@ -74,4 +74,4 @@ img = map.render(res=300).reshape(300, 300)
 aximg.imshow(img, origin="lower", cmap="plasma", vmin=0.042, vmax=0.353)
 aximg.axis('off')
 
-fig.savefig("compare_rigid.pdf", bbox_inches="tight")
+fig.savefig("compare.pdf", bbox_inches="tight")

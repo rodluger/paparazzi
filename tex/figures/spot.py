@@ -87,7 +87,7 @@ for t in range(nt):
     ax[t, 2].set_ylim(-30, 30)
     
     # Plot current stellar image
-    img = map.render(res=100)[:, :, 0]
+    img = map.render(res=100)[0]
     ax[t, 0].imshow(img, origin="lower", 
                     extent=(-1, 1, -1, 1),
                     cmap=cmap, vmin=vmin,
@@ -99,4 +99,4 @@ for t in range(nt):
 ax[0, 1].set_title("spectrum", y=1.4)
 ax[0, 2].set_title("residuals", y=1.4)
 
-fig.savefig("spot_rigid.pdf", bbox_inches="tight")
+fig.savefig("spot.pdf", bbox_inches="tight")
