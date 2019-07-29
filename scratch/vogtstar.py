@@ -13,6 +13,7 @@ from tqdm import tqdm
 import theano.tensor as tt
 import theano.sparse as ts
 import theano
+from theano.ifelse import ifelse
 
 
 __all__ = ["Solver"]
@@ -170,7 +171,8 @@ class Solver(object):
         # since it contains really important information about
         # the map, but unfortunately we can't typically
         # measure it with a spectrograph.
-        b = np.max(F, axis=1)
+        theta = (360.0 * t) % 360.0
+        b = self.map.flux(theta=theta).eval()
         F /= b.reshape(-1, 1)
 
         # Finally, we add some noise
@@ -182,7 +184,7 @@ class Solver(object):
         self.b_true = b
         self.D = D
         self.t = t
-        self.theta = (360.0 * t) % 360.0
+        self.theta = theta
         self.lam_padded = lam_padded
         self.lam = lam
         self.F = F
@@ -191,7 +193,7 @@ class Solver(object):
         self.Kp = self.D.shape[1] // self.N
         self._loaded = True
 
-    def _compute_u(self):
+    def _compute_u(self, T=1.0):
         """
         Linear solve for `u` given `v^T`, `b`.
 
@@ -201,14 +203,14 @@ class Solver(object):
         A0 = AFull[:, 0]
         A = AFull[:, 1:]
         ATCInv = np.multiply(A.T, 
-            (self.F_CInv / self.b.reshape(-1, 1) ** 2).reshape(-1))
+            (self.F_CInv / T / self.b.reshape(-1, 1) ** 2).reshape(-1))
         ATCInvA = ATCInv.dot(A)
         ATCInvf = np.dot(ATCInv, (self.F * self.b.reshape(-1, 1)).reshape(-1) - A0)
         np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + self.u_cinv)
         self.u = np.linalg.solve(ATCInvA, 
                                  ATCInvf + self.u_cinv * self.u_mu)
 
-    def _compute_vT(self):
+    def _compute_vT(self, T=1.0):
         """
         Linear solve for `v^T` given `u`, `b`.
 
@@ -219,13 +221,13 @@ class Solver(object):
                   offsets, shape=(self.N * self.Kp, self.Kp))
         A = np.array(self.D.dot(U).todense())
         ATCInv = np.multiply(A.T, 
-            (self.F_CInv / self.b.reshape(-1, 1) ** 2).reshape(-1))
+            (self.F_CInv / T / self.b.reshape(-1, 1) ** 2).reshape(-1))
         ATCInvA = ATCInv.dot(A)
         ATCInvf = np.dot(ATCInv, (self.F * self.b.reshape(-1, 1)).reshape(-1))
         self.vT = np.linalg.solve(ATCInvA + self.vT_CInv, 
                                   ATCInvf + self.vT_CInvmu)
 
-    def _compute_b(self):
+    def _compute_b(self, T=1.0):
         """
         Linear solve for `b` given `u` and `vT`.
         Note that the problem is linear in `1 / b`, so that's the
@@ -235,7 +237,7 @@ class Solver(object):
         A = (np.append([1], self.u)).reshape(-1, 1).dot(self.vT.reshape(1, -1))
         M = self.D.dot(A.reshape(-1)).reshape(self.M, -1)
         MT = dense_block_diag(*M)
-        ATCInv = np.multiply(MT, self.F_CInv.reshape(-1))
+        ATCInv = np.multiply(MT, self.F_CInv.reshape(-1) / T)
         ATCInvA = ATCInv.dot(MT.T)
         ATCInvf = np.dot(ATCInv, self.F.reshape(-1))
         np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + 1.0 / self.b_cinv)
@@ -246,7 +248,8 @@ class Solver(object):
     def solve(self, u=None, vT=None, b=None, u_guess=None, 
               vT_guess=None, b_guess=None, u_mu=0.0, u_sig=0.01, 
               vT_mu=1.0, vT_sig=0.3, vT_rho=3.e-5, b_mu=1.0, 
-              b_sig=0.1, niter=100, **kwargs):
+              b_sig=0.1, niter_adam=100, niter_linear=100, 
+              temp=1.e3, **kwargs):
         """
         
         """
@@ -305,79 +308,72 @@ class Solver(object):
                 self.u = u
                 var_names = ["vT", "b"]
                 if vT_guess is None and b_guess is None:
-                    self.b = self.b_mu + b_sig * np.random.randn(self.M)
-                    self._compute_vT()
+                    self.b = np.ones(self.M)
+                    self._compute_vT(T=temp)
                 elif vT_guess is not None:
                     self.vT = vT_guess
-                    self._compute_b()
+                    self._compute_b(T=temp)
                 elif b_guess is not None:
                     self.b = b_guess
-                    self._compute_vT()
+                    self._compute_vT(T=temp)
                 else: raise ValueError("Unexpected branch!")
             elif vT is not None:
                 self.vT = vT
                 var_names = ["u", "b"]
                 if u_guess is None and b_guess is None:
-                    self.b = self.b_mu + b_sig * np.random.randn(self.M)
-                    self._compute_u()
+                    self.b = np.ones(self.M)
+                    self._compute_u(T=temp)
                 elif u_guess is not None:
                     self.u = u_guess
-                    self._compute_b()
+                    self._compute_b(T=temp)
                 elif b_guess is not None:
                     self.b = b_guess
-                    self._compute_u()
+                    self._compute_u(T=temp)
                 else: raise ValueError("Unexpected branch!")
             elif b is not None:
                 self.b = b
                 var_names = ["u", "vT"]
                 if u_guess is None and vT_guess is None:
                     self.u = self.u_mu + u_sig * np.random.randn(self.N - 1)
-                    self._compute_vT()
+                    self._compute_vT(T=temp)
                 elif u_guess is not None:
                     self.u = u_guess
-                    self._compute_vT()
+                    self._compute_vT(T=temp)
                 elif vT_guess is not None:
                     self.vT = vT_guess
-                    self._compute_u()
+                    self._compute_u(T=temp)
                 else: raise ValueError("")
             else:
                 var_names = ["u", "vT", "b"]
                 if vT_guess is None and b_guess is None and u_guess is None:
-                    self.b = self.b_mu + b_sig * np.random.randn(self.M)
+                    self.b = np.ones(self.M)
                     self.u = self.u_mu + u_sig * np.random.randn(self.N - 1)
-                    self._compute_vT()
+                    self._compute_vT(T=temp)
                 elif u_guess is not None:
                     self.u = u_guess
                     if vT_guess is None and b_guess is None:
-                        self.b = self.b_mu + b_sig * np.random.randn(self.M)
-                        self._compute_vT()
+                        self.b = np.ones(self.M)
+                        self._compute_vT(T=temp)
                     elif vT_guess is not None:
                         self.vT = vT_guess
-                        self._compute_b()
+                        self._compute_b(T=temp)
                     elif b_guess is not None:
                         self.b = b_guess
-                        self._compute_vT()
+                        self._compute_vT(T=temp)
                     else: raise ValueError("Unexpected branch!")
                 elif vT_guess is not None:
                     self.vT = vT_guess
                     if b_guess is None:
-                        self.b = self.b_mu + b_sig * np.random.randn(self.M)
-                        self._compute_u()
+                        self.b = np.ones(self.M)
+                        self._compute_u(T=temp)
                     else:
                         self.b = b_guess
-                        self._compute_u()
+                        self._compute_u(T=temp)
                 elif b_guess is not None:
                     self.b = b_guess
                     self.u = self.u_mu + u_sig * np.random.randn(self.N - 1)
-                    self._compute_vT()
+                    self._compute_vT(T=temp)
                 else: raise ValueError("Unexpected branch!")
-
-            # Iterate a bit
-            for i in tqdm(range(100)):
-                self._compute_u()
-                self.map[1:, :] = self.u
-                self.b = self.map.flux(theta=self.theta).eval()
-                self._compute_vT()
 
             # Initialize the variables to the guesses
             vars = []
@@ -391,23 +387,14 @@ class Solver(object):
                 vars += [vT]
             else:
                 vT = tt.as_tensor_variable(self.vT)
-            if "b" in var_names:
-                d_guess = np.zeros(self.M)
-                d = theano.shared(d_guess)  
-                vars += [d]
-            else:
-                d_guess = np.zeros(self.M)
-                d = tt.as_tensor_variable(d_guess)
-
-            # The baseline is special
-            self.map[1:, :] = u
-            b = self.map.flux(theta=self.theta) + d            
 
             # Compute the model
             D = ts.as_sparse_variable(self.D)
             a = tt.reshape(tt.dot(tt.reshape(
                                   tt.concatenate([[1.0], u]), (-1, 1)), 
                                   tt.reshape(vT, (1, -1))), (-1,))
+            self.map[1:, :] = u
+            b = self.map.flux(theta=self.theta)
             B = tt.reshape(b, (-1, 1))
             M = tt.reshape(ts.dot(D, a), (self.M, -1)) / B
 
@@ -419,21 +406,25 @@ class Solver(object):
             # Compute the prior
             lnprior = -0.5 * (tt.sum((u - self.u_mu) ** 2 * self.u_cinv) + self.u_lndet)
             lnprior += -0.5 * (tt.dot(tt.dot(tt.reshape((vT - self.vT_mu), (1, -1)), self.vT_CInv), tt.reshape((vT - self.vT_mu), (-1, 1)))[0, 0] + self.vT_lndet)
-            lnprior += -0.5 * (tt.sum((b - self.b_mu) ** 2 * self.b_cinv) + self.b_lndet)
 
             # The full loss
             loss = -(lnlike + lnprior)
+            best_loss = loss.eval()
+            best_u = u.eval()
+            best_vT = vT.eval()
+            best_b = b.eval()
+            lnlike_val = np.zeros(niter_adam + 1)
+            lnprior_val = np.zeros(niter_adam + 1)
+            lnlike_val[0] = lnlike.eval()
+            lnprior_val[0] = lnprior.eval()
 
-            # The optimizer
+            # Optimize
             upd = Adam(loss, vars, **kwargs)
             train = theano.function([], 
                 [u, vT, b, loss, lnlike, lnprior], updates=upd)
-            lnlike_val = np.zeros(niter)
-            lnprior_val = np.zeros(niter)
-            best_loss = np.inf
-            for n in tqdm(range(niter)):
+            for n in tqdm(1 + np.arange(niter_adam)):
                 u_val, vT_val, b_val, loss_val, lnlike_val[n], lnprior_val[n] = train()
-                if loss_val < best_loss:
+                if (loss_val < best_loss):
                     best_loss = loss_val
                     best_u = u_val
                     best_vT = vT_val
@@ -595,7 +586,8 @@ class Solver(object):
 
 # Generate a dataset
 np.random.seed(12)
-solver = Solver(ydeg=5, inc=40.0, vsini=40.0, P=1.0)
-solver.generate_data(nt=8, ferr=1.e-3, image="vogtstar.jpg")
-solver.solve(niter=200)
+solver = Solver(ydeg=15, inc=40.0, vsini=40.0, P=1.0)
+solver.generate_data(nt=16, ferr=1.e-5, image="vogtstar.jpg")
+solver.solve(niter_linear=0, niter_adam=200, temp=1e7, vT=solver.vT_true, u_sig=1e-4)
 solver.plot(render_movies=False, open_plots=True)
+print(np.max(solver.lnlike))
