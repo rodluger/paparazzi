@@ -150,7 +150,6 @@ class Solver(object):
         lam_padded = doppler.lam_padded
 
         # A deep line at the center of the wavelength range
-        vT = np.ones_like(lam_padded)
         vT = 1 - 0.5 * np.exp(-0.5 * lam_padded ** 2 / sigma ** 2)
 
         # Scatter some smaller lines around for good measure
