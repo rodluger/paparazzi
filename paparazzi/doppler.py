@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import starry
-from scipy.sparse import csr_matrix, hstack, vstack, diags
+from scipy.sparse import csr_matrix, hstack, vstack, diags, block_diag
 from tqdm import tqdm
 import os
 from .utils import Adam
@@ -15,7 +15,7 @@ class Doppler(object):
     
     """
 
-    def __init__(self, ydeg=5, vsini=40, inc=90.0):
+    def __init__(self, ydeg=15, vsini=40, inc=90.0):
         """
 
         """
@@ -273,9 +273,9 @@ class Doppler(object):
         """Load a dataset.
         
         Args:
-            theta (ndarray): Array of rotational phases in degrees.
-            lnlam (ndarray): Uniformly spaced log-wavelength array.
-            F (ndarray): Matrix of observed spectra of shape `(nt, nlam)`.
+            theta (ndarray): Array of rotational phases in degrees of length `M`.
+            lnlam (ndarray): Uniformly spaced log-wavelength array of length `K`.
+            F (ndarray): Matrix of observed spectra of shape `(M, K)`.
             ferr (float, optional): Uncertainty on the flux. Defaults to 1.e-4.
         """
         self._reset_data()
@@ -283,6 +283,7 @@ class Doppler(object):
         self._set_lnlam(lnlam)
         self.F = F
         self.ferr = ferr
+        self.F_CInv = np.ones_like(self.F) / self.ferr ** 2
     
     def generate_data(self, R=3e5, nlam=200, sigma=7.5e-6, nlines=20, 
             ntheta=11, ferr=1.e-4, image=None):
@@ -352,3 +353,23 @@ class Doppler(object):
         self.b_true = b
         self.F = F
         self.ferr = ferr
+        self._F_CInv = np.ones_like(self.F) / self.ferr ** 2
+    
+    def compute_u(self, T=1.0, u_mu=0.0, u_sig=0.01):
+        """
+        Linear solve for `u` given `v^T`, `b`.
+
+        """
+        V = block_diag([self.vT.reshape(-1, 1) for n in range(self.N)])
+        A_ = np.array(self.D.dot(V).todense())
+        A0, A = A_[:, 0], A_[:, 1:]
+        ATCInv = np.multiply(A.T, 
+            (self._F_CInv / T / self.b.reshape(-1, 1) ** 2).reshape(-1))
+        ATCInvA = ATCInv.dot(A)
+        ATCInvf = np.dot(ATCInv, 
+            (self.F * self.b.reshape(-1, 1)).reshape(-1) - A0)
+        u_cinv = np.ones(self.N - 1) / u_sig ** 2
+        u_mu = np.ones(self.N - 1) * u_mu ** 2
+        np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + u_cinv)
+        self.u = np.linalg.solve(ATCInvA, 
+                                 ATCInvf + u_cinv * u_mu)

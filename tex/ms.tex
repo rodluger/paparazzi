@@ -46,19 +46,10 @@ We may express this intensity as
 \begin{align}
     \label{eq:intro:Ixi}
     I(\lnlam, \mathbf{x}, t, \mathbf{d}) &= 
-        I_0\Big(\lnlam_0(\lnlam, \mathbf{x}, \mathbf{d}), \mathbf{x}, t\Big)
+        I\Big(\lnlam_0 + \mathcal{D}(\bvec{x}, \bvec{d}), \mathbf{x}, t\Big)
 \end{align}
 %
-where $I_0$ is the specific intensity at each point on the star 
-in the surface rest frame and 
-%
-\begin{align}
-    \label{eq:intro:xi0}
-    \lnlam_0(\lnlam, \mathbf{x}, \mathbf{d}) &= 
-    \lnlam - \mathcal{D}(\mathbf{x}, \mathbf{d})
-\end{align}
-%
-is the log wavelength in the rest frame. The quantity $\mathcal{D}$ is
+where $\lnlam_0$ is the log wavelength in the rest frame and $\mathcal{D}$ is
 the Doppler shift in log wavelength space:
 %
 \begin{align}
@@ -77,8 +68,7 @@ In keeping with the literature, we take positive values of $v$ (and
 $\mathcal{D}$) to mean redshifts.
 
 A common approach to computing the Doppler-shifted spectrum is to
-evaluate the spectrum at the rest frame wavelength 
-(Equation~\ref{eq:intro:xi0})
+evaluate the spectrum at the rest frame wavelength $\lnlam_0$
 and interpolate back to the grid in $\lnlam$. This is practical when
 computing the spectrum at a single \emph{point} on the surface, but not
 ideal when one is interested in the \emph{integral} over the visible
@@ -86,7 +76,7 @@ surface of the star $\mathcal{S}$, which is typically all we can observe:
 %
 \begin{align}
     \label{eq:intro:Fxi}
-    F(\lnlam, t) 
+    F(\lnlam, t, \bvec{d}) 
         &\equiv
         \iint\limits_{\mathcal{S}(\mathbf{x})}
                 I(\lnlam, \mathbf{x}, t, \mathbf{d})
@@ -113,12 +103,32 @@ of spatial, spectral, temporal, and velocity terms. The goal in this
 section is to deconvolve each of these terms to make solving the integral
 in Equation~(\ref{eq:intro:Fxi}) easier.
 %
-The first thing we will do is to expand the spatial dependence of the
-specific intensity in terms of spherical harmonics on the unit disk:
+The first thing we will do is to express Equation~(\ref{eq:intro:Ixi})
+as a convolution:
+%
+\begin{align}
+    \label{eq:solution:convolution}
+    I(\lnlam, \mathbf{x}, t, \mathbf{d}) &= 
+        I(\lnlam_0, \mathbf{x}, t) 
+        * 
+        \delta\big(\lnlam_0 + \mathcal{D}(\bvec{x}, \bvec{d})\big)
+\end{align}
+%
+where $\delta$ is the
+Dirac delta function and
+$*$ denotes the linear convolution operator,
+returning a function of the shifted log wavelength, 
+$\lnlam = \lnlam_0 + \mathcal{D}$. The convolution with the delta function
+has the effect of ``sliding'' the spectrum by an amount $\mathcal{D}$
+onto the observed wavelength grid. 
+
+Next, we expand the spatial dependence of the
+specific intensity at the rest frame wavelength
+in terms of spherical harmonics on the unit disk:
 %
 \begin{align}
     \label{eq:solution:Ixi0}
-    I_0(\lnlam_0, \mathbf{x}, t) 
+    I(\lnlam_0, \mathbf{x}, t) 
         &=
         \sum_{l=0}^\infty\sum_{m=-l}^{l} a_{lm}(\lnlam_0, t) Y_{lm}(\mathbf{x})
     \quad ,
@@ -131,7 +141,7 @@ convenience, we may write this equation in vector form:
 %
 \begin{align}
     \label{eq:solution:Ixi0vec}
-    I_0(\lnlam_0, \mathbf{x}, t) &=
+    I(\lnlam_0, \mathbf{x}, t) &=
     \bvec{Y}^\top(\mathbf{x}) \,
     \bvec{a}(\lnlam_0, t)
     \quad ,
@@ -184,52 +194,42 @@ over the course of an observation, Equation~(\ref{eq:solution:R}) can be
 made to hold approximately for some effective rotation matrix 
 $\mathbf{R}(t)$; we discuss this later.
 
-The equation for the specific intensity now reads
+The equation for the specific intensity in the rest frame now reads
 %
 \begin{align}
     \label{eq:solution:Ixi0vecfull}
-    I_0(\lnlam_0, \mathbf{x}, t) &=
+    I(\lnlam_0, \mathbf{x}, t) &=
     \bvec{Y}^\top(\mathbf{x})
+    \,
     \mathbf{R}(t)
+    \,
     \bvec{a}(\lnlam_0)
     \quad ,
 \end{align}
 %
 where it is clear that we have fully separated the spatial, temporal, and
-spectral terms. However, in order to compute the observed spectrum, we must
-still Doppler shift this expression and integrate it over the visible
-portion of the star. To this end, it is convenient to express the Doppler
-shift as a convolution
-of the spectrum in the rest frame with a delta function:
-%
-\begin{align}
-    I(\lnlam, \mathbf{x}, t) &= 
-        I_0(\lnlam_0, \mathbf{x}, t) 
-        * \delta\big(\lnlam - \lnlam_0\big)
-        \quad,
-\end{align}
-%
-where $*$ denotes the convolution operation, 
-returning a function of the shifted log wavelength, $\lnlam$.
-Inserting this into Equation~(\ref{eq:solution:Ixi0vecfull}) and integrating
+spectral terms. Inserting this into Equation~(\ref{eq:solution:convolution}) 
+and integrating
 over the visible portion of the star, we arrive at the expression for the 
 observed spectrum:
 %
 %
 \begin{align}
     \label{eq:solution:Fxi2d}
-    F(\lnlam, t) &=
+    F(\lnlam, t, \bvec{d}) &=
     \iint\limits_{\mathcal{S}(\mathbf{x})}
     \bvec{Y}^\top(\mathbf{x})
+    \,
     \mathbf{R}(t)
+    \,
     \bvec{a}(\lnlam_0)
-    * \delta\big(\lnlam - \lnlam_0\big)
+    * \delta\big(\lnlam_0 + \mathcal{D}(\bvec{x}, \bvec{d})\big)
     \mathrm{d}\mathcal{S}(\mathbf{x})
     \nonumber \\[0.5em]
     &=
     \iint\limits_{\mathcal{S}(\mathbf{x})}
     \bvec{Y}^\top(\mathbf{x})
-    \delta\big(\lnlam - \lnlam_0\big)
+    \delta\big(\lnlam_0 + \mathcal{D}(\bvec{x}, \bvec{d})\big)
     \mathrm{d}\mathcal{S}(\mathbf{x})
     \,
     \mathbf{R}(t)
@@ -237,9 +237,6 @@ observed spectrum:
     *
     \,
     \bvec{a}(\lnlam_0)
-    %\mathbf{g}^\top(\lnlam_0) \, \mathbf{R}(t)
-    %*
-    %\bvec{a}(\lnlam_0)
     \quad ,
 \end{align}
 %
@@ -259,28 +256,29 @@ to a line integral:
     \label{eq:solution:gT}
     \iint\limits_{\mathcal{S}(\mathbf{x})}
     \bvec{Y}^\top(\mathbf{x})
-    \delta\big(\lnlam - \lnlam_0\big)
+    \delta\big(\lnlam_0 + \mathcal{D}(\bvec{x}, \bvec{d})\big)
     \mathrm{d}\mathcal{S}(\mathbf{x})
     \, \,
     &=  
-    \int\limits_{\mathcal{C}(\lnlam - \lnlam_0)}
-    \hspace*{-1em}\bvec{Y}^\top(\mathbf{x})
-    \mathrm{d}\mathcal{C}(\lnlam - \lnlam_0)
+    \int\limits_{\mathcal{C}(\lnlam, \bvec{x}, \bvec{d})}
+    \hspace*{-0.6em}\bvec{Y}^\top(\mathbf{x})
+    \mathrm{d}\mathcal{C}(\lnlam, \bvec{x}, \bvec{d})
     \nonumber \\[0.5em]
-    &\equiv \mathbf{g}^\top(\lnlam - \lnlam_0)
+    &\equiv \mathbf{g}^\top(\lnlam, \bvec{d})
     \quad.
 \end{align}
 %
-where the path $\mathcal{C}$ corresponds to the
-set of all points on the visible disk where \xxx{what???} 
-
+where the path $\mathcal{C}(\lnlam, \bvec{x}, \bvec{d})$ corresponds to the
+set of all points on the visible disk where 
+$\lnlam_0 + \mathcal{D}(\bvec{x}, \bvec{d}) = 0$.
+%
 We thus have
 %
 \begin{align}
     \label{eq:solution:Fxi}
-    F(\lnlam, t) 
+    F(\lnlam, t, \bvec{d}) 
     &=
-    \mathbf{g}^\top(\lnlam - \lnlam_0) \, \mathbf{R}(t)
+    \mathbf{g}^\top(\lnlam, \bvec{d}) \, \mathbf{R}(t)
     *
     \bvec{a}(\lnlam_0)
     \quad.
@@ -326,8 +324,8 @@ spherical harmonics to polynomials on the sphere:
 %
 \begin{align}
     \label{eq:rigid:gT}
-    \mathbf{g}^\top(\lnlam_0) &\equiv
-    \bvec{s}^\top(\lnlam_0)
+    \mathbf{g}^\top(\lnlam, \bvec{d}) &\equiv
+    \bvec{s}^\top(\lnlam, \bvec{d})
     \bvec{A_1}
 \end{align}
 %
@@ -335,11 +333,11 @@ where
 %
 \begin{align}
     \label{eq:rigid:sTdef}
-    \mathbf{s}^\top(\lnlam_0)
+    \mathbf{s}^\top(\lnlam, \bvec{d})
     &\equiv
-    \int\limits_{\mathcal{C}(\lnlam_0, \mathbf{x}, \mathbf{d})}
+    \int\limits_{\mathcal{C}(\lnlam, \mathbf{x}, \mathbf{d})}
     \tilde{\bvec{p}}^\top(\mathbf{x})
-    \mathrm{d}\mathcal{C}(\lnlam_0, \mathbf{x}, \mathbf{d})
+    \mathrm{d}\mathcal{C}(\lnlam, \mathbf{x}, \mathbf{d})
 \end{align}
 %
 is the vector of integral solutions for each spherical harmonic,
@@ -386,21 +384,21 @@ the unit sphere, the coordinate $z$ is given by $\sqrt{1 - x^2 - y^2}$.
 \end{figure}
 
 If we assume the star is unocculted, the region of integration $\mathcal{S}$ 
-is simply the unit disk, so $\mathcal{C}(\lnlam_0, \mathbf{x}, \mathbf{d})$ 
+is simply the unit disk, so $\mathcal{C}(\lnlam, \mathbf{x}, \mathbf{d})$ 
 is the set of all points
-that satisfy both $\mathcal{D}(\mathbf{x}, \mathbf{d}) = \lnlam - \lnlam_0$ and 
+that satisfy both $\lnlam_0 + \mathcal{D}(\bvec{x}, \bvec{d}) = 0$ and 
 $x^2 + y^2 \le 1$.
 Solving Equation~(\ref{eq:rigid:D}) for $x$, we find that 
-the curves $\mathcal{C}(\lnlam_0, \mathbf{x}, \mathbf{d})$ 
+the curves $\mathcal{C}(\lnlam, \mathbf{x}, \mathbf{d})$ 
 are simply vertical lines on the unit disk given by 
 %
-\xxx{(this should be $\lnlam - \lnlam_0$, no?)}
+\xxx{(TODO: Check signs in the code.)}
 %
 \begin{align}
-    x(\lnlam_0) &= 
+    x &= 
         \Bigg(\frac{c}{\omega\sin i}\Bigg) 
-        \Bigg(\frac{\mathrm{e}^{2{\lnlam_0}} - 1}
-                   {\mathrm{e}^{2{\lnlam_0}} + 1}\Bigg)
+        \Bigg(\frac{\mathrm{e}^{-2{\lnlam_0}} - 1}
+                   {\mathrm{e}^{-2{\lnlam_0}} + 1}\Bigg)
     \quad .
 \end{align}
 %
@@ -409,7 +407,7 @@ over $y$:
 %
 \begin{align}
     \label{eq:rigid:sT}
-    \bvec{s}^\top(\lnlam_0) 
+    \bvec{s}^\top(\lnlam, \bvec{d}) 
     &=    
     \int\limits_{-\sqrt{1 - x^2}}^
                 {\sqrt{1 - x^2}}
@@ -453,9 +451,9 @@ Equation~(\ref{eq:rigid:sT}),
 %
 \begin{align}
     \label{eq:rigid:sTexpression}
-    s_n(\lnlam_0) 
+    s_n(\lnlam, \bvec{d}) 
     &=    
-    s_{i,\,j,\,k}(\lnlam_0) 
+    s_{i,\,j,\,k}(\lnlam, \bvec{d}) 
     =    
     x^i
     \int\limits_{-\sqrt{1 - x^2}}^
