@@ -4,7 +4,7 @@ import numpy as np
 import paparazzi as pp
 from scipy.sparse import hstack, vstack, csr_matrix, block_diag
 import starry
-np.random.seed(15)
+np.random.seed(11)
 
 
 def RAxisAngle(axis=[0, 1, 0], theta=0):
@@ -168,10 +168,11 @@ def plot_main():
     #
 
     # Compute the g-functions and the corresponding Toeplitz matrices
-    doppler = pp.Doppler(np.linspace(-6e-4, 6e-4, nlam), 
-        ydeg=ydeg, vsini=vsini, inc=inc, P=1.0)
-    g = doppler.g()
-    T = doppler.T()
+    lnlam = np.linspace(-6e-4, 6e-4, nlam)
+    doppler = pp.Doppler(ydeg=ydeg, vsini=vsini, inc=inc)
+    doppler._set_lnlam(lnlam)
+    g = doppler.g
+    T = doppler.T
 
     # Pad them to reveal the structure
     for n in range(doppler.N):
@@ -183,7 +184,10 @@ def plot_main():
 
     # Tensordot with rotation matrices to get the full Doppler matrix
     theta = np.linspace(0, 2 * np.pi, ntheta)
-    R = [doppler._R(doppler._axis, t) for t in theta]
+    sini = np.sin(inc * np.pi / 180.)
+    cosi = np.cos(inc * np.pi / 180.)
+    axis = [0, sini, cosi]
+    R = [doppler._R(axis, t) for t in theta]
     D = [None for t in range(ntheta)]
     for t in range(ntheta):
         TR = [None for n in range(doppler.N)]
@@ -195,7 +199,7 @@ def plot_main():
     D /= np.nanmax(D)
 
     # The starry coefficient matrix
-    vT = 1 - 0.5 * np.exp(-0.5 * doppler.lam_padded ** 2 / (1e-4) ** 2)
+    vT = 1 - 0.5 * np.exp(-0.5 * doppler.lnlam_padded ** 2 / (1e-4) ** 2)
     map = starry.Map(ydeg)
     map.inc = inc
     map.add_spot(-1, lon=-180)
@@ -225,11 +229,12 @@ def plot_main():
     ax.axis("off")
 
     # Re-compute stuff at hi res for better plotting
-    lam = np.linspace(-6e-4, 6e-4, nlam * 11)
-    doppler = pp.Doppler(lam, ydeg=ydeg, vsini=vsini, inc=inc, P=1.0)
-    g = doppler.g()
-    T = doppler.T()
-    vT = 1 - 0.5 * np.exp(-0.5 * doppler.lam_padded ** 2 / (1e-4) ** 2)
+    lnlam = np.linspace(-6e-4, 6e-4, nlam * 11)
+    doppler = pp.Doppler(ydeg=ydeg, vsini=vsini, inc=inc)
+    doppler._set_lnlam(lnlam)
+    g = doppler.g
+    T = doppler.T
+    vT = 1 - 0.5 * np.exp(-0.5 * doppler.lnlam_padded ** 2 / (1e-4) ** 2)
     A = u.reshape(-1, 1).dot(vT.reshape(1, -1))
     D = [None for t in range(ntheta)]
     for t in range(ntheta):
@@ -260,7 +265,7 @@ def plot_main():
     height = 0.0622
     for n in range(ntheta):
         axins = ax.inset_axes([x0, y0 - n * (height + pad), width, height])
-        axins.plot(lam, F[n], "k-", alpha=0.3)
+        axins.plot(lnlam, F[n], "k-", alpha=0.3)
         axins.set_ylim(0.6, 1.45)
         axins.axis("off")
 
@@ -284,9 +289,9 @@ def plot_main():
     for n in range(doppler.N):
         axins = ax.inset_axes([x0, y0 - n * (height + pad), width, height])
         axins.axis('off')
-        axins.plot(A[n], doppler.lam_padded, "k-", alpha=0.3)
+        axins.plot(A[n], doppler.lnlam_padded, "k-", alpha=0.3)
         axins.set_xlim(-1.1, 1.1)
-        axins.set_ylim(doppler.lam_padded[0], doppler.lam_padded[-1])
+        axins.set_ylim(doppler.lnlam_padded[0], doppler.lnlam_padded[-1])
 
     # Plot the map orientation
     x0 = -0.125
@@ -376,10 +381,11 @@ def plot_u():
     #
 
     # Compute the g-functions and the corresponding Toeplitz matrices
-    doppler = pp.Doppler(np.linspace(-6e-4, 6e-4, nlam), 
-        ydeg=ydeg, vsini=vsini, inc=inc, P=1.0)
-    g = doppler.g()
-    T = doppler.T()
+    lnlam = np.linspace(-6e-4, 6e-4, nlam)
+    doppler = pp.Doppler(ydeg=ydeg, vsini=vsini, inc=inc)
+    doppler._set_lnlam(lnlam)
+    g = doppler.g
+    T = doppler.T
 
     # Pad them to reveal the structure
     for n in range(doppler.N):
@@ -391,7 +397,10 @@ def plot_u():
 
     # Tensordot with rotation matrices to get the full Doppler matrix
     theta = np.linspace(0, 2 * np.pi, ntheta)
-    R = [doppler._R(doppler._axis, t) for t in theta]
+    sini = np.sin(inc * np.pi / 180.)
+    cosi = np.cos(inc * np.pi / 180.)
+    axis = [0, sini, cosi]
+    R = [doppler._R(axis, t) for t in theta]
     D = [None for t in range(ntheta)]
     for t in range(ntheta):
         TR = [None for n in range(doppler.N)]
@@ -403,10 +412,10 @@ def plot_u():
     D /= np.nanmax(D)
 
     # The spectrum matrix
-    vT0 = 1 - 0.5 * np.exp(-0.5 * doppler.lam_padded ** 2 / (1e-4) ** 2)
-    vT1 = 1 - 0.25 * np.exp(-0.5 * doppler.lam_padded ** 2 / (0.5e-4) ** 2) \
-            - 0.25 * np.exp(-0.5 * doppler.lam_padded ** 2 / (2.5e-4) ** 2)
-    vT2 = 1 - 0.5 * (1 + 0.5 * np.sin(2e4 * doppler.lam_padded)) * np.exp(-0.5 * doppler.lam_padded ** 2 / (2e-4) ** 2)
+    vT0 = 1 - 0.5 * np.exp(-0.5 * doppler.lnlam_padded ** 2 / (1e-4) ** 2)
+    vT1 = 1 - 0.25 * np.exp(-0.5 * doppler.lnlam_padded ** 2 / (0.5e-4) ** 2) \
+            - 0.25 * np.exp(-0.5 * doppler.lnlam_padded ** 2 / (2.5e-4) ** 2)
+    vT2 = 1 - 0.5 * (1 + 0.5 * np.sin(2e4 * doppler.lnlam_padded)) * np.exp(-0.5 * doppler.lnlam_padded ** 2 / (2e-4) ** 2)
     vT0 = np.append(vT0, [np.nan, np.nan])
     vT1 = np.append(vT1, [np.nan, np.nan])
     vT2 = np.append(vT2, [np.nan, np.nan])
@@ -449,14 +458,15 @@ def plot_u():
     ax.axis("off")
 
     # Re-compute stuff at hi res for better plotting
-    lam = np.linspace(-6e-4, 6e-4, nlam * 11)
-    doppler = pp.Doppler(lam, ydeg=ydeg, vsini=vsini, inc=inc, P=1.0)
-    g = doppler.g()
-    T = doppler.T()
-    vT0 = 1 - 0.5 * np.exp(-0.5 * doppler.lam_padded ** 2 / (1e-4) ** 2)
-    vT1 = 1 - 0.25 * np.exp(-0.5 * doppler.lam_padded ** 2 / (0.5e-4) ** 2) \
-            - 0.25 * np.exp(-0.5 * doppler.lam_padded ** 2 / (2.5e-4) ** 2)
-    vT2 = 1 - 0.5 * (1 + 0.5 * np.sin(2e4 * doppler.lam_padded)) * np.exp(-0.5 * doppler.lam_padded ** 2 / (2e-4) ** 2)
+    lnlam = np.linspace(-6e-4, 6e-4, nlam * 11)
+    doppler = pp.Doppler(ydeg=ydeg, vsini=vsini, inc=inc)
+    doppler._set_lnlam(lnlam)
+    g = doppler.g
+    T = doppler.T
+    vT0 = 1 - 0.5 * np.exp(-0.5 * doppler.lnlam_padded ** 2 / (1e-4) ** 2)
+    vT1 = 1 - 0.25 * np.exp(-0.5 * doppler.lnlam_padded ** 2 / (0.5e-4) ** 2) \
+            - 0.25 * np.exp(-0.5 * doppler.lnlam_padded ** 2 / (2.5e-4) ** 2)
+    vT2 = 1 - 0.5 * (1 + 0.5 * np.sin(2e4 * doppler.lnlam_padded)) * np.exp(-0.5 * doppler.lnlam_padded ** 2 / (2e-4) ** 2)
     vT = np.vstack((vT0.reshape(1, -1), vT1.reshape(1, -1), vT2.reshape(1, -1)))
     u = np.hstack((u0.reshape(-1, 1), u1.reshape(-1, 1), u2.reshape(-1, 1)))
     A = u.dot(vT)
@@ -489,7 +499,7 @@ def plot_u():
     height = 0.0622
     for n in range(ntheta):
         axins = ax.inset_axes([x0, y0 - n * (height + pad), width, height])
-        axins.plot(lam, F[n], "k-", alpha=0.3)
+        axins.plot(lnlam, F[n], "k-", alpha=0.3)
         axins.set_ylim(0.6, 1.45)
         axins.axis("off")
 
@@ -510,9 +520,9 @@ def plot_u():
     y0 = 1.02
     height = 0.06
     axins = ax.inset_axes([x0, y0, width, height])
-    axins.plot(vT0, doppler.lam_padded, "k-", alpha=0.3)
-    axins.plot(vT1 + 1, doppler.lam_padded, "k-", alpha=0.3)
-    axins.plot(vT2 + 2, doppler.lam_padded, "k-", alpha=0.3)
+    axins.plot(vT0, doppler.lnlam_padded, "k-", alpha=0.3)
+    axins.plot(vT1 + 1, doppler.lnlam_padded, "k-", alpha=0.3)
+    axins.plot(vT2 + 2, doppler.lnlam_padded, "k-", alpha=0.3)
     axins.axis("off")
 
     # Plot the map orientation

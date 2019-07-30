@@ -54,7 +54,7 @@ class Solver(object):
             Defaults to 40.0.
         P (float, optional): Rotational period in days. Defaults to 1.
     """
-    def __init__(self, name="vogtstar", ydeg=5, inc=60.0, vsini=40.0, P=1.0):
+    def __init__(self, name="vogtstar", ydeg=5, inc=60.0, vsini=40.0):
         # Main properties
         self.name = "output/%s" % name
         if not os.path.exists("output"):
@@ -63,7 +63,6 @@ class Solver(object):
         self.N = (ydeg + 1) ** 2
         self.inc = inc
         self.vsini = vsini
-        self.P = P
          
         # Map instance (for computing `b`)
         self.map = starry.Map(self.ydeg)
@@ -74,7 +73,6 @@ class Solver(object):
         self.u_true = None
         self.vT_true = None
         self.b_true = None
-        self.d_true = None
         self.D = None
         self.t = None
         self.lam_padded = None
@@ -102,11 +100,11 @@ class Solver(object):
         """
         doppler = pp.Doppler(lam, ydeg=self.ydeg, 
                              vsini=self.vsini, 
-                             inc=self.inc, P=self.P)
-        self.D = doppler.D(t=t)
+                             inc=self.inc)
+        self.theta = (360.0 * t) % 360.0
+        self.D = doppler.D(theta=self.theta)
         self.lam_padded = doppler.lam_padded
         self.t = t
-        self.theta = (360.0 * t) % 360.0
         self.lam = lam
         self.F = F
         self.ferr = ferr
@@ -142,8 +140,9 @@ class Solver(object):
         # Pre-compute the Doppler basis
         doppler = pp.Doppler(lam, ydeg=self.ydeg, 
                              vsini=self.vsini, 
-                             inc=self.inc, P=self.P)
-        D = doppler.D(t=t)
+                             inc=self.inc)
+        theta = (360.0 * t) % 360.0
+        D = doppler.D(theta=theta)
 
         # Now let's generate a synthetic spectrum. We do this on the
         # *padded* wavelength grid to avoid convolution edge effects.
@@ -170,7 +169,6 @@ class Solver(object):
         # since it contains really important information about
         # the map, but unfortunately we can't typically
         # measure it with a spectrograph.
-        theta = (360.0 * t) % 360.0
         b = self.map.flux(theta=theta).eval()
         F /= b.reshape(-1, 1)
 
@@ -585,8 +583,8 @@ class Solver(object):
 
 # Generate a dataset
 np.random.seed(12)
-solver = Solver(ydeg=15, inc=40.0, vsini=40.0, P=1.0)
-solver.generate_data(nt=16, ferr=1.e-5, image="vogtstar.jpg")
+solver = Solver(ydeg=5, inc=40.0, vsini=40.0, P=1.0)
+solver.generate_data(nt=8, ferr=1.e-5, image="vogtstar.jpg")
 solver.solve(niter_linear=0, niter_adam=200, temp=1e7, vT=solver.vT_true, u_sig=1e-4)
 solver.plot(render_movies=False, open_plots=True)
 print(np.max(solver.lnlike))
