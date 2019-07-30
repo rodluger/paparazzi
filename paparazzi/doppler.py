@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import starry
-from scipy.sparse import csr_matrix, hstack, vstack, diags, block_diag
+from scipy.sparse import csr_matrix, hstack, vstack, diags
+from scipy.sparse import block_diag as sparse_block_diag
+from scipy.linalg import block_diag as dense_block_diag
+from scipy.linalg import cho_factor, cho_solve
+import celerite
 from tqdm import tqdm
 import os
 from .utils import Adam
@@ -15,7 +19,7 @@ class Doppler(object):
     
     """
 
-    def __init__(self, ydeg=15, vsini=40, inc=90.0):
+    def __init__(self, ydeg=15, vsini=40, inc=40.0):
         """
 
         """
@@ -155,7 +159,7 @@ class Doppler(object):
         """
         if self._theta is None:
             raise ValueError("Please load a dataset first.")
-        return self._theta * np.pi / 180.0
+        return self._theta * 180.0 / np.pi
 
     def _reset_cache(self):
         self._lnlam_padded = None
@@ -355,12 +359,12 @@ class Doppler(object):
         self.ferr = ferr
         self._F_CInv = np.ones_like(self.F) / self.ferr ** 2
     
-    def compute_u(self, T=1.0, u_mu=0.0, u_sig=0.01):
+    def compute_u(self, T=1.0, mu=0.0, sig=0.01):
         """
         Linear solve for `u` given `v^T`, `b`.
 
         """
-        V = block_diag([self.vT.reshape(-1, 1) for n in range(self.N)])
+        V = sparse_block_diag([self.vT.reshape(-1, 1) for n in range(self.N)])
         A_ = np.array(self.D.dot(V).todense())
         A0, A = A_[:, 0], A_[:, 1:]
         ATCInv = np.multiply(A.T, 
@@ -368,8 +372,77 @@ class Doppler(object):
         ATCInvA = ATCInv.dot(A)
         ATCInvf = np.dot(ATCInv, 
             (self.F * self.b.reshape(-1, 1)).reshape(-1) - A0)
-        u_cinv = np.ones(self.N - 1) / u_sig ** 2
-        u_mu = np.ones(self.N - 1) * u_mu ** 2
-        np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + u_cinv)
-        self.u = np.linalg.solve(ATCInvA, 
-                                 ATCInvf + u_cinv * u_mu)
+        cinv = np.ones(self.N - 1) / sig ** 2
+        mu = np.ones(self.N - 1) * mu ** 2
+        np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + cinv)
+        self.u = np.linalg.solve(ATCInvA, ATCInvf + cinv * mu)
+    
+    def compute_b(self, T=1.0, mu=1.0, sig=0.1):
+        """
+        Linear solve for `b` given `u` and `vT`.
+        Note that the problem is linear in `1 / b`, so that's the
+        space in which the Gaussian priors are applied.
+
+        """
+        A = (np.append([1], self.u)).reshape(-1, 1).dot(self.vT.reshape(1, -1))
+        M = self.D.dot(A.reshape(-1)).reshape(self.M, -1)
+        MT = dense_block_diag(*M)
+        ATCInv = np.multiply(MT, self._F_CInv.reshape(-1) / T)
+        ATCInvA = ATCInv.dot(MT.T)
+        ATCInvf = np.dot(ATCInv, self.F.reshape(-1))
+        cinv = np.ones(self.M) / sig ** 2
+        np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + 1.0 / cinv)
+        mu = np.ones(self.M) * mu
+        invb = np.linalg.solve(ATCInvA, ATCInvf + 1.0 / (cinv * mu))
+        self.b = 1.0 / invb
+    
+    def compute_vT(self, cho_C, T=1.0, mu=1.0):
+        """
+        Linear solve for `v^T` given `u`, `b`.
+
+        """
+        Kp = self.lnlam_padded.shape[0]
+        offsets = -np.arange(0, self.N) * Kp
+        U = diags([np.ones(Kp)] + 
+                  [np.ones(Kp) * self.u[n] for n in range(self.N - 1)], 
+                  offsets, shape=(self.N * Kp, Kp))
+        A = np.array(self.D.dot(U).todense())
+        ATCInv = np.multiply(A.T, 
+            (self._F_CInv / T / self.b.reshape(-1, 1) ** 2).reshape(-1))
+        ATCInvA = ATCInv.dot(A)
+        ATCInvf = np.dot(ATCInv, (self.F * self.b.reshape(-1, 1)).reshape(-1))
+        CInv = cho_solve(cho_C, np.eye(Kp))
+        CInvmu = cho_solve(cho_C, np.ones(Kp) * mu)
+        self.vT = np.linalg.solve(ATCInvA + CInv, ATCInvf + CInvmu)
+    
+    def solve(self, u=None, vT=None, b=None, u_guess=None, 
+              vT_guess=None, b_guess=None, u_mu=0.0, u_sig=0.01, 
+              vT_mu=1.0, vT_sig=0.3, vT_rho=3.e-5, b_mu=1.0, 
+              b_sig=0.1, niter_adam=100, niter_linear=0, 
+              T=1.0, **kwargs):
+        """
+        
+        """
+        # Gaussian process prior on `vT`
+        if vT_rho > 0.0:
+            kernel = celerite.terms.Matern32Term(np.log(vT_sig), np.log(vT_rho))
+            gp = celerite.GP(kernel)
+            vT_C = gp.get_matrix(self.lnlam_padded)
+        else:
+            Kp = self.lnlam_padded.shape[0]
+            vT_C = np.eye(Kp) * vT_sig ** 2
+        vT_cho_C = cho_factor(vT_C)
+
+        # Simple linear solves
+        if (u is not None) and (vT is not None):
+            self.u = u
+            self.vT = vT
+            self.compute_b(T=T, mu=b_mu, sig=b_sig)
+        elif (u is not None) and (b is not None):
+            self.u = u
+            self.b = b
+            self.compute_vT(vT_cho_C, T=T, mu=vT_mu)
+        elif (vT is not None) and (b is not None):
+            self.b = b
+            self.vT = vT
+            self.compute_u(T=T, mu=u_mu, sig=u_sig)
