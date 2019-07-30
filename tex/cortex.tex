@@ -102,3 +102,8 @@
 % Typography obsessions
 \setlength{\parindent}{3.0ex}
 \renewcommand\quad{\hskip\fontdimen3\font}
+
+% https://tex.stackexchange.com/a/184474
+\usepackage{stackengine,scalerel}
+\def\lnlam{\ThisStyle{\ensurestackMath{\stackon[-2.4\LMpt]{%
+  \SavedStyle\lambda}{\kern-.5pt\kern\LMpt\rule{1\LMex}{.25pt+.15\LMpt}}}}}

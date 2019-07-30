@@ -63,7 +63,7 @@ for i in range(len(Snum)):
 ax[0].set_ylabel(r"spectrum")
 ax[0].legend(fontsize=12, loc="lower left")
 ax[1].set_yscale("log")
-ax[1].set_xlabel(r"$10^{6}\times\xi$")
+ax[1].set_xlabel(r"$\lambdabar$ (arbitrary units)")
 ax[1].legend(fontsize=10, loc="upper right")
 ax[1].set_ylim(1e-10, 1e0)
 ax[1].set_ylabel(r"residuals")

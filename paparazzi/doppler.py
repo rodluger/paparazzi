@@ -114,10 +114,10 @@ class Doppler(object):
         # which is the opposite of the convention used for Doppler
         # shifts, so we need to include a factor of -1 below.
         lam_kernel = self._lam_padded[self.Kp // 2 - W:self.Kp // 2 + W + 1]
-        self._x = -(1 / self._betasini) * (np.exp(2 * lam_kernel) - 1) / \
+        self.x = -(1 / self._betasini) * (np.exp(2 * lam_kernel) - 1) / \
                     (np.exp(2 * lam_kernel) + 1)
-        self._x[self._x < -1.0] = -1.0
-        self._x[self._x > 1.0] = 1.0
+        self.x[self.x < -1.0] = -1.0
+        self.x[self.x > 1.0] = 1.0
 
     def _Ij(self, j, x):
         """
@@ -128,44 +128,53 @@ class Doppler(object):
         else:
             return (j - 1) / (j + 2) * (1 - x ** 2) * self._Ij(j - 2, x)
 
-    def _sn(self, n):
+    def _s(self):
         """
+
+        """
+        sijk = np.zeros((self.ydeg + 1, self.ydeg + 1, 2, len(self.x)))
         
-        """
-        # Indices
+        # Initial conditions
+        r2 = (1 - self.x ** 2)
+        sijk[0, 0, 0] = 2 * r2 ** 0.5
+        sijk[0, 0, 1] = 0.5 * np.pi * r2
+
+        # Upward recursion in j
+        for j in range(2, self.ydeg + 1, 2):
+            sijk[0, j, 0] = ((j - 1.) / (j + 1.)) * r2 * sijk[0, j - 2, 0]
+            sijk[0, j, 1] = ((j - 1.) / (j + 2.)) * r2 * sijk[0, j - 2, 1]
+        
+        # Upward recursion in i
+        for i in range(1, self.ydeg + 1):
+            sijk[i] = sijk[i - 1] * self.x
+
+        # Full vector
+        s = np.empty((self.N, len(self.x)))
+        n = np.arange(self.N)
         LAM = np.floor(np.sqrt(n))
         DEL = 0.5 * (n - LAM ** 2)
-        i = int(np.floor(LAM - DEL))
-        j = int(np.floor(DEL))
-        k = int(np.ceil(DEL) - np.floor(DEL))
+        i = np.array(np.floor(LAM - DEL), dtype=int)
+        j = np.array(np.floor(DEL), dtype=int)
+        k = np.array(np.ceil(DEL) - np.floor(DEL), dtype=int)
+        s[n] = sijk[i, j, k]
+        return s
 
-        # Solve the integral
-        # TODO: Find the recursion relations
-        if (k == 0) and (j % 2 == 0):
-            sn = (2 * self._x ** i * \
-                (1 - self._x ** 2) ** (0.5 * (j + 1))) / (j + 1)
-        elif (k == 1) and (j % 2 == 0):
-            sn = self._x ** i * self._Ij(j, self._x)
-        else:
-            sn = np.zeros_like(self._x)
-        return sn
-
-    def _g(self):
+    def g(self):
         """
         Indexed [ylm, nlam].
         Normalized.
 
         """
-        g = self._A1T.dot(np.array([self._sn(n) for n in range(self.N)]))
+        g = self._A1T.dot(self._s())
         norm = np.trapz(g[0])
         return g / norm
 
-    def _T(self):
+    def T(self):
         """
-        Toeplitz g matrix.
+        Toeplitz g matrices.
 
         """
-        g = self._g()
+        g = self.g()
         T = [None for n in range(self.N)]
         for n in range(self.N):
             offsets = np.arange(self._kernel_width)
@@ -186,7 +195,7 @@ class Doppler(object):
             theta = (2 * np.pi / self._P * t) % (2 * np.pi)
             
             # Toeplitz matrices
-            T = self._T()
+            T = self.T()
 
             # Rotation matrices
             R = [self._R(self._axis, t) for t in theta]

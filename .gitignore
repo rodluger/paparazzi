@@ -6,3 +6,5 @@ build/
 __pycache__
 *.pyc
 */.vogtstar*
+*.log
+*.blg

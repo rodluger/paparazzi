@@ -10,7 +10,7 @@
 \begin{document}
 
 % Title
-\title{Doppler Imaging Fun}
+\title{Analytic Doppler Imaging}
 
 % Author list
 \author[0000-0002-0296-3826]{Rodrigo Luger}
@@ -18,6 +18,9 @@
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 %
 \author{Megan Bedell}
+\affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
+%
+\author{Daniel Foreman-Mackey}
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 %
 \author{David W. Hogg}
@@ -32,9 +35,9 @@ Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.
 \section{The problem}
 \label{sec:the_problem}
 %
-Let $I(\xi, \mathbf{x}, t, \mathbf{d})$ be the specific 
+Let $I(\lnlam, \mathbf{x}, t, \mathbf{d})$ be the specific 
 intensity observed 
-at log wavelength $\xi \equiv \ln\lambda$ and at sky-projected 
+at log wavelength $\lnlam \equiv \ln\lambda$ and at sky-projected 
 Cartesian position $\mathbf{x} = (x, y, z)$ on the surface of the 
 star at time $t$, where
 $\mathbf{d}$ is a set of arbitrary parameters of the Doppler field.
@@ -42,8 +45,8 @@ We may express this intensity as
 %
 \begin{align}
     \label{eq:intro:Ixi}
-    I(\xi, \mathbf{x}, t, \mathbf{d}) &= 
-        I_0\Big(\xi_0(\xi, \mathbf{x}, \mathbf{d}), \mathbf{x}, t\Big)
+    I(\lnlam, \mathbf{x}, t, \mathbf{d}) &= 
+        I_0\Big(\lnlam_0(\lnlam, \mathbf{x}, \mathbf{d}), \mathbf{x}, t\Big)
 \end{align}
 %
 where $I_0$ is the specific intensity at each point on the star 
@@ -51,8 +54,8 @@ in the surface rest frame and
 %
 \begin{align}
     \label{eq:intro:xi0}
-    \xi_0(\xi, \mathbf{x}, \mathbf{d}) &= 
-    \xi - \mathcal{D}(\mathbf{x}, \mathbf{d})
+    \lnlam_0(\lnlam, \mathbf{x}, \mathbf{d}) &= 
+    \lnlam - \mathcal{D}(\mathbf{x}, \mathbf{d})
 \end{align}
 %
 is the log wavelength in the rest frame. The quantity $\mathcal{D}$ is
@@ -76,23 +79,23 @@ $\mathcal{D}$) to mean redshifts.
 A common approach to computing the Doppler-shifted spectrum is to
 evaluate the spectrum at the rest frame wavelength 
 (Equation~\ref{eq:intro:xi0})
-and interpolate back to the grid in $\xi$. This is practical when
+and interpolate back to the grid in $\lnlam$. This is practical when
 computing the spectrum at a single \emph{point} on the surface, but not
 ideal when one is interested in the \emph{integral} over the visible
 surface of the star $\mathcal{S}$, which is typically all we can observe:
 %
 \begin{align}
     \label{eq:intro:Fxi}
-    F(\xi, t) 
+    F(\lnlam, t) 
         &\equiv
         \iint\limits_{\mathcal{S}(\mathbf{x})}
-                I(\xi, \mathbf{x}, t, \mathbf{d})
+                I(\lnlam, \mathbf{x}, t, \mathbf{d})
         \mathrm{d}{\mathcal{S}(\mathbf{x})}
         \quad ,
 \end{align}
 %
 The difficulty in solving Equation~(\ref{eq:intro:Fxi}) stems from the fact
-that $I(\xi, \mathbf{x}, t, \mathbf{d})$ is difficult to write down in 
+that $I(\lnlam, \mathbf{x}, t, \mathbf{d})$ is difficult to write down in 
 closed form, given
 the non-linearity of the Doppler shift.
 The standard approach to solving this integral is therefore
@@ -115,34 +118,34 @@ specific intensity in terms of spherical harmonics on the unit disk:
 %
 \begin{align}
     \label{eq:solution:Ixi0}
-    I_0(\xi_0, \mathbf{x}, t) 
+    I_0(\lnlam_0, \mathbf{x}, t) 
         &=
-        \sum_{l=0}^\infty\sum_{m=-l}^{l} a_{lm}(\xi_0, t) Y_{lm}(\mathbf{x})
+        \sum_{l=0}^\infty\sum_{m=-l}^{l} a_{lm}(\lnlam_0, t) Y_{lm}(\mathbf{x})
     \quad ,
 \end{align}
 %
 where $Y_{lm}(\mathbf{x})$ is a spherical harmonic on the projected disk
-and $a_{lm}(\xi_0, t)$ is the corresponding spherical harmonic 
-coefficient at log wavelength in the rest frame $\xi_0$ and time $t$. For 
+and $a_{lm}(\lnlam_0, t)$ is the corresponding spherical harmonic 
+coefficient at log wavelength in the rest frame $\lnlam_0$ and time $t$. For 
 convenience, we may write this equation in vector form:
 %
 \begin{align}
     \label{eq:solution:Ixi0vec}
-    I_0(\xi_0, \mathbf{x}, t) &=
-    \tilde{\bvec{y}}^\top(\mathbf{x})
-    \bvec{a}(\xi_0, t)
+    I_0(\lnlam_0, \mathbf{x}, t) &=
+    \bvec{Y}^\top(\mathbf{x}) \,
+    \bvec{a}(\lnlam_0, t)
     \quad ,
 \end{align}
 %
 where
 %
 \begin{align}
-    \bvec{a}(\xi_0, t) \equiv
+    \bvec{a}(\lnlam_0, t) \equiv
 \Big( 
-    a_{0,0}(\xi_0, t) \quad\quad\quad\quad\quad\quad 
-    a_{1,-1}(\xi_0, t) \quad\quad\quad\quad\quad\quad 
-    a_{1,0}(\xi_0, t) \quad\quad\quad\quad\quad\quad
-    a_{1,1}(\xi_0, t) \quad\quad\quad\quad\quad\quad 
+    a_{0,0}(\lnlam_0, t) \quad\quad\quad\quad\quad\quad 
+    a_{1,-1}(\lnlam_0, t) \quad\quad\quad\quad\quad\quad 
+    a_{1,0}(\lnlam_0, t) \quad\quad\quad\quad\quad\quad
+    a_{1,1}(\lnlam_0, t) \quad\quad\quad\quad\quad\quad 
     ... 
 \Big)^\top
 \end{align}
@@ -150,7 +153,7 @@ where
 is the vector of spherical harmonic coefficients and
 %
 \begin{align}
-    \tilde{\bvec{y}}^\top(\mathbf{x}) \equiv 
+    \bvec{Y}^\top(\mathbf{x}) \equiv 
 \Big( 
     Y_{0,0}(\mathbf{x}) \quad\quad\quad\quad\quad\quad 
     Y_{1,-1}(\mathbf{x}) \quad\quad\quad\quad\quad\quad 
@@ -166,11 +169,11 @@ spherical harmonic coefficients:
 %
 \begin{align}
     \label{eq:solution:R}
-    \bvec{a}(\xi_0, t) = \mathbf{R}(t) \bvec{a}(\xi_0)
+    \bvec{a}(\lnlam_0, t) = \mathbf{R}(t) \bvec{a}(\lnlam_0)
     \quad ,
 \end{align}
 %
-where $\bvec{a}(\xi_0) = \bvec{a}(\xi_0, t=t_0)$ for some reference time $t_0$.
+where $\bvec{a}(\lnlam_0) = \bvec{a}(\lnlam_0, t=t_0)$ for some reference time $t_0$.
 For rigid body rotation, the result is exact and $\mathbf{R}(t)$ is the Wigner 
 rotation matrix for real spherical harmonics 
 \citep[e.g.][]{AlvarezCollado1989}, which is implicitly a 
@@ -179,16 +182,16 @@ In the case that other processes such as differential rotation or spot
 evolution are significant
 over the course of an observation, Equation~(\ref{eq:solution:R}) can be
 made to hold approximately for some effective rotation matrix 
-$\mathbf{R}(t)$; we discuss this further below.
+$\mathbf{R}(t)$; we discuss this later.
 
 The equation for the specific intensity now reads
 %
 \begin{align}
     \label{eq:solution:Ixi0vecfull}
-    I_0(\xi_0, \mathbf{x}, t) &=
-    \tilde{\bvec{y}}^\top(\mathbf{x})
+    I_0(\lnlam_0, \mathbf{x}, t) &=
+    \bvec{Y}^\top(\mathbf{x})
     \mathbf{R}(t)
-    \bvec{a}(\xi_0)
+    \bvec{a}(\lnlam_0)
     \quad ,
 \end{align}
 %
@@ -200,69 +203,93 @@ shift as a convolution
 of the spectrum in the rest frame with a delta function:
 %
 \begin{align}
-    I(\xi, \mathbf{x}, t) &= 
-        I_0(\xi_0, \mathbf{x}, t) 
-        * \delta\big(\mathcal{D}(\mathbf{x}, \mathbf{d}) - (\xi - \xi_0)\big)
+    I(\lnlam, \mathbf{x}, t) &= 
+        I_0(\lnlam_0, \mathbf{x}, t) 
+        * \delta\big(\lnlam - \lnlam_0\big)
         \quad,
 \end{align}
 %
 where $*$ denotes the convolution operation, 
-returning a function of the shifted log wavelength, $\xi$.
+returning a function of the shifted log wavelength, $\lnlam$.
 Inserting this into Equation~(\ref{eq:solution:Ixi0vecfull}) and integrating
 over the visible portion of the star, we arrive at the expression for the 
 observed spectrum:
 %
 %
 \begin{align}
-    \label{eq:solution:Fxi}
-    F(\xi, t) &=
+    \label{eq:solution:Fxi2d}
+    F(\lnlam, t) &=
     \iint\limits_{\mathcal{S}(\mathbf{x})}
-    \tilde{\bvec{y}}^\top(\mathbf{x})
+    \bvec{Y}^\top(\mathbf{x})
     \mathbf{R}(t)
-    \bvec{a}(\xi_0)
-    * \delta\big(\mathcal{D}(\mathbf{x}, \mathbf{d}) - (\xi - \xi_0)\big)
+    \bvec{a}(\lnlam_0)
+    * \delta\big(\lnlam - \lnlam_0\big)
     \mathrm{d}\mathcal{S}(\mathbf{x})
     \nonumber \\[0.5em]
     &=
-    \mathbf{g}^\top(\mathcal{D})
-    *
+    \iint\limits_{\mathcal{S}(\mathbf{x})}
+    \bvec{Y}^\top(\mathbf{x})
+    \delta\big(\lnlam - \lnlam_0\big)
+    \mathrm{d}\mathcal{S}(\mathbf{x})
     \,
     \mathbf{R}(t)
     \,
-    \bvec{a}(\xi_0)
+    *
+    \,
+    \bvec{a}(\lnlam_0)
+    %\mathbf{g}^\top(\lnlam_0) \, \mathbf{R}(t)
+    %*
+    %\bvec{a}(\lnlam_0)
     \quad ,
 \end{align}
 %
 %
 where we made use of the commutativity of the convolution operator and 
 the fact that the integral is taken only over the spatial dimensions.
-We further define
+Note, importantly, that the convolution operation
+above is implicitly a vector operation---i.e., the
+convolution is taken for each spherical harmonic term and then summed over 
+all terms.
+
+Finally, we can simplify Equation~(\ref{eq:solution:Fxi2d}) by noting that the
+delta function in the integrand allows us to reduce the double integral 
+to a line integral:
 %
 \begin{align}
     \label{eq:solution:gT}
-    \mathbf{g}^\top(\mathcal{D})
-    &\equiv
     \iint\limits_{\mathcal{S}(\mathbf{x})}
-    \tilde{\bvec{y}}^\top(\mathbf{x})
-    \delta\big(\mathcal{D}(\mathbf{x}, \mathbf{d}) - (\xi - \xi_0)\big)
+    \bvec{Y}^\top(\mathbf{x})
+    \delta\big(\lnlam - \lnlam_0\big)
     \mathrm{d}\mathcal{S}(\mathbf{x})
-    \nonumber \\[0.5em]
+    \, \,
     &=  
-    \int\limits_{\mathcal{C}(\mathbf{x}, \mathbf{d})}
-    \tilde{\bvec{y}}^\top(\mathbf{x})
-    \mathrm{d}\mathcal{C}(\mathbf{x}, \mathbf{d})
+    \int\limits_{\mathcal{C}(\lnlam - \lnlam_0)}
+    \hspace*{-1em}\bvec{Y}^\top(\mathbf{x})
+    \mathrm{d}\mathcal{C}(\lnlam - \lnlam_0)
+    \nonumber \\[0.5em]
+    &\equiv \mathbf{g}^\top(\lnlam - \lnlam_0)
     \quad.
 \end{align}
 %
-where the integral in the second line denotes the line integral about
-some function $\mathcal{C}(\mathbf{x}, \mathbf{d})$ corresponding to the
-set of all points on the visible disk where 
-$\mathcal{D}(\mathbf{x}, \mathbf{d}) = \xi - \xi_0$.
+where the path $\mathcal{C}$ corresponds to the
+set of all points on the visible disk where \xxx{what???} 
 
-Equation~(\ref{eq:solution:Fxi}) is the complete deconvolution of the
+We thus have
+%
+\begin{align}
+    \label{eq:solution:Fxi}
+    F(\lnlam, t) 
+    &=
+    \mathbf{g}^\top(\lnlam - \lnlam_0) \, \mathbf{R}(t)
+    *
+    \bvec{a}(\lnlam_0)
+    \quad.
+\end{align}
+%
+Equation~(\ref{eq:solution:Fxi}) is the deconvolution of the
 observed spectrum into velocity terms, temporal terms, and spectral/spatial
 terms, respectively. In the following sections, we will discuss how to
-efficiently solve Equation~(\ref{eq:solution:gT}).
+efficiently solve the line integral in Equation~(\ref{eq:solution:gT}).
 
 \section{Doppler imaging of rigid rotators}
 \label{sec:rigid}
@@ -299,8 +326,8 @@ spherical harmonics to polynomials on the sphere:
 %
 \begin{align}
     \label{eq:rigid:gT}
-    \mathbf{g}^\top(\mathcal{D}) &\equiv
-    \bvec{s}^\top(\mathcal{D})
+    \mathbf{g}^\top(\lnlam_0) &\equiv
+    \bvec{s}^\top(\lnlam_0)
     \bvec{A_1}
 \end{align}
 %
@@ -308,11 +335,11 @@ where
 %
 \begin{align}
     \label{eq:rigid:sTdef}
-    \mathbf{s}^\top(\mathcal{D})
+    \mathbf{s}^\top(\lnlam_0)
     &\equiv
-    \int\limits_{\mathcal{C}(\mathbf{x}, \mathbf{d})}
+    \int\limits_{\mathcal{C}(\lnlam_0, \mathbf{x}, \mathbf{d})}
     \tilde{\bvec{p}}^\top(\mathbf{x})
-    \mathrm{d}\mathcal{C}(\mathbf{x}, \mathbf{d})
+    \mathrm{d}\mathcal{C}(\lnlam_0, \mathbf{x}, \mathbf{d})
 \end{align}
 %
 is the vector of integral solutions for each spherical harmonic,
@@ -345,7 +372,7 @@ the unit sphere, the coordinate $z$ is given by $\sqrt{1 - x^2 - y^2}$.
     \oscaption{g}{%
         The Doppler $\mathbf{g}$ basis for a rigidly rotating star
         computed from Equation~(\ref{eq:rigid:gT}) and
-        Equation~(\ref{eq:rigid:sTAnalytic}) up to spherical 
+        Equation~(\ref{eq:rigid:sTrecurrence}) up to spherical 
         harmonic degree $l=10$. Rows correspond to the degree $l$ and
         columns correspond to the order $m$. These functions encode
         the contribution of each spherical harmonic to the rotational
@@ -359,19 +386,21 @@ the unit sphere, the coordinate $z$ is given by $\sqrt{1 - x^2 - y^2}$.
 \end{figure}
 
 If we assume the star is unocculted, the region of integration $\mathcal{S}$ 
-is simply the unit disk, so $\mathcal{C}(\mathbf{x}, \mathbf{d})$ 
+is simply the unit disk, so $\mathcal{C}(\lnlam_0, \mathbf{x}, \mathbf{d})$ 
 is the set of all points
-that satisfy both $\mathcal{D}(\mathbf{x}, \mathbf{d}) = \xi - \xi_0$ and 
+that satisfy both $\mathcal{D}(\mathbf{x}, \mathbf{d}) = \lnlam - \lnlam_0$ and 
 $x^2 + y^2 \le 1$.
 Solving Equation~(\ref{eq:rigid:D}) for $x$, we find that 
-the curves $\mathcal{C}(\mathbf{x}, \mathbf{d})$ 
-are simply vertical lines on the unit disk given by
+the curves $\mathcal{C}(\lnlam_0, \mathbf{x}, \mathbf{d})$ 
+are simply vertical lines on the unit disk given by 
+%
+\xxx{(this should be $\lnlam - \lnlam_0$, no?)}
 %
 \begin{align}
-    x(\mathcal{D}) &= 
+    x(\lnlam_0) &= 
         \Bigg(\frac{c}{\omega\sin i}\Bigg) 
-        \Bigg(\frac{\mathrm{e}^{2\mathcal{D}} - 1}
-                   {\mathrm{e}^{2\mathcal{D}} + 1}\Bigg)
+        \Bigg(\frac{\mathrm{e}^{2{\lnlam_0}} - 1}
+                   {\mathrm{e}^{2{\lnlam_0}} + 1}\Bigg)
     \quad .
 \end{align}
 %
@@ -380,12 +409,12 @@ over $y$:
 %
 \begin{align}
     \label{eq:rigid:sT}
-    \bvec{s}^\top(\mathcal{D}) 
+    \bvec{s}^\top(\lnlam_0) 
     &=    
-    \int\limits_{-\sqrt{1 - x(\mathcal{D})^2}}^
-                {\sqrt{1 - x(\mathcal{D})^2}}
+    \int\limits_{-\sqrt{1 - x^2}}^
+                {\sqrt{1 - x^2}}
     \tilde{\bvec{p}}^\top
-    \Big(x(\mathcal{D}), y\Big)
+    \Big(x, y\Big)
     \mathrm{d}y
     \quad .
 \end{align}
@@ -402,7 +431,7 @@ is a polynomial in $x$, $y$, and $z = \sqrt{1 - x^2 - y^2}$:
 where $i, j, k$ are integers given by
 %
 \begin{proof}{PolynomialBasis}
-    \label{eq:lm}
+    \label{eq:rigid:lm}
     i &= \floor*{\Lambda - \Delta}
     \nonumber \\[0.5em]
     j &= \floor*{\Delta}
@@ -423,44 +452,39 @@ We may now explicitly write down the $n^\mathrm{th}$ term of
 Equation~(\ref{eq:rigid:sT}),
 %
 \begin{align}
-    s_n(\mathcal{D}) 
+    \label{eq:rigid:sTexpression}
+    s_n(\lnlam_0) 
     &=    
-    x(\mathcal{D})^i
-    \int\limits_{-\sqrt{1 - x(\mathcal{D})^2}}^
-                {\sqrt{1 - x(\mathcal{D})^2}}
+    s_{i,\,j,\,k}(\lnlam_0) 
+    =    
+    x^i
+    \int\limits_{-\sqrt{1 - x^2}}^
+                {\sqrt{1 - x^2}}
         y^j
-        \left(1 - x(\mathcal{D})^2 - y^2\right)^{\frac{k}{2}} \,
+        \left(1 - x^2 - y^2\right)^{\frac{k}{2}} \,
     \mathrm{d}y 
-    \quad ,
+    \quad .
 \end{align}
 %
-and solve it analytically:
+As we show in the Appendix, the solution to this integral
+is analytic and expressible in terms of simple recurrence
+relations. Given the boundary conditions
 %
 \begin{align}
-        \label{eq:rigid:sTAnalytic}
-        s_n(\mathcal{D}) 
-        &=     
-    \begin{dcases}
-        0
-        &
-        \qquad j \, \mathrm{odd}
-        \\[1em]
-        \frac{2 x(\mathcal{D})^i 
-        \big(1 - x(\mathcal{D})^ 2\big)^{\frac{j + 1}{2}}}{j + 1}
-        &
-        \qquad k = 0
-        \\[1em]
-        x(\mathcal{D})^{i} \mathcal{I}_{j}
-        \big(x(\mathcal{D})\big)
-        &
-        \qquad k = 1
-        \quad ,
-    \end{dcases}
+    s_{0,\,0,\,0} &= 2 \sqrt{1-x^2} \nonumber \\
+    s_{0,\,0,\,1} &= \frac{\pi}{2} \big(1-x^2\big) \nonumber \\
+    s_{0,\,1,\,0} &= 0 \nonumber \\
+    s_{0,\,1,\,1} &= 0 \quad ,
 \end{align}
 %
-where $\mathcal{I}_j(x)$ is computed analytically
-from the upward recurrence relation given by Equation~(\ref{eq:app:Ij}),
-with $\mathcal{I}_0(x)$ given by Equation~(\ref{eq:app:I0}).
+we may compute any term in the series via the expressions
+%
+\begin{align}
+    \label{eq:rigid:sTrecurrence}
+    s_{0,\,j,\,0} &= \frac{j - 1}{j + 1} \big(1 - x^2\big) s_{0,\,j-2,\,0} \nonumber \\
+    s_{0,\,j,\,1} &= \frac{j - 1}{j + 2} \big(1 - x^2\big) s_{0,\,j-2,\,1} \nonumber \\
+    s_{i,\,j,\,k} &= x s_{i-1,\,j,\,k} \quad.
+\end{align}
 %
 Figure~\ref{fig:g} shows the $\mathbf{g}$ basis computed from
 the formulae above and Equation~(\ref{eq:rigid:gT}) up to spherical 
@@ -497,7 +521,7 @@ harmonic degree $l=10$.
         panel shows the absolute value of the difference between the 
         two spectra for different grid resolutions in the numerical solution.
         As the number of grid points increases, the numerical solution
-        converges to the \starry solution.
+        approaches the \starry solution.
         \label{fig:compare}
     }
     \end{centering}
@@ -505,19 +529,48 @@ harmonic degree $l=10$.
 
 \begin{figure}[p!]
     \begin{centering}
-    \includegraphics[width=0.95\linewidth]{figures/linalg.pdf}
+    \includegraphics[width=1.0\linewidth]{figures/linalg.pdf}
     \oscaption{linalg}{%
-        The linear Doppler imaging problem.
+        The linear Doppler imaging problem, $\bvec{f} = \bvec{D} \bvec{a}$.
+        The vector on the left hand side, $\bvec{f}$, is the model for the
+        observed flux, a sequence of $M$ spectra taken at different times,
+        each measured at $K$ wavelength bins. The matrix on the right hand 
+        side, $\bvec{D}$, is
+        the Doppler design matrix, constructed from $M \times N$ Toeplitz
+        matrices, each of shape $K \times (K + W)$, where $W$ is the width
+        of the convolution kernel and $N$ is the number of spherical harmonic
+        coefficients in the expansion of the stellar surface.
+        The $N$ columns of $\mathcal{D}$ correspond
+        to the Toeplitz matrices for each of the $N$ spherical harmonics;
+        the $M$ rows correspond to the Toeplitz matrices rotated to each
+        of the $M$ stellar phases observed. Finally, the vector at the 
+        right is the weight vector $\bvec{a}$, a sequence of $N$ spectral 
+        components, each of length $K + W$. In this example, each segment of
+        $\bvec{a}$ is equal to a simple Gaussian line profile weighted by
+        the spherical harmonic coefficients of a large equatorial starspot;
+        this corresponds to a star whose spectrum is the same everywhere, but
+        whose overall brightness varies spatially.
         \label{fig:linalg}
     }
     \end{centering}
 \end{figure}
 
+\begin{figure}[p!]
+    \begin{centering}
+    \includegraphics[width=1.0\linewidth]{figures/linalg_u.pdf}
+    \oscaption{linalg_u}{%
+        Similar to Figure~\ref{fig:linalg}, but isolating the linear dependence
+        of the model on the spherical harmonic coefficients $\bvec{u}$.
+        \label{fig:linalg_u}
+    }
+    \end{centering}
+\end{figure}
 
 %
 %
 %
 %
+\clearpage
 \appendix
 %
 %
@@ -525,33 +578,42 @@ harmonic degree $l=10$.
 %
 
 \section{Integrals}
-\subsection{Equation~(\ref{eq:rigid:sTAnalytic})}
+\subsection{Equation~(\ref{eq:rigid:sTexpression})}
 %
-When $k = 1$, we may write the $n^\mathrm{th}$ component
-of Equation~(\ref{eq:rigid:sTAnalytic}) as
+In this section we derive the recurrence relations
+(\ref{eq:rigid:sTrecurrence}) for computing $\mathbf{s}^\top$.
+When $i = k = 0$, the integral is easy to evaluate:
 %
 \begin{align}
-    s_n(\mathcal{D}) = 
-        x(\mathcal{D})^{i}
-        \mathcal{I}_{j}\big(x(\mathcal{D})\big)
+    s_{i,\,j,\,0}(\lnlam_0) 
+    &=    
+    \begin{cases}
+        2 \left( 1 - x^2 \right)^\frac{j + 1}{2} 
+        \quad\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad 
+        &  j \, \mathrm{even} \\
+        0 & j \, \mathrm{odd} \quad .
+    \end{cases}
 \end{align}
 %
-where
+The general term may be computed from the recurrence relation
 %
 \begin{align}
-    \mathcal{I}_j(x) &\equiv
-    \int\limits_{-\sqrt{1-x^2}}^{\sqrt{1-x^2}}
-        y^{j}
-        \sqrt{1 - x^2 - y^2} \,
-    \mathrm{d}y
-    \quad.
+    s_{0,\,j,\,0}(\lnlam_0) = \frac{j - 1}{j + 1} \big(1 - x^2\big) s_{0,\,j-2,\,0}
 \end{align}
 %
-Substituting $y = \sin\psi\sqrt{1 - x^2}$, we have
+provided 
 %
 \begin{align}
-    \mathcal{I}_j(x) &=
-    %
+    s_{0,\,0,\,0} &= 2 \sqrt{1-x^2} \nonumber \\
+    s_{0,\,1,\,0} &= 0 \quad.
+\end{align}
+%
+When $i = 0$ and $k = 1$, we may substitute $y = \sin\psi\sqrt{1 - x^2}$ in
+the integrand to obtain
+%
+\begin{align}
+    s_{0,\,j,\,1}(\lnlam_0)
+    &=
     (1 - x^2)^{\frac{j + 2}{2}}
     \int\limits_{-\frac{\pi}{2}}^{\frac{\pi}{2}}
         \sin^j\psi
@@ -590,26 +652,20 @@ which, in our case, simplifies to
 We thus arrive at the recurrence relation
 %
 \begin{align}
-    \label{eq:app:Ij}
-    \mathcal{I}_j(x) &=
-    \frac{j - 1}{j + 2}
-    (1 - x^2)
-    \mathcal{I}_{j-2}(x)
-    \quad.
+    s_{0,\,j,\,1} &= \frac{j - 1}{j + 2} \big(1 - x^2\big) s_{0,\,j-2,\,1}
 \end{align}
 %
-Since this expression is only used when $j$ is even, we only need one
-initial condition for upward recursion:
+with initial conditions
 %
 \begin{align}
-    \label{eq:app:I0}
-    \mathcal{I}_0(x) &\equiv
-    \int\limits_{-\sqrt{1-x^2}}^{\sqrt{1-x^2}}
-        \sqrt{1 - x^2 - y^2} \,
-    \mathrm{d}y
-    \nonumber \\
-    &= \frac{\pi}{2}(1 - x^2)
-    \quad.
+    s_{0,\,0,\,1} &= \frac{\pi}{2} \big(1-x^2\big) \nonumber \\
+    s_{0,\,1,\,1} &= 0 \quad.
+\end{align}
+%
+Given these expressions, recursing upward in $i$ is easy:
+%
+\begin{align}
+    s_{i,\,j,\,k} &= x s_{i-1,\,j,\,k} \quad.
 \end{align}
 
 % Bibliography
