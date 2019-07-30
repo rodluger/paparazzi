@@ -531,21 +531,26 @@ harmonic degree $l=10$.
     \begin{centering}
     \includegraphics[width=1.0\linewidth]{figures/linalg.pdf}
     \oscaption{linalg}{%
-        The linear Doppler imaging problem, $\bvec{f} = \bvec{D} \bvec{a}$.
+        The linear Doppler imaging problem, $\bvec{f} = \bvec{D} \bvec{a}$
+        (Equation~\ref{eq:fDa}).
         The vector on the left hand side, $\bvec{f}$, is the model for the
         observed flux, a sequence of $M$ spectra taken at different times,
-        each measured at $K$ wavelength bins. The matrix on the right hand 
+        each measured at $K$ wavelength bins (plotted to the left of $\bvec{f}$). 
+        The matrix on the right hand 
         side, $\bvec{D}$, is
         the Doppler design matrix, constructed from $M \times N$ Toeplitz
         matrices, each of shape $K \times (K + W)$, where $W$ is the width
-        of the convolution kernel and $N$ is the number of spherical harmonic
+        of the convolution kernels (plotted at the top) and $N$ is the 
+        number of spherical harmonic
         coefficients in the expansion of the stellar surface.
         The $N$ columns of $\mathcal{D}$ correspond
         to the Toeplitz matrices for each of the $N$ spherical harmonics;
         the $M$ rows correspond to the Toeplitz matrices rotated to each
-        of the $M$ stellar phases observed. Finally, the vector at the 
+        of the $M$ stellar phases observed (indicated graphically 
+        to the left of $\mathbf{D}$). Finally, the vector at the 
         right is the weight vector $\bvec{a}$, a sequence of $N$ spectral 
-        components, each of length $K + W$. In this example, each segment of
+        components, each of length $K + W$ (plotted to the right). 
+        In this example, each segment of
         $\bvec{a}$ is equal to a simple Gaussian line profile weighted by
         the spherical harmonic coefficients of a large equatorial starspot;
         this corresponds to a star whose spectrum is the same everywhere, but
@@ -560,7 +565,13 @@ harmonic degree $l=10$.
     \includegraphics[width=1.0\linewidth]{figures/linalg_u.pdf}
     \oscaption{linalg_u}{%
         Similar to Figure~\ref{fig:linalg}, but isolating the linear dependence
-        of the model on the spherical harmonic coefficients $\bvec{u}$.
+        of the model on the spherical harmonic coefficients:
+        $\bvec{f} = \bvec{D}\bvec{V}\bvec{u}$ (Equation~\ref{eq:fDVu}).
+        The $\bvec{f}$ vector and the $\bvec{D}$ design matrix are the same
+        as before, but the spectra have been factored out 
+        of the weight vector and into the $(N \times NP)$ matrix
+        $\bvec{V}$, a block diagonal matrix constructed from $P$
+        distinct spectral components (plotted at the top).
         \label{fig:linalg_u}
     }
     \end{centering}

@@ -4,6 +4,7 @@ import numpy as np
 import paparazzi as pp
 from scipy.sparse import hstack, vstack, csr_matrix, block_diag
 import starry
+np.random.seed(15)
 
 
 def RAxisAngle(axis=[0, 1, 0], theta=0):
@@ -181,7 +182,7 @@ def plot_main():
         T[n] = vstack((T[n], np.nan * np.ones((2, T[n].shape[1]))))
 
     # Tensordot with rotation matrices to get the full Doppler matrix
-    theta = np.linspace(-np.pi, np.pi, ntheta)
+    theta = np.linspace(0, 2 * np.pi, ntheta)
     R = [doppler._R(doppler._axis, t) for t in theta]
     D = [None for t in range(ntheta)]
     for t in range(ntheta):
@@ -197,7 +198,7 @@ def plot_main():
     vT = 1 - 0.5 * np.exp(-0.5 * doppler.lam_padded ** 2 / (1e-4) ** 2)
     map = starry.Map(ydeg)
     map.inc = inc
-    map.add_spot(-1)
+    map.add_spot(-1, lon=-180)
     u = np.array(map.y.eval())
     A = u.reshape(-1, 1).dot(vT.reshape(1, -1))
 
@@ -259,7 +260,7 @@ def plot_main():
     height = 0.0622
     for n in range(ntheta):
         axins = ax.inset_axes([x0, y0 - n * (height + pad), width, height])
-        axins.plot(lam, F[n], "k-")
+        axins.plot(lam, F[n], "k-", alpha=0.3)
         axins.set_ylim(0.6, 1.45)
         axins.axis("off")
 
@@ -272,7 +273,7 @@ def plot_main():
     for n in range(doppler.N):
         axins = ax.inset_axes([x0 + n * (width + pad), y0, width, height])
         axins.axis('off')
-        axins.plot(g[n], "k-")
+        axins.plot(g[n], "k-", alpha=0.3)
 
     # Plot the spectral components
     x0 = 1.03
@@ -283,7 +284,7 @@ def plot_main():
     for n in range(doppler.N):
         axins = ax.inset_axes([x0, y0 - n * (height + pad), width, height])
         axins.axis('off')
-        axins.plot(A[n], doppler.lam_padded, "k-")
+        axins.plot(A[n], doppler.lam_padded, "k-", alpha=0.3)
         axins.set_xlim(-1.1, 1.1)
         axins.set_ylim(doppler.lam_padded[0], doppler.lam_padded[-1])
 
@@ -302,7 +303,7 @@ def plot_main():
         lat_lines = get_ortho_latitude_lines(inc=inc * np.pi / 180)
         for x, y in lat_lines:
             axins.plot(x, y, 'k-', lw=0.5, alpha=0.25, zorder=100)
-        lon_lines = get_ortho_longitude_lines(inc=inc * np.pi / 180, theta=theta[n])
+        lon_lines = get_ortho_longitude_lines(inc=inc * np.pi / 180, theta=np.pi + theta[n])
         for n, l in enumerate(lon_lines):
             if n == 0:
                 axins.plot(l[0], l[1], 'r-', lw=1.25, alpha=1, zorder=100)
@@ -369,7 +370,6 @@ def plot_u():
     inc = 40.
     vsini = 80.
     nlam = 11
-    ncomp = 3
 
     #
     # Compute stuff!
@@ -390,7 +390,7 @@ def plot_u():
         T[n] = vstack((T[n], np.nan * np.ones((2, T[n].shape[1]))))
 
     # Tensordot with rotation matrices to get the full Doppler matrix
-    theta = np.linspace(-np.pi, np.pi, ntheta)
+    theta = np.linspace(0, 2 * np.pi, ntheta)
     R = [doppler._R(doppler._axis, t) for t in theta]
     D = [None for t in range(ntheta)]
     for t in range(ntheta):
@@ -404,30 +404,28 @@ def plot_u():
 
     # The spectrum matrix
     vT0 = 1 - 0.5 * np.exp(-0.5 * doppler.lam_padded ** 2 / (1e-4) ** 2)
-    vT1 = 1 - 0.5 * np.exp(-0.5 * doppler.lam_padded ** 2 / (3e-4) ** 2)
+    vT1 = 1 - 0.25 * np.exp(-0.5 * doppler.lam_padded ** 2 / (0.5e-4) ** 2) \
+            - 0.25 * np.exp(-0.5 * doppler.lam_padded ** 2 / (2.5e-4) ** 2)
     vT2 = 1 - 0.5 * (1 + 0.5 * np.sin(2e4 * doppler.lam_padded)) * np.exp(-0.5 * doppler.lam_padded ** 2 / (2e-4) ** 2)
     vT0 = np.append(vT0, [np.nan, np.nan])
     vT1 = np.append(vT1, [np.nan, np.nan])
     vT2 = np.append(vT2, [np.nan, np.nan])
     vT = np.hstack((vT0.reshape(-1, 1), vT1.reshape(-1, 1), vT2.reshape(-1, 1)))
-    V = block_diag([vT.reshape(-1, ncomp) for n in range(doppler.N)]).toarray()
+    V = block_diag([vT.reshape(-1, 3) for n in range(doppler.N)]).toarray()
     V[np.where(np.isnan(V))[0], :] = np.nan
     V /= np.nanmax(V)
 
     # The Ylm coefficient matrix
     map = starry.Map(ydeg)
     map.inc = inc
-    map.add_spot(-1)
-    u = np.array(map.y.eval())
+    map.add_spot(-1, lon=-180)
+    u0 = np.array(map.y.eval())
+    u1 = u0 * 0.5 * np.random.randn(doppler.N)
+    u2 = u0 * 0.1 * np.random.randn(doppler.N)
 
     # Pad it
-    u = np.pad(u.reshape(-1, 1), ((0, 0), (0, 2)), 
-               "constant", constant_values=np.nan).reshape(-1, 1)
-    
-    u = np.repeat(u, ncomp).T.reshape(-1, 1)
-    u[1::9] *= 0.8 * np.random.randn(doppler.N).reshape(-1, 1)
-    u[2::9] *= 0.1 * np.random.randn(doppler.N).reshape(-1, 1)
-
+    u = np.hstack((u0.reshape(-1, 1), u1.reshape(-1, 1), u2.reshape(-1, 1)))
+    u = np.pad(u, ((0, 0), (0, 2)), "constant", constant_values=np.nan).reshape(-1, 1)
     upad = (V.shape[0] - u.shape[0]) // 2
     u = np.pad(u, ((upad, upad), (0, 0)), "constant", constant_values=np.nan)
     pad = np.nan * np.ones((V.shape[0], 6))
@@ -455,9 +453,13 @@ def plot_u():
     doppler = pp.Doppler(lam, ydeg=ydeg, vsini=vsini, inc=inc, P=1.0)
     g = doppler.g()
     T = doppler.T()
-    vT = 1 - 0.5 * np.exp(-0.5 * doppler.lam_padded ** 2 / (1e-4) ** 2)
-    u = np.array(map.y.eval())
-    A = u.reshape(-1, 1).dot(vT.reshape(1, -1))
+    vT0 = 1 - 0.5 * np.exp(-0.5 * doppler.lam_padded ** 2 / (1e-4) ** 2)
+    vT1 = 1 - 0.25 * np.exp(-0.5 * doppler.lam_padded ** 2 / (0.5e-4) ** 2) \
+            - 0.25 * np.exp(-0.5 * doppler.lam_padded ** 2 / (2.5e-4) ** 2)
+    vT2 = 1 - 0.5 * (1 + 0.5 * np.sin(2e4 * doppler.lam_padded)) * np.exp(-0.5 * doppler.lam_padded ** 2 / (2e-4) ** 2)
+    vT = np.vstack((vT0.reshape(1, -1), vT1.reshape(1, -1), vT2.reshape(1, -1)))
+    u = np.hstack((u0.reshape(-1, 1), u1.reshape(-1, 1), u2.reshape(-1, 1)))
+    A = u.dot(vT)
     D = [None for t in range(ntheta)]
     for t in range(ntheta):
         TR = [None for n in range(doppler.N)]
@@ -487,7 +489,7 @@ def plot_u():
     height = 0.0622
     for n in range(ntheta):
         axins = ax.inset_axes([x0, y0 - n * (height + pad), width, height])
-        axins.plot(lam, F[n], "k-")
+        axins.plot(lam, F[n], "k-", alpha=0.3)
         axins.set_ylim(0.6, 1.45)
         axins.axis("off")
 
@@ -500,7 +502,7 @@ def plot_u():
     for n in range(doppler.N):
         axins = ax.inset_axes([x0 + n * (width + pad), y0, width, height])
         axins.axis('off')
-        axins.plot(g[n], "k-")
+        axins.plot(g[n], "k-", alpha=0.3)
 
     # Plot the spectral components
     x0 = 0.8325
@@ -508,12 +510,9 @@ def plot_u():
     y0 = 1.02
     height = 0.06
     axins = ax.inset_axes([x0, y0, width, height])
-    vT0 = 1 - 0.5 * np.exp(-0.5 * doppler.lam_padded ** 2 / (1e-4) ** 2)
-    vT1 = 1 - 0.5 * np.exp(-0.5 * doppler.lam_padded ** 2 / (3e-4) ** 2)
-    vT2 = 1 - 0.5 * (1 + 0.5 * np.sin(2e4 * doppler.lam_padded)) * np.exp(-0.5 * doppler.lam_padded ** 2 / (2e-4) ** 2)
-    axins.plot(vT0, doppler.lam_padded, "k-")
-    axins.plot(vT1 + 1, doppler.lam_padded, "k-")
-    axins.plot(vT2 + 2, doppler.lam_padded, "k-")
+    axins.plot(vT0, doppler.lam_padded, "k-", alpha=0.3)
+    axins.plot(vT1 + 1, doppler.lam_padded, "k-", alpha=0.3)
+    axins.plot(vT2 + 2, doppler.lam_padded, "k-", alpha=0.3)
     axins.axis("off")
 
     # Plot the map orientation
@@ -531,7 +530,7 @@ def plot_u():
         lat_lines = get_ortho_latitude_lines(inc=inc * np.pi / 180)
         for x, y in lat_lines:
             axins.plot(x, y, 'k-', lw=0.5, alpha=0.25, zorder=100)
-        lon_lines = get_ortho_longitude_lines(inc=inc * np.pi / 180, theta=theta[n])
+        lon_lines = get_ortho_longitude_lines(inc=inc * np.pi / 180, theta=np.pi + theta[n])
         for n, l in enumerate(lon_lines):
             if n == 0:
                 axins.plot(l[0], l[1], 'r-', lw=1.25, alpha=1, zorder=100)
@@ -570,7 +569,7 @@ def plot_u():
                 xytext=(110, 0), textcoords="offset points",
                 clip_on=False)
 
-    ax.annotate(r"$P$", xy=(160, 46.5), xycoords="data", 
+    ax.annotate(r"$P$", xy=(160, 64.25), xycoords="data", 
                 ha="center", va="center", fontsize=8,
                 xytext=(103, 0), textcoords="offset points",
                 clip_on=False)

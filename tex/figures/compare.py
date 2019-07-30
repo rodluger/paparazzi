@@ -53,8 +53,8 @@ for i, res in enumerate(res_arr):
 
 # Compare
 fig, ax = plt.subplots(2, sharex=True, figsize=(8, 8))
-ax[0].plot(1e6 * xi[obs], S[obs], label="starry")
-ax[0].plot(1e6 * xi[obs], Snum[-1][obs], "--", label="numerical")
+ax[0].plot(1e6 * xi[obs], S[obs], lw=2.5, label="Luger et al. (2019)")
+ax[0].plot(1e6 * xi[obs], Snum[-1][obs], "--", lw=2.5, label="numerical")
 ax[0].set_xlim(-4, 4)
 alpha = [0.2, 0.5, 1.0]
 for i in range(len(Snum)):
