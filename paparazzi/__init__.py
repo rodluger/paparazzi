@@ -12,3 +12,4 @@ if not __PAPARAZZI_SETUP__:
 
     # Import the main interface
     from .doppler import Doppler
+    from . import utils

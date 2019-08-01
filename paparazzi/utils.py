@@ -2,9 +2,11 @@
 import numpy as np
 import theano
 import theano.tensor as tt
+from collections import OrderedDict
+from theano.tensor.shared_randomstreams import RandomStreams
+srng = RandomStreams(seed=13)
 
-
-__all__ = ["Adam"]
+__all__ = ["Adam", "AdaGrad", "RMSProp", "SGD", "NAdam"]
 
 
 def Adam(cost, params, lr=0.001, b1=0.9, b2=0.999, e=1e-8):
@@ -13,7 +15,7 @@ def Adam(cost, params, lr=0.001, b1=0.9, b2=0.999, e=1e-8):
     """
     updates = []
     grads = tt.grad(cost, params)
-    i = theano.shared(np.array(0.,dtype=theano.config.floatX))
+    i = theano.shared(np.array(0., dtype=theano.config.floatX))
     i_t = i + 1.
     fix1 = 1. - (1. - b1)**i_t
     fix2 = 1. - (1. - b2)**i_t
@@ -29,4 +31,90 @@ def Adam(cost, params, lr=0.001, b1=0.9, b2=0.999, e=1e-8):
         updates.append((v, v_t))
         updates.append((p, p_t))
     updates.append((i, i_t))
+    return updates
+
+
+def NAdam(cost, params, lr=0.002, b1=0.9, b2=0.999, e=1e-8, sd=0.004):
+    """https://github.com/keras-team/keras/blob/master/keras/optimizers.py
+
+    """
+    updates = []
+    grads = tt.grad(cost, params)
+    i = theano.shared(np.array(0.,dtype=theano.config.floatX))
+    i_t = i + 1.
+
+    # Warm up
+    m_schedule = theano.shared(np.array(1., dtype=theano.config.floatX))
+    momentum_cache_t = b1 * (1. - 0.5 * (tt.pow(0.96, i_t * sd)))
+    momentum_cache_t_1 = b1 * (1. - 0.5 * (tt.pow(0.96, (i_t + 1) * sd)))
+    m_schedule_new = m_schedule * momentum_cache_t
+    m_schedule_next = m_schedule * momentum_cache_t * momentum_cache_t_1
+    updates.append((m_schedule, m_schedule_new))
+
+    for p, g in zip(params, grads):
+        m = theano.shared(p.get_value() * 0.)
+        v = theano.shared(p.get_value() * 0.)
+        
+        g_prime = g / (1. - m_schedule_new)
+        m_t = b1 * m + (1. - b1) * g
+        m_t_prime = m_t / (1. - m_schedule_next)
+        v_t = b2 * v + (1. - b2) * tt.sqr(g)
+        v_t_prime = v_t / (1. - tt.pow(b2, i_t))
+        m_t_bar = (1. - momentum_cache_t) * g_prime + (
+            momentum_cache_t_1 * m_t_prime)
+
+        updates.append((m, m_t))
+        updates.append((v, v_t))
+
+        p_t = p - lr * m_t_bar / (tt.sqrt(v_t_prime) + e)
+        new_p = p_t
+        updates.append((p, new_p))
+        
+    updates.append((i, i_t))
+
+    return updates
+
+
+def AdaGrad(cost, params, lr=1.0, e=1e-6):
+    """https://github.com/Lasagne/Lasagne/blob/master/lasagne/updates.py
+
+    """
+    updates = OrderedDict()
+    grads = tt.grad(cost, params)
+    for param, grad in zip(params, grads):
+        value = param.get_value(borrow=True)
+        accu = theano.shared(np.zeros(value.shape, dtype=value.dtype),
+                             broadcastable=param.broadcastable)
+        accu_new = accu + grad ** 2
+        updates[accu] = accu_new
+        updates[param] = param - (lr * grad / tt.sqrt(accu_new + e))
+    return updates
+
+
+def RMSProp(cost, params, lr=1.0, rho=0.9, e=1e-6):
+    """https://github.com/Lasagne/Lasagne/blob/master/lasagne/updates.py
+
+    """
+    updates = OrderedDict()
+    grads = tt.grad(cost, params)
+    for param, grad in zip(params, grads):
+        value = param.get_value(borrow=True)
+        accu = theano.shared(np.zeros(value.shape, dtype=value.dtype),
+                             broadcastable=param.broadcastable)
+        accu_new = rho * accu + (1.0 - rho) * grad ** 2
+        updates[accu] = accu_new
+        updates[param] = param - (lr * grad / tt.sqrt(accu_new + e))
+
+    return updates
+
+def SGD(cost, params, cost_size, lr=0.001):
+    """broken
+
+    """
+    updates = OrderedDict()
+    i = theano.shared(np.arange(cost_size // 2))
+    grads = tt.grad(tt.sum(cost[i]), params)
+    for param, grad in zip(params, grads):
+        updates[param] = param - lr * grad
+    updates[i] = srng.choice(size=(cost_size // 2,), a=cost_size, replace=False)
     return updates

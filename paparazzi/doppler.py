@@ -6,9 +6,13 @@ from scipy.sparse import block_diag as sparse_block_diag
 from scipy.linalg import block_diag as dense_block_diag
 from scipy.linalg import cho_factor, cho_solve
 import celerite
+import theano
+import theano.tensor as tt
+import theano.sparse as ts
 from tqdm import tqdm
 import os
 from .utils import Adam
+CLIGHT = 3.e5
 
 
 __all__ = ["Doppler"]
@@ -60,11 +64,11 @@ class Doppler(object):
         self.N = (value + 1) ** 2
 
         # Grab the `A1` matrix from `starry`
-        self.map = starry.Map(value)
-        self._A1T = self.map.ops.A1.eval().T
+        self._map = starry.Map(value)
+        self._A1T = self._map.ops.A1.eval().T
 
         # Grab the rotation matrix op
-        self._R = self.map.ops.R
+        self._R = self._map.ops.R
 
         self._reset_cache()
 
@@ -74,11 +78,11 @@ class Doppler(object):
         The projected equatorial radial velocity in km/s.
             
         """
-        return self._beta * 3.e5 * np.sin(self._inc)
+        return self._vsini
     
     @vsini.setter
     def vsini(self, value):
-        self._beta = value / np.sin(self._inc) / 3.e5
+        self._vsini = value
         self._reset_cache()
 
     @property
@@ -92,7 +96,7 @@ class Doppler(object):
     @inc.setter
     def inc(self, value):
         self._inc = value * np.pi / 180.0
-        self.map.inc = value
+        self._map.inc = value
         self._reset_cache()
 
     @property
@@ -113,7 +117,7 @@ class Doppler(object):
         """
         if self._lnlam_padded is None:
             # Kernel width
-            betasini = self._beta * np.sin(self._inc)
+            betasini = self.vsini / CLIGHT
             hw = (np.abs(0.5 * np.log((1 + betasini) / 
                                       (1 - betasini)))) 
             dlam = self.lnlam[1] - self.lnlam[0]
@@ -140,7 +144,8 @@ class Doppler(object):
             # NOTE: In starry, the z axis points *toward* the observer,
             # which is the opposite of the convention used for Doppler
             # shifts, so we need to include a factor of -1 below.
-            betasini = self._beta * np.sin(self._inc)
+            # TODO: Check these signs!
+            betasini = self.vsini / CLIGHT
             Kp = self.lnlam_padded.shape[0]
             hw = (self.W - 1) // 2
             lam_kernel = self.lnlam_padded[Kp // 2 - hw:Kp // 2 + hw + 1]
@@ -170,7 +175,6 @@ class Doppler(object):
         self._D = None
         self.u = None
         self.vT = None
-        self.b = None
 
     def _reset_data(self):
         self._theta = None
@@ -179,10 +183,8 @@ class Doppler(object):
         self.ferr = None
         self.u_true = None
         self.vT_true = None
-        self.b_true = None
         self.u = None
         self.vT = None
-        self.b = None
 
     def _s(self):
         # Compute the `s^T` solution vector.
@@ -259,7 +261,7 @@ class Doppler(object):
             sini = np.sin(self._inc)
             cosi = np.cos(self._inc)
             axis = [0, sini, cosi]
-            R = [self._R(axis, t) for t in self.theta]
+            R = [self._R(axis, t * np.pi / 180.0) for t in self.theta]
 
             # The design matrix
             Dt = [None for t in range(self.M)]
@@ -334,8 +336,8 @@ class Doppler(object):
         if image is None:
             image = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
                                  "vogtstar.jpg")
-        self.map.load(image)
-        u = np.array(self.map.y.eval())
+        self._map.load(image)
+        u = np.array(self._map.y.eval())
 
         # Compute the map matrix & the flux matrix
         A = u.reshape(-1, 1).dot(vT.reshape(1, -1))
@@ -345,8 +347,8 @@ class Doppler(object):
         # since it contains really important information about
         # the map, but unfortunately we can't typically
         # measure it with a spectrograph.
-        b = self.map.flux(theta=theta).eval()
-        F /= b.reshape(-1, 1)
+        baseline = self._map.flux(theta=self.theta).eval().reshape(-1, 1)
+        F /= baseline
 
         # Finally, we add some noise
         F += ferr * np.random.randn(*F.shape)
@@ -354,53 +356,84 @@ class Doppler(object):
         # Store the dataset
         self.u_true = u[1:]
         self.vT_true = vT
-        self.b_true = b
         self.F = F
         self.ferr = ferr
         self._F_CInv = np.ones_like(self.F) / self.ferr ** 2
     
-    def compute_u(self, T=1.0, mu=0.0, sig=0.01):
+    @property
+    def baseline(self):
         """
-        Linear solve for `u` given `v^T`, `b`.
+        
+        """
+        self._map[1:, :] = self.u
+        return self._map.flux(theta=self.theta).eval().reshape(-1, 1)
+
+    @property
+    def model(self):
+        """
+        
+        """
+        A = np.append([1], self.u).reshape(-1, 1).dot(self.vT.reshape(1, -1))
+        model = self.D.dot(A.reshape(-1)).reshape(self.M, -1)
+        model /= self.baseline
+        return model
+
+    def loss(self, u_mu=0.0, u_sig=0.01, vT_mu=1.0, vT_sig=0.3, vT_rho=3.e-5, 
+             vT_CInv=None, baseline_mu=1.0, baseline_sig=0.1):
+        """
 
         """
+        # Gaussian process prior on `vT`
+        if vT_CInv is None:
+            Kp = self.lnlam_padded.shape[0]
+            if vT_rho > 0.0:
+                kernel = celerite.terms.Matern32Term(np.log(vT_sig), 
+                                                     np.log(vT_rho))
+                gp = celerite.GP(kernel)
+                vT_C = gp.get_matrix(self.lnlam_padded)
+            else:
+                vT_C = np.eye(Kp) * vT_sig ** 2
+            vT_cho_C = cho_factor(vT_C)
+            vT_CInv = cho_solve(vT_cho_C, np.eye(Kp))
+
+        # Likelihood and prior
+        lnlike = -0.5 * np.sum((self.F - self.model).reshape(-1) ** 2 * self._F_CInv.reshape(-1))
+        lnprior = -0.5 * np.sum((self.u - u_mu) ** 2 / u_sig ** 2) + \
+                  -0.5 * np.sum((self.baseline - baseline_mu) ** 2 / baseline_sig ** 2) + \
+                  -0.5 * np.dot(np.dot((self.vT - vT_mu).reshape(1, -1), vT_CInv), (self.vT - vT_mu).reshape(-1, 1))
+        return -(lnlike + lnprior)
+
+    def compute_u(self, T=1.0, mu=0.0, sig=0.01, baseline=None):
+        """
+        Linear solve for `u` given `v^T` and a baseline.
+
+        """
+        if baseline is None:
+            baseline = self.baseline
+        else:
+            baseline = baseline.reshape(-1, 1)
         V = sparse_block_diag([self.vT.reshape(-1, 1) for n in range(self.N)])
         A_ = np.array(self.D.dot(V).todense())
         A0, A = A_[:, 0], A_[:, 1:]
         ATCInv = np.multiply(A.T, 
-            (self._F_CInv / T / self.b.reshape(-1, 1) ** 2).reshape(-1))
+            (self._F_CInv / T / baseline ** 2).reshape(-1))
         ATCInvA = ATCInv.dot(A)
         ATCInvf = np.dot(ATCInv, 
-            (self.F * self.b.reshape(-1, 1)).reshape(-1) - A0)
+            (self.F * baseline).reshape(-1) - A0)
         cinv = np.ones(self.N - 1) / sig ** 2
-        mu = np.ones(self.N - 1) * mu ** 2
+        mu = np.ones(self.N - 1) * mu
         np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + cinv)
         self.u = np.linalg.solve(ATCInvA, ATCInvf + cinv * mu)
     
-    def compute_b(self, T=1.0, mu=1.0, sig=0.1):
+    def compute_vT(self, cho_C, T=1.0, mu=1.0, baseline=None):
         """
-        Linear solve for `b` given `u` and `vT`.
-        Note that the problem is linear in `1 / b`, so that's the
-        space in which the Gaussian priors are applied.
+        Linear solve for `v^T` given `u`.
 
         """
-        A = (np.append([1], self.u)).reshape(-1, 1).dot(self.vT.reshape(1, -1))
-        M = self.D.dot(A.reshape(-1)).reshape(self.M, -1)
-        MT = dense_block_diag(*M)
-        ATCInv = np.multiply(MT, self._F_CInv.reshape(-1) / T)
-        ATCInvA = ATCInv.dot(MT.T)
-        ATCInvf = np.dot(ATCInv, self.F.reshape(-1))
-        cinv = np.ones(self.M) / sig ** 2
-        np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + 1.0 / cinv)
-        mu = np.ones(self.M) * mu
-        invb = np.linalg.solve(ATCInvA, ATCInvf + 1.0 / (cinv * mu))
-        self.b = 1.0 / invb
-    
-    def compute_vT(self, cho_C, T=1.0, mu=1.0):
-        """
-        Linear solve for `v^T` given `u`, `b`.
-
-        """
+        if baseline is None:
+            baseline = self.baseline
+        else:
+            baseline = baseline.reshape(-1, 1)
         Kp = self.lnlam_padded.shape[0]
         offsets = -np.arange(0, self.N) * Kp
         U = diags([np.ones(Kp)] + 
@@ -408,41 +441,121 @@ class Doppler(object):
                   offsets, shape=(self.N * Kp, Kp))
         A = np.array(self.D.dot(U).todense())
         ATCInv = np.multiply(A.T, 
-            (self._F_CInv / T / self.b.reshape(-1, 1) ** 2).reshape(-1))
+            (self._F_CInv / T / baseline ** 2).reshape(-1))
         ATCInvA = ATCInv.dot(A)
-        ATCInvf = np.dot(ATCInv, (self.F * self.b.reshape(-1, 1)).reshape(-1))
+        ATCInvf = np.dot(ATCInv, (self.F * baseline).reshape(-1))
         CInv = cho_solve(cho_C, np.eye(Kp))
         CInvmu = cho_solve(cho_C, np.ones(Kp) * mu)
         self.vT = np.linalg.solve(ATCInvA + CInv, ATCInvf + CInvmu)
     
-    def solve(self, u=None, vT=None, b=None, u_guess=None, 
-              vT_guess=None, b_guess=None, u_mu=0.0, u_sig=0.01, 
-              vT_mu=1.0, vT_sig=0.3, vT_rho=3.e-5, b_mu=1.0, 
-              b_sig=0.1, niter_adam=100, niter_linear=0, 
-              T=1.0, **kwargs):
+    def solve(self, u=None, vT=None, baseline=None,
+              u_guess=None, vT_guess=None,
+              u_mu=0.0, u_sig=0.01, 
+              vT_mu=1.0, vT_sig=0.3, vT_rho=3.e-5, 
+              baseline_mu=1.0, baseline_sig=0.1,
+              niter=100, T=1.0, **kwargs):
         """
         
         """
         # Gaussian process prior on `vT`
+        Kp = self.lnlam_padded.shape[0]
         if vT_rho > 0.0:
-            kernel = celerite.terms.Matern32Term(np.log(vT_sig), np.log(vT_rho))
+            kernel = celerite.terms.Matern32Term(np.log(vT_sig), 
+                                                    np.log(vT_rho))
             gp = celerite.GP(kernel)
             vT_C = gp.get_matrix(self.lnlam_padded)
         else:
             Kp = self.lnlam_padded.shape[0]
             vT_C = np.eye(Kp) * vT_sig ** 2
         vT_cho_C = cho_factor(vT_C)
+        vT_CInv = cho_solve(vT_cho_C, np.eye(Kp))
 
         # Simple linear solves
-        if (u is not None) and (vT is not None):
+        if (u is not None):
+            
+            # Easy: it's a linear problem
             self.u = u
-            self.vT = vT
-            self.compute_b(T=T, mu=b_mu, sig=b_sig)
-        elif (u is not None) and (b is not None):
-            self.u = u
-            self.b = b
             self.compute_vT(vT_cho_C, T=T, mu=vT_mu)
-        elif (vT is not None) and (b is not None):
-            self.b = b
+            return self.loss(u_mu=u_mu, u_sig=u_sig, vT_mu=vT_mu,
+                             vT_CInv=vT_CInv, baseline_mu=baseline_mu, 
+                             baseline_sig=baseline_sig)
+        
+        elif (vT is not None):
+
             self.vT = vT
-            self.compute_u(T=T, mu=u_mu, sig=u_sig)
+
+            # Linear if we know the baseline
+            if (baseline is not None):
+
+                self.compute_u(T=T, mu=u_mu, sig=u_sig, baseline=baseline)
+                return self.loss(u_mu=u_mu, u_sig=u_sig, vT_mu=vT_mu,
+                             vT_CInv=vT_CInv, baseline_mu=baseline_mu, 
+                             baseline_sig=baseline_sig)
+
+            else:
+
+                # Non-linear
+                if (u_guess is None):
+                    baseline_guess = np.atleast_1d(baseline_mu).reshape(-1) + \
+                                     baseline_sig * np.random.randn(self.M)
+                    self.compute_u(T=T, mu=u_mu, sig=u_sig, 
+                                   baseline=baseline_guess)
+                else:
+                    self.u = u_guess
+
+                u = theano.shared(self.u)
+                vT = theano.shared(self.vT)
+
+                # Compute the model
+                D = ts.as_sparse_variable(self.D)
+                a = tt.reshape(tt.dot(tt.reshape(
+                                    tt.concatenate([[1.0], u]), (-1, 1)), 
+                                    tt.reshape(vT, (1, -1))), (-1,))
+                self._map[1:, :] = u
+                b = self._map.flux(theta=self.theta)
+                B = tt.reshape(b, (-1, 1))
+                M = tt.reshape(ts.dot(D, a), (self.M, -1)) / B
+
+                # Compute the loss
+                r = tt.reshape(self.F - M, (-1,))
+                cov = tt.reshape(self._F_CInv, (-1,))
+                lnlike = -0.5 * tt.sum(r ** 2 * cov)
+                lnprior = -0.5 * tt.sum((u - u_mu) ** 2 / u_sig ** 2) + \
+                          -0.5 * tt.sum((b - baseline_mu) ** 2 / baseline_sig ** 2) + \
+                          -0.5 * tt.dot(tt.dot(tt.reshape((vT - vT_mu), (1, -1)), vT_CInv), tt.reshape((vT - vT_mu), (-1, 1)))[0, 0]
+                loss = -(lnlike + lnprior)
+                loss_T = -(lnlike / T + lnprior)
+                best_loss = loss.eval()
+                best_u = u.eval()
+                loss_val = np.zeros(niter + 1)
+                loss_val[0] = best_loss
+
+                # Optimize
+                upd = Adam(loss_T, [u], **kwargs)
+                train = theano.function([], [u, loss], updates=upd)
+                for n in tqdm(1 + np.arange(niter)):
+                    u_val, loss_val[n] = train()
+                    if (loss_val[n] < best_loss):
+                        best_loss = loss_val[n]
+                        best_u = u_val
+
+                self.u = best_u
+                return loss_val
+
+        elif (u is not None) and (vT is not None):
+            self.u = u
+            self.vT = vT
+            return self.loss(u_mu=u_mu, u_sig=u_sig, vT_mu=vT_mu,
+                             vT_CInv=vT_CInv, baseline_mu=baseline_mu, 
+                             baseline_sig=baseline_sig)
+        else:
+
+            # TODO!
+            raise NotImplementedError("TODO!")
+    
+    def show(self, **kwargs):
+        """
+
+        """
+        self._map[1:, :] = self.u
+        self._map.show(**kwargs)

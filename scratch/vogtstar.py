@@ -259,7 +259,7 @@ class Solver(object):
 
         # Prior on `u`
         self.u_cinv = np.ones(self.N - 1) / u_sig ** 2
-        self.u_mu = np.ones(self.N - 1) * u_mu ** 2
+        self.u_mu = np.ones(self.N - 1) * u_mu
         self.u_lndet = np.sum(np.log(2 * np.pi * self.u_cinv))
 
         # Gaussian process prior on `vT`
