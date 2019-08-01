@@ -563,7 +563,53 @@ class Doppler(object):
         else:
 
             # TODO!
-            raise NotImplementedError("TODO!")
+            # Non-linear
+            if u_guess is None or vT_guess is None:
+                raise ValueError("Please provide guesses")
+            self.u = u_guess
+            self.vT = vT_guess
+
+            u = theano.shared(self.u)
+            vT = theano.shared(self.vT)
+
+            # Compute the model
+            D = ts.as_sparse_variable(self.D)
+            a = tt.reshape(tt.dot(tt.reshape(
+                                tt.concatenate([[1.0], u]), (-1, 1)), 
+                                tt.reshape(vT, (1, -1))), (-1,))
+            self._map[1:, :] = u
+            b = self._map.flux(theta=self.theta)
+            B = tt.reshape(b, (-1, 1))
+            M = tt.reshape(ts.dot(D, a), (self.M, -1)) / B
+
+            # Compute the loss
+            r = tt.reshape(self.F - M, (-1,))
+            cov = tt.reshape(self._F_CInv, (-1,))
+            lnlike = -0.5 * tt.sum(r ** 2 * cov)
+            lnprior = -0.5 * tt.sum((u - u_mu) ** 2 / u_sig ** 2) + \
+                        -0.5 * tt.sum((b - baseline_mu) ** 2 / baseline_sig ** 2) + \
+                        -0.5 * tt.dot(tt.dot(tt.reshape((vT - vT_mu), (1, -1)), vT_CInv), tt.reshape((vT - vT_mu), (-1, 1)))[0, 0]
+            loss = -(lnlike + lnprior)
+            loss_T = -(lnlike / T + lnprior)
+            best_loss = loss.eval()
+            best_u = u.eval()
+            best_vT = vT.eval()
+            loss_val = np.zeros(niter + 1)
+            loss_val[0] = best_loss
+
+            # Optimize
+            upd = NAdam(loss_T, [u, vT], **kwargs)
+            train = theano.function([], [u, vT, loss], updates=upd)
+            for n in tqdm(1 + np.arange(niter)):
+                u_val, vT_val, loss_val[n] = train()
+                if (loss_val[n] < best_loss):
+                    best_loss = loss_val[n]
+                    best_u = u_val
+                    best_vT = vT_val
+
+            self.u = best_u
+            self.vT = best_vT
+            return loss_val
     
     def show(self, **kwargs):
         """

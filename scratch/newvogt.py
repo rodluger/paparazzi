@@ -58,7 +58,7 @@ def current_best():
     D.compute_vT()
 
 
-    loss = D.solve(T=1, vT=D.vT, u_guess=D.u, niter=500)
+    loss = D.solve(T=1, vT_guess=D.vT, u_guess=D.u, niter=500)
     print(D.loss())
 
     fig, ax = plt.subplots(1, figsize=(6, 8))
