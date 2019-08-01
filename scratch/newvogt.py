@@ -15,30 +15,67 @@ def current_best():
     Currently getting loss = 2600 (loss_true = 1500).
 
     """
-    D = pp.Doppler(ydeg=8)
+    D = pp.Doppler(ydeg=15)
     D.generate_data(ferr=1e-3)
+
+
+    # DEBUG
+    '''
+    truth = D.vT_true
+    truth -= np.mean(truth)
+    fmean = D.T[0].dot(truth)
+
+    fmean = np.mean(D.F, axis=0)
+    fmean -= np.mean(fmean)
+
+    A = D.T[0]
+    LInv = 1e-8 * np.eye(D.vT_true.shape[0])
+    estimate = np.linalg.solve(A.T.dot(A).toarray() + LInv, A.T.dot(fmean))
+    plt.figure()
+    plt.plot(truth)
+    plt.plot(estimate)
+    
+    plt.figure()
+    plt.plot(fmean)
+    plt.plot(D.T[0].dot(estimate))
+
+    plt.show()
+    quit()
+    '''
 
     D.u = D.u_true
     D.vT = D.vT_true
     loss_true = D.loss()
 
+    fmean = np.mean(D.F, axis=0)
+    fmean -= np.mean(fmean)
+    A = D.T[0]
+    LInv = 1e-5 * np.eye(A.shape[1])
+    vT_guess = 1 + np.linalg.solve(A.T.dot(A).toarray() + LInv, A.T.dot(fmean))
 
-    '''
-    # This works but is SO slow
-    u_guess = 1e-2 * np.random.randn(D.N - 1)
-    loss = D.solve(vT=D.vT_true, u_guess=u_guess, niter_adam=20000, lr=1e-5)
-    '''
+    D.vT = vT_guess
+    D.compute_u()
+    D.compute_vT()
 
 
-    D.u = 1e-2 * np.random.randn(D.N - 1)
-    loss = D.solve(T=1, vT=D.vT_true, u_guess=D.u, niter=200)
+    loss = D.solve(T=1, vT=D.vT, u_guess=D.u, niter=500)
     print(D.loss())
 
     fig, ax = plt.subplots(1, figsize=(6, 8))
     ax.plot(loss)
     ax.axhline(loss_true, color="C1", ls="--")
     ax.set_yscale("log")
+
+    fig = plt.figure()
+    plt.plot(D.vT_true)
+    plt.plot(D.vT)
+
+    D.show(projection="rect")
     plt.show()
+
+
+current_best()
+quit()
 
 
 # Generate data

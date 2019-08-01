@@ -11,7 +11,7 @@ import theano.tensor as tt
 import theano.sparse as ts
 from tqdm import tqdm
 import os
-from .utils import Adam
+from .utils import Adam, NAdam
 CLIGHT = 3.e5
 
 
@@ -425,7 +425,7 @@ class Doppler(object):
         np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + cinv)
         self.u = np.linalg.solve(ATCInvA, ATCInvf + cinv * mu)
     
-    def compute_vT(self, cho_C, T=1.0, mu=1.0, baseline=None):
+    def compute_vT(self, cho_C=None, T=1.0, mu=1.0, sig=0.3, rho=3.e-5, baseline=None):
         """
         Linear solve for `v^T` given `u`.
 
@@ -435,6 +435,18 @@ class Doppler(object):
         else:
             baseline = baseline.reshape(-1, 1)
         Kp = self.lnlam_padded.shape[0]
+
+        # Gaussian process prior on `vT`
+        if cho_C is None:
+            if rho > 0.0:
+                kernel = celerite.terms.Matern32Term(np.log(sig), 
+                                                     np.log(rho))
+                gp = celerite.GP(kernel)
+                C = gp.get_matrix(self.lnlam_padded)
+            else:
+                C = np.eye(Kp) * sig ** 2
+            cho_C = cho_factor(C)
+
         offsets = -np.arange(0, self.N) * Kp
         U = diags([np.ones(Kp)] + 
                   [np.ones(Kp) * self.u[n] for n in range(self.N - 1)], 
@@ -531,7 +543,7 @@ class Doppler(object):
                 loss_val[0] = best_loss
 
                 # Optimize
-                upd = Adam(loss_T, [u], **kwargs)
+                upd = NAdam(loss_T, [u], **kwargs)
                 train = theano.function([], [u, loss], updates=upd)
                 for n in tqdm(1 + np.arange(niter)):
                     u_val, loss_val[n] = train()
