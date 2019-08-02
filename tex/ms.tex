@@ -245,8 +245,8 @@ where we made use of the commutativity of the convolution operator and
 the fact that the integral is taken only over the spatial dimensions.
 Note, importantly, that the convolution operation
 above is implicitly a vector operation---i.e., the
-convolution is taken for each spherical harmonic term and then summed over 
-all terms.
+convolution is taken for each spherical harmonic term individually
+and then summed over all terms.
 
 Finally, we can simplify Equation~(\ref{eq:solution:Fxi2d}) by noting that the
 delta function in the integrand allows us to reduce the double integral 
@@ -392,8 +392,6 @@ Solving Equation~(\ref{eq:rigid:D}) for $x$, we find that
 the curves $\mathcal{C}(\lnlam, \mathbf{x}, \mathbf{d})$ 
 are simply vertical lines on the unit disk given by 
 %
-\xxx{(TODO: Check signs in the code.)}
-%
 \begin{align}
     x &= 
         \Bigg(\frac{c}{\omega\sin i}\Bigg) 
@@ -471,17 +469,15 @@ relations. Given the boundary conditions
 \begin{align}
     s_{0,\,0,\,0} &= 2 \sqrt{1-x^2} \nonumber \\
     s_{0,\,0,\,1} &= \frac{\pi}{2} \big(1-x^2\big) \nonumber \\
-    s_{0,\,1,\,0} &= 0 \nonumber \\
-    s_{0,\,1,\,1} &= 0 \quad ,
+    s_{0,\,1,\,k} &= 0 \quad ,
 \end{align}
 %
 we may compute any term in the series via the expressions
 %
 \begin{align}
     \label{eq:rigid:sTrecurrence}
-    s_{0,\,j,\,0} &= \frac{j - 1}{j + 1} \big(1 - x^2\big) s_{0,\,j-2,\,0} \nonumber \\
-    s_{0,\,j,\,1} &= \frac{j - 1}{j + 2} \big(1 - x^2\big) s_{0,\,j-2,\,1} \nonumber \\
-    s_{i,\,j,\,k} &= x s_{i-1,\,j,\,k} \quad.
+    s_{0,\,j,\,k} &= \frac{j - 1}{j + 1 + k} \big(1 - x^2\big) s_{0,\,j-2,\,k} \nonumber \\
+    s_{i,\,j,\,k} &= x \, s_{i-1,\,j,\,k} \quad.
 \end{align}
 %
 Figure~\ref{fig:g} shows the $\mathbf{g}$ basis computed from
@@ -674,7 +670,7 @@ with initial conditions
 Given these expressions, recursing upward in $i$ is easy:
 %
 \begin{align}
-    s_{i,\,j,\,k} &= x s_{i-1,\,j,\,k} \quad.
+    s_{i,\,j,\,k} &= x \, s_{i-1,\,j,\,k} \quad.
 \end{align}
 
 % Bibliography

@@ -141,16 +141,12 @@ class Doppler(object):
         
         """
         if self._x is None:
-            # NOTE: In starry, the z axis points *toward* the observer,
-            # which is the opposite of the convention used for Doppler
-            # shifts, so we need to include a factor of -1 below.
-            # TODO: Check these signs!
             betasini = self.vsini / CLIGHT
             Kp = self.lnlam_padded.shape[0]
             hw = (self.W - 1) // 2
             lam_kernel = self.lnlam_padded[Kp // 2 - hw:Kp // 2 + hw + 1]
-            self._x = -(1 / betasini) * (np.exp(2 * lam_kernel) - 1) / \
-                        (np.exp(2 * lam_kernel) + 1)
+            self._x = (1 / betasini) * (np.exp(-2 * lam_kernel) - 1) / \
+                                       (np.exp(-2 * lam_kernel) + 1)
             self._x[self.x < -1.0] = -1.0
             self._x[self.x > 1.0] = 1.0
 
