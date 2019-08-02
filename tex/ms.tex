@@ -3,6 +3,22 @@
 % Load the corTeX style definitions
 \input{cortex}
 
+
+\newcommand{\s}{\bvec{s}}
+\newcommand{\p}{\bvec{p}}
+\newcommand{\R}{\bvec{R}}
+\newcommand{\AOne}{\bvec{A_1}}
+\newcommand{\alm}{\bvec{a}}
+\newcommand{\Y}{\bvec{Y}}
+\newcommand{\x}{\bvec{x}}
+\newcommand{\g}{\bvec{g}}
+\newcommand{\D}{\mathcal{D}}
+\newcommand{\Surf}{\mathcal{S}}
+\newcommand{\Curve}{\mathcal{C}}
+\newcommand{\Dargs}{\bvec{d}}
+\newcommand{\lmax}{\ensuremath{l_\mathrm{max}}}
+
+
 % Bibliography stuff
 \bibliographystyle{aasjournal}
 
@@ -35,57 +51,57 @@ Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.
 \section{The problem}
 \label{sec:the_problem}
 %
-Let $I(\lnlam, \mathbf{x}, t, \mathbf{d})$ be the specific 
+Let $I(\lnlam, \x, t, \Dargs)$ be the specific 
 intensity observed 
 at log wavelength $\lnlam \equiv \ln\lambda$ and at sky-projected 
-Cartesian position $\mathbf{x} = (x, y, z)$ on the surface of the 
+Cartesian position $\x = (x, y, z)$ on the surface of the 
 star at time $t$, where
-$\mathbf{d}$ is a set of arbitrary parameters of the Doppler field.
+$\Dargs$ is a set of arbitrary parameters of the Doppler field.
 We may express this intensity as
 %
 \begin{align}
     \label{eq:intro:Ixi}
-    I(\lnlam, \mathbf{x}, t, \mathbf{d}) &= 
-        I\Big(\lnlam_0 + \mathcal{D}(\bvec{x}, \bvec{d}), \mathbf{x}, t\Big)
+    I(\lnlam, \x, t, \Dargs) &= 
+        I\Big(\lnlam_0 + \D(\x, \Dargs), \x, t\Big)
 \end{align}
 %
-where $\lnlam_0$ is the log wavelength in the rest frame and $\mathcal{D}$ is
+where $\lnlam_0$ is the log wavelength in the rest frame and $\D$ is
 the Doppler shift in log wavelength space:
 %
 \begin{align}
     \label{eq:intro:D}
-    \mathcal{D}(\mathbf{x}, \mathbf{d}) 
+    \D(\x, \Dargs) 
         &=
         \frac{1}{2}\ln\left( 
-            \frac{1 + \beta(\mathbf{x}, \mathbf{d})}{1 - \beta(\mathbf{x}, 
-            \mathbf{d})} 
+            \frac{1 + \beta(\x, \Dargs)}{1 - \beta(\x, 
+            \Dargs)} 
         \right)
 \end{align}
 %
-where $\beta = v(\mathbf{x}, \mathbf{d}) / c$ is the ratio of the 
+where $\beta = v(\x, \Dargs) / c$ is the ratio of the 
 radial velocity at a point on the surface of the star to the speed of light.
 In keeping with the literature, we take positive values of $v$ (and
-$\mathcal{D}$) to mean redshifts.
+$\D$) to mean redshifts.
 
 A common approach to computing the Doppler-shifted spectrum is to
 evaluate the spectrum at the rest frame wavelength $\lnlam_0$
 and interpolate back to the grid in $\lnlam$. This is practical when
 computing the spectrum at a single \emph{point} on the surface, but not
 ideal when one is interested in the \emph{integral} over the visible
-surface of the star $\mathcal{S}$, which is typically all we can observe:
+surface of the star $\Surf$, which is typically all we can observe:
 %
 \begin{align}
-    \label{eq:intro:Fxi}
-    F(\lnlam, t, \bvec{d}) 
+    \label{eq:intro:F}
+    F(\lnlam, t, \Dargs) 
         &\equiv
-        \iint\limits_{\mathcal{S}(\mathbf{x})}
-                I(\lnlam, \mathbf{x}, t, \mathbf{d})
-        \mathrm{d}{\mathcal{S}(\mathbf{x})}
+        \iint\limits_{\Surf(\x)}
+                I(\lnlam, \x, t, \Dargs)
+        \mathrm{d}{\Surf(\x)}
         \quad ,
 \end{align}
 %
-The difficulty in solving Equation~(\ref{eq:intro:Fxi}) stems from the fact
-that $I(\lnlam, \mathbf{x}, t, \mathbf{d})$ is difficult to write down in 
+The difficulty in solving Equation~(\ref{eq:intro:F}) stems from the fact
+that $I(\lnlam, \x, t, \Dargs)$ is difficult to write down in 
 closed form, given
 the non-linearity of the Doppler shift.
 The standard approach to solving this integral is therefore
@@ -98,28 +114,30 @@ this is either numerically inaccurate or computationally inefficient
 
 \section{The Solution}
 
+\subsection{Doppler Deconvolution}
+
 The observed spectrum is a complex function
 of spatial, spectral, temporal, and velocity terms. The goal in this
 section is to deconvolve each of these terms to make solving the integral
-in Equation~(\ref{eq:intro:Fxi}) easier.
+in Equation~(\ref{eq:intro:F}) easier.
 %
 The first thing we will do is to express Equation~(\ref{eq:intro:Ixi})
 as a convolution:
 %
 \begin{align}
-    \label{eq:solution:convolution}
-    I(\lnlam, \mathbf{x}, t, \mathbf{d}) &= 
-        I(\lnlam_0, \mathbf{x}, t) 
+    \label{eq:deconv:convolution}
+    I(\lnlam, \x, t, \Dargs) &= 
+        I(\lnlam_0, \x, t) 
         * 
-        \delta\big(\lnlam_0 + \mathcal{D}(\bvec{x}, \bvec{d})\big)
+        \delta\big(\lnlam_0 + \D(\x, \Dargs)\big)
 \end{align}
 %
 where $\delta$ is the
 Dirac delta function and
 $*$ denotes the linear convolution operator,
 returning a function of the shifted log wavelength, 
-$\lnlam = \lnlam_0 + \mathcal{D}$. The convolution with the delta function
-has the effect of shifting the spectrum by an amount $\mathcal{D}$
+$\lnlam = \lnlam_0 + \D$. The convolution with the delta function
+has the effect of shifting the spectrum by an amount $\D$
 onto the observed wavelength grid. 
 
 Next, we expand the spatial dependence of the
@@ -127,30 +145,30 @@ specific intensity at the rest frame wavelength
 in terms of spherical harmonics on the unit disk:
 %
 \begin{align}
-    \label{eq:solution:Ixi0}
-    I(\lnlam_0, \mathbf{x}, t) 
+    \label{eq:deconv:Ixi0}
+    I(\lnlam_0, \x, t) 
         &=
-        \sum_{l=0}^\infty\sum_{m=-l}^{l} a_{lm}(\lnlam_0, t) Y_{lm}(\mathbf{x})
+        \sum_{l=0}^\infty\sum_{m=-l}^{l} a_{lm}(\lnlam_0, t) Y_{lm}(\x)
     \quad ,
 \end{align}
 %
-where $Y_{lm}(\mathbf{x})$ is a spherical harmonic on the projected disk
+where $Y_{lm}(\x)$ is a spherical harmonic on the projected disk
 and $a_{lm}(\lnlam_0, t)$ is the corresponding spherical harmonic 
 coefficient at log wavelength in the rest frame $\lnlam_0$ and time $t$. For 
 convenience, we may write this equation in vector form:
 %
 \begin{align}
-    \label{eq:solution:Ixi0vec}
-    I(\lnlam_0, \mathbf{x}, t) &=
-    \bvec{Y}^\top(\mathbf{x}) \,
-    \bvec{a}(\lnlam_0, t)
+    \label{eq:deconv:Ixi0vec}
+    I(\lnlam_0, \x, t) &=
+    \Y^\top(\x) \,
+    \alm(\lnlam_0, t)
     \quad ,
 \end{align}
 %
 where
 %
 \begin{align}
-    \bvec{a}(\lnlam_0, t) \equiv
+    \alm(\lnlam_0, t) \equiv
 \Big( 
     a_{0,0}(\lnlam_0, t) \quad\quad\quad\quad\quad\quad 
     a_{1,-1}(\lnlam_0, t) \quad\quad\quad\quad\quad\quad 
@@ -163,12 +181,12 @@ where
 is the vector of spherical harmonic coefficients and
 %
 \begin{align}
-    \bvec{Y}^\top(\mathbf{x}) \equiv 
+    \Y^\top(\x) \equiv 
 \Big( 
-    Y_{0,0}(\mathbf{x}) \quad\quad\quad\quad\quad\quad 
-    Y_{1,-1}(\mathbf{x}) \quad\quad\quad\quad\quad\quad 
-    Y_{1,0}(\mathbf{x}) \quad\quad\quad\quad\quad\quad 
-    Y_{1,1}(\mathbf{x}) \quad\quad\quad\quad\quad\quad 
+    Y_{0,0}(\x) \quad\quad\quad\quad\quad\quad 
+    Y_{1,-1}(\x) \quad\quad\quad\quad\quad\quad 
+    Y_{1,0}(\x) \quad\quad\quad\quad\quad\quad 
+    Y_{1,1}(\x) \quad\quad\quad\quad\quad\quad 
     ... 
 \Big)
 \end{align}
@@ -178,65 +196,65 @@ decompose our expression by linearizing the time dependence of the
 spherical harmonic coefficients:
 %
 \begin{align}
-    \label{eq:solution:R}
-    \bvec{a}(\lnlam_0, t) = \mathbf{R}(t) \bvec{a}(\lnlam_0)
+    \label{eq:deconv:R}
+    \alm(\lnlam_0, t) = \R(t) \alm(\lnlam_0)
     \quad ,
 \end{align}
 %
-where $\bvec{a}(\lnlam_0) = \bvec{a}(\lnlam_0, t=t_0)$ for some reference time $t_0$.
-For rigid body rotation, the result is exact and $\mathbf{R}(t)$ is the Wigner 
+where $\alm(\lnlam_0) = \alm(\lnlam_0, t=t_0)$ for some reference time $t_0$.
+For rigid body rotation, the result is exact and $\R(t)$ is the Wigner 
 rotation matrix for real spherical harmonics 
 \citep[e.g.][]{AlvarezCollado1989}, which is implicitly a 
 function of the inclination, obliquity, and rotation period of the star.
 In the case that other processes such as differential rotation or spot 
 evolution are significant
-over the course of an observation, Equation~(\ref{eq:solution:R}) can be
+over the course of an observation, Equation~(\ref{eq:deconv:R}) can be
 made to hold approximately for some effective rotation matrix 
-$\mathbf{R}(t)$; we discuss this later.
+$\R(t)$; we discuss this later.
 
 The equation for the specific intensity in the rest frame now reads
 %
 \begin{align}
-    \label{eq:solution:Ixi0vecfull}
-    I(\lnlam_0, \mathbf{x}, t) &=
-    \bvec{Y}^\top(\mathbf{x})
+    \label{eq:deconv:Ixi0vecfull}
+    I(\lnlam_0, \x, t) &=
+    \Y^\top(\x)
     \,
-    \mathbf{R}(t)
+    \R(t)
     \,
-    \bvec{a}(\lnlam_0)
+    \alm(\lnlam_0)
     \quad ,
 \end{align}
 %
 where it is clear that we have fully separated the spatial, temporal, and
-spectral terms. Inserting this into Equation~(\ref{eq:solution:convolution}) 
+spectral terms. Inserting this into Equation~(\ref{eq:deconv:convolution}) 
 and integrating
 over the visible portion of the star, we arrive at the expression for the 
 observed spectrum:
 %
 %
 \begin{align}
-    \label{eq:solution:Fxi2d}
-    F(\lnlam, t, \bvec{d}) &=
-    \iint\limits_{\mathcal{S}(\mathbf{x})}
-    \bvec{Y}^\top(\mathbf{x})
+    \label{eq:deconv:F2d}
+    F(\lnlam, t, \Dargs) &=
+    \iint\limits_{\Surf(\x)}
+    \Y^\top(\x)
     \,
-    \mathbf{R}(t)
+    \R(t)
     \,
-    \bvec{a}(\lnlam_0)
-    * \delta\big(\lnlam_0 + \mathcal{D}(\bvec{x}, \bvec{d})\big)
-    \mathrm{d}\mathcal{S}(\mathbf{x})
+    \alm(\lnlam_0)
+    * \delta\big(\lnlam_0 + \D(\x, \Dargs)\big)
+    \mathrm{d}\Surf(\x)
     \nonumber \\[0.5em]
     &=
-    \iint\limits_{\mathcal{S}(\mathbf{x})}
-    \bvec{Y}^\top(\mathbf{x})
-    \delta\big(\lnlam_0 + \mathcal{D}(\bvec{x}, \bvec{d})\big)
-    \mathrm{d}\mathcal{S}(\mathbf{x})
+    \iint\limits_{\Surf(\x)}
+    \Y^\top(\x)
+    \delta\big(\lnlam_0 + \D(\x, \Dargs)\big)
+    \mathrm{d}\Surf(\x)
     \,
-    \mathbf{R}(t)
+    \R(t)
     \,
     *
     \,
-    \bvec{a}(\lnlam_0)
+    \alm(\lnlam_0)
     \quad ,
 \end{align}
 %
@@ -248,49 +266,49 @@ above is implicitly a vector operation---i.e., the
 convolution is taken for each spherical harmonic term individually
 and then summed over all terms.
 
-Finally, we can simplify Equation~(\ref{eq:solution:Fxi2d}) by noting that the
+Finally, we can simplify Equation~(\ref{eq:deconv:F2d}) by noting that the
 delta function in the integrand allows us to reduce the double integral 
 to a line integral:
 %
 \begin{align}
-    \label{eq:solution:gT}
-    \iint\limits_{\mathcal{S}(\mathbf{x})}
-    \bvec{Y}^\top(\mathbf{x})
-    \delta\big(\lnlam_0 + \mathcal{D}(\bvec{x}, \bvec{d})\big)
-    \mathrm{d}\mathcal{S}(\mathbf{x})
+    \label{eq:deconv:gT}
+    \iint\limits_{\Surf(\x)}
+    \Y^\top(\x)
+    \delta\big(\lnlam_0 + \D(\x, \Dargs)\big)
+    \mathrm{d}\Surf(\x)
     \, \,
     &=  
-    \int\limits_{\mathcal{C}(\lnlam, \bvec{x}, \bvec{d})}
-    \hspace*{-0.6em}\bvec{Y}^\top(\mathbf{x})
-    \mathrm{d}\mathcal{C}(\lnlam, \bvec{x}, \bvec{d})
+    \int\limits_{\Curve(\lnlam, \x, \Dargs)}
+    \hspace*{-0.6em}\Y^\top(\x)
+    \mathrm{d}\Curve(\lnlam, \x, \Dargs)
     \nonumber \\[0.5em]
-    &\equiv \mathbf{g}^\top(\lnlam, \bvec{d})
+    &\equiv \g^\top(\lnlam, \Dargs)
     \quad.
 \end{align}
 %
-where the path $\mathcal{C}(\lnlam, \bvec{x}, \bvec{d})$ corresponds to the
+where the path $\Curve(\lnlam, \x, \Dargs)$ corresponds to the
 set of all points on the visible disk where 
-$\lnlam_0 + \mathcal{D}(\bvec{x}, \bvec{d}) = 0$.
+$\lnlam_0 + \D(\x, \Dargs) = 0$.
 %
 We thus have
 %
 \begin{align}
-    \label{eq:solution:Fxi}
-    F(\lnlam, t, \bvec{d}) 
+    \label{eq:deconv:F}
+    F(\lnlam, t, \Dargs) 
     &=
-    \mathbf{g}^\top(\lnlam, \bvec{d}) \, \mathbf{R}(t)
+    \g^\top(\lnlam, \Dargs) \, \R(t)
     *
-    \bvec{a}(\lnlam_0)
+    \alm(\lnlam_0)
     \quad.
 \end{align}
 %
-Equation~(\ref{eq:solution:Fxi}) is the deconvolution of the
+Equation~(\ref{eq:deconv:F}) is the deconvolution of the
 observed spectrum into velocity terms, temporal terms, and spectral/spatial
 terms, respectively. In the following sections, we will discuss how to
-efficiently solve the line integral in Equation~(\ref{eq:solution:gT}).
+efficiently solve the line integral in Equation~(\ref{eq:deconv:gT}).
 
-\section{Doppler imaging of rigid rotators}
-\label{sec:rigid}
+\subsection{Computing $\g$}
+\label{sec:g}
 %
 In the case that the star's rotation is rigid (i.e., differential rotation
 is negligible) and other effects such as convective blueshift
@@ -300,14 +318,14 @@ of generality, if we assume the axis of rotation lies along the $y-z$ plane,
 we have
 %
 \begin{align}
-    \beta(\mathbf{x}, \mathbf{d}) = \frac{\omega \sin i \, x}{c}
+    \beta(\x, \Dargs) = \frac{\omega \sin i \, x}{c}
 \end{align}
 %
 and
 %
 \begin{align}
-    \label{eq:rigid:D}
-    \mathcal{D}(\mathbf{x}, \mathbf{d}) &= 
+    \label{eq:g:D}
+    \D(\x, \Dargs) &= 
         \frac{1}{2}\ln\left( 
             \dfrac{1 + \dfrac{\omega \sin i \, x}{c}}
                  {1 - \dfrac{\omega \sin i \, x}{c}}
@@ -315,35 +333,35 @@ and
     \quad ,
 \end{align}
 %
-where the parameters $\mathbf{d}$ of the Doppler field are the
+where the parameters $\Dargs$ of the Doppler field are the
 angular velocity, $\omega$, and the inclination of the star with
 respect to $\hat{y}$, $i$. 
 
-In order to solve Equation~(\ref{eq:solution:gT}), let us change basis from
+In order to solve Equation~(\ref{eq:deconv:gT}), let us change basis from
 spherical harmonics to polynomials on the sphere:
 %
 \begin{align}
-    \label{eq:rigid:gT}
-    \mathbf{g}^\top(\lnlam, \bvec{d}) &\equiv
-    \bvec{s}^\top(\lnlam, \bvec{d})
-    \bvec{A_1}
+    \label{eq:g:gT}
+    \g^\top(\lnlam, \Dargs) &\equiv
+    \s^\top(\lnlam, \Dargs)
+    \AOne
 \end{align}
 %
 where
 %
 \begin{align}
-    \label{eq:rigid:sTdef}
-    \mathbf{s}^\top(\lnlam, \bvec{d})
+    \label{eq:g:sTdef}
+    \s^\top(\lnlam, \Dargs)
     &\equiv
-    \int\limits_{\mathcal{C}(\lnlam, \mathbf{x}, \mathbf{d})}
-    \tilde{\bvec{p}}^\top(\mathbf{x})
-    \mathrm{d}\mathcal{C}(\lnlam, \mathbf{x}, \mathbf{d})
+    \int\limits_{\Curve(\lnlam, \x, \Dargs)}
+    \tilde{\p}^\top(\x)
+    \mathrm{d}\Curve(\lnlam, \x, \Dargs)
 \end{align}
 %
 is the vector of integral solutions for each spherical harmonic,
 %
 \begin{align}
-    \tilde{\bvec{p}}(\mathbf{x}) \equiv 
+    \tilde{\p}(\x) \equiv 
 \Big( 
     1 \quad\quad\quad\quad\quad\quad 
     x \quad\quad\quad\quad\quad\quad 
@@ -359,7 +377,7 @@ is the vector of integral solutions for each spherical harmonic,
 \end{align}
 %
 is the polynomial basis \citep[Equation 7 in][]{Luger2019},
-and $\bvec{A_1}$ is the change of basis matrix from spherical harmonics
+and $\AOne$ is the change of basis matrix from spherical harmonics
 to polynomials 
 \citep[Equation B11 in][]{Luger2019}. On the observer-facing surface of 
 the unit sphere, the coordinate $z$ is given by $\sqrt{1 - x^2 - y^2}$.
@@ -368,9 +386,9 @@ the unit sphere, the coordinate $z$ is given by $\sqrt{1 - x^2 - y^2}$.
     \begin{centering}
     \includegraphics[width=\linewidth]{figures/g.pdf}
     \oscaption{g}{%
-        The Doppler $\mathbf{g}$ basis for a rigidly rotating star
-        computed from Equation~(\ref{eq:rigid:gT}) and
-        Equation~(\ref{eq:rigid:sTrecurrence}) up to spherical 
+        The Doppler $\g$ basis for a rigidly rotating star
+        computed from Equation~(\ref{eq:g:gT}) and
+        Equation~(\ref{eq:g:sTrecurrence}) up to spherical 
         harmonic degree $l=10$. Rows correspond to the degree $l$ and
         columns correspond to the order $m$. These functions encode
         the contribution of each spherical harmonic to the rotational
@@ -383,13 +401,13 @@ the unit sphere, the coordinate $z$ is given by $\sqrt{1 - x^2 - y^2}$.
     \end{centering}
 \end{figure}
 
-If we assume the star is unocculted, the region of integration $\mathcal{S}$ 
-is simply the unit disk, so $\mathcal{C}(\lnlam, \mathbf{x}, \mathbf{d})$ 
+If we assume the star is unocculted, the region of integration $\Surf$ 
+is simply the unit disk, so $\Curve(\lnlam, \x, \Dargs)$ 
 is the set of all points
-that satisfy both $\lnlam_0 + \mathcal{D}(\bvec{x}, \bvec{d}) = 0$ and 
+that satisfy both $\lnlam_0 + \D(\x, \Dargs) = 0$ and 
 $x^2 + y^2 \le 1$.
-Solving Equation~(\ref{eq:rigid:D}) for $x$, we find that 
-the curves $\mathcal{C}(\lnlam, \mathbf{x}, \mathbf{d})$ 
+Solving Equation~(\ref{eq:g:D}) for $x$, we find that 
+the curves $\Curve(\lnlam, \x, \Dargs)$ 
 are simply vertical lines on the unit disk given by 
 %
 \begin{align}
@@ -400,16 +418,16 @@ are simply vertical lines on the unit disk given by
     \quad .
 \end{align}
 %
-The integral in Equation~(\ref{eq:rigid:sTdef}) is therefore just an integral
+The integral in Equation~(\ref{eq:g:sTdef}) is therefore just an integral
 over $y$:
 %
 \begin{align}
-    \label{eq:rigid:sT}
-    \bvec{s}^\top(\lnlam, \bvec{d}) 
+    \label{eq:g:sT}
+    \s^\top(\lnlam, \Dargs) 
     &=    
     \int\limits_{-\sqrt{1 - x^2}}^
                 {\sqrt{1 - x^2}}
-    \tilde{\bvec{p}}^\top
+    \tilde{\p}^\top
     \Big(x, y\Big)
     \mathrm{d}y
     \quad .
@@ -427,7 +445,7 @@ is a polynomial in $x$, $y$, and $z = \sqrt{1 - x^2 - y^2}$:
 where $i, j, k$ are integers given by
 %
 \begin{proof}{PolynomialBasis}
-    \label{eq:rigid:lm}
+    \label{eq:g:lm}
     i &= \floor*{\Lambda - \Delta}
     \nonumber \\[0.5em]
     j &= \floor*{\Delta}
@@ -445,13 +463,13 @@ with
 \end{proof}
 %
 We may now explicitly write down the $n^\mathrm{th}$ term of 
-Equation~(\ref{eq:rigid:sT}),
+Equation~(\ref{eq:g:sT}),
 %
 \begin{align}
-    \label{eq:rigid:sTexpression}
-    s_n(\lnlam, \bvec{d}) 
+    \label{eq:g:sTexpression}
+    s_n(\lnlam, \Dargs) 
     &=    
-    s_{i,\,j,\,k}(\lnlam, \bvec{d}) 
+    s_{i,\,j,\,k}(\lnlam, \Dargs) 
     =    
     x^i
     \int\limits_{-\sqrt{1 - x^2}}^
@@ -475,21 +493,41 @@ relations. Given the boundary conditions
 we may compute any term in the series via the expressions
 %
 \begin{align}
-    \label{eq:rigid:sTrecurrence}
+    \label{eq:g:sTrecurrence}
     s_{0,\,j,\,k} &= \frac{j - 1}{j + 1 + k} \big(1 - x^2\big) s_{0,\,j-2,\,k} \nonumber \\
     s_{i,\,j,\,k} &= x \, s_{i-1,\,j,\,k} \quad.
 \end{align}
 %
-Figure~\ref{fig:g} shows the $\mathbf{g}$ basis computed from
-the formulae above and Equation~(\ref{eq:rigid:gT}) up to spherical 
+Figure~\ref{fig:g} shows the $\g$ basis computed from
+the formulae above and Equation~(\ref{eq:g:gT}) up to spherical 
 harmonic degree $l=10$.
+
+This completes our derivation of the analytic expression for the
+observed spectrum (Equation~\ref{eq:deconv:F}).
+
+\subsection{Linearization}
+\label{sec:linear}
+
+\section{Performance}
+\label{sec:performance}
+Evaluation of the model via Equation~(\ref{eq:deconv:F}) requires 
+first the rotation of the $(\lmax + 1)^2$
+$\g$ functions (each of length $W$) to the correct stellar 
+rotational phase, an operation that scales approximately
+as $W \lmax^3$,
+followed by $(\lmax + 1)^2$
+linear convolutions of the rotated $\g$ functions with the 
+spectral components (each of length $K$), which scales
+approximately as $W K \lmax^2$. Since typically $K \gg \lmax$,
+the latter computation dominates and the entire evaluation 
+takes $\mathcal{O}(W K \lmax^2)$ operations.
 
 \begin{figure}[p!]
     \begin{centering}
     \includegraphics[width=0.6\linewidth]{figures/spot.pdf}
     \oscaption{spot}{%
         Time evolution of a Gaussian absorption line on a rigidly rotating, 
-        spotted star computed from the analytic formulae in \S\ref{sec:rigid}.
+        spotted star computed from the analytic formulae in \S\ref{sec:g}.
         The stellar surface is modeled as a spherical harmonic expansion
         up to $l=20$, and the line shape is assumed to be the same everywhere;
         the spot simply downweights the local intensity at all wavelengths.
@@ -525,48 +563,17 @@ harmonic degree $l=10$.
     \begin{centering}
     \includegraphics[width=1.0\linewidth]{figures/linalg.pdf}
     \oscaption{linalg}{%
-        The linear Doppler imaging problem, $\bvec{f} = \bvec{D} \bvec{a}$
-        (Equation~\ref{eq:fDa}).
-        The vector on the left hand side, $\bvec{f}$, is the model for the
-        observed flux, a sequence of $M$ spectra taken at different times,
-        each measured at $K$ wavelength bins (plotted to the left of $\bvec{f}$). 
-        The matrix on the right hand 
-        side, $\bvec{D}$, is
-        the Doppler design matrix, constructed from $M \times N$ Toeplitz
-        matrices, each of shape $K \times (K + W)$, where $W$ is the width
-        of the convolution kernels (plotted at the top) and $N$ is the 
-        number of spherical harmonic
-        coefficients in the expansion of the stellar surface.
-        The $N$ columns of $\mathcal{D}$ correspond
-        to the Toeplitz matrices for each of the $N$ spherical harmonics;
+        The Doppler design matrix, constructed from a grid of Toeplitz
+        matrices, each of shape $K \times (K + W - 1)$, where $K$
+        is the number of wavelength bins in the observed spectrum and
+        $W$ is the width of the convolution kernels.
+        The $N$ columns of $\D$ correspond
+        to the Toeplitz matrices for each of the $N$ spherical harmonics
+        (shown at the top);
         the $M$ rows correspond to the Toeplitz matrices rotated to each
         of the $M$ stellar phases observed (indicated graphically 
-        to the left of $\mathbf{D}$). Finally, the vector at the 
-        right is the weight vector $\bvec{a}$, a sequence of $N$ spectral 
-        components, each of length $K + W$ (plotted to the right). 
-        In this example, each segment of
-        $\bvec{a}$ is equal to a simple Gaussian line profile weighted by
-        the spherical harmonic coefficients of a large equatorial starspot;
-        this corresponds to a star whose spectrum is the same everywhere, but
-        whose overall brightness varies spatially.
+        to the left of $\bvec{D}$).
         \label{fig:linalg}
-    }
-    \end{centering}
-\end{figure}
-
-\begin{figure}[p!]
-    \begin{centering}
-    \includegraphics[width=1.0\linewidth]{figures/linalg_u.pdf}
-    \oscaption{linalg_u}{%
-        Similar to Figure~\ref{fig:linalg}, but isolating the linear dependence
-        of the model on the spherical harmonic coefficients:
-        $\bvec{f} = \bvec{D}\bvec{V}\bvec{u}$ (Equation~\ref{eq:fDVu}).
-        The $\bvec{f}$ vector and the $\bvec{D}$ design matrix are the same
-        as before, but the spectra have been factored out 
-        of the weight vector and into the $(N \times NP)$ matrix
-        $\bvec{V}$, a block diagonal matrix constructed from $P$
-        distinct spectral components (plotted at the top).
-        \label{fig:linalg_u}
     }
     \end{centering}
 \end{figure}
@@ -583,10 +590,10 @@ harmonic degree $l=10$.
 %
 
 \section{Integrals}
-\subsection{Equation~(\ref{eq:rigid:sTexpression})}
+\subsection{Equation~(\ref{eq:g:sTexpression})}
 %
 In this section we derive the recurrence relations
-(\ref{eq:rigid:sTrecurrence}) for computing $\mathbf{s}^\top$.
+(\ref{eq:g:sTrecurrence}) for computing $\s^\top$.
 When $i = k = 0$, the integral is easy to evaluate:
 %
 \begin{align}
