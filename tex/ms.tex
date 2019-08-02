@@ -134,11 +134,20 @@ as a convolution:
 %
 where $\delta$ is the
 Dirac delta function and
-$*$ denotes the linear convolution operator,
-returning a function of the shifted log wavelength, 
-$\lnlam = \lnlam_0 + \D$. The convolution with the delta function
-has the effect of shifting the spectrum by an amount $\D$
-onto the observed wavelength grid. 
+$*$ denotes the linear convolution operator, defined for
+two arbitrary functions $f$ and $h$ as the integral
+%
+\begin{align}
+    \label{eq:deconv:convolution_def}
+    (f * h)(t) \equiv \int_{-\infty}^\infty f(\tau) h(t - \tau) d\tau
+\end{align}
+%
+for some independent coordinate $t$ and dummy parameter $\tau$.
+%
+The convolution of $I(\lnlam_0)$ with a delta function
+has the effect of shifting the spectrum by an amount $\D$, returning
+a function of the shifted (observed) log wavelength, 
+$\lnlam = \lnlam_0 + \D$.
 
 Next, we expand the spatial dependence of the
 specific intensity at the rest frame wavelength
@@ -307,7 +316,7 @@ observed spectrum into velocity terms, temporal terms, and spectral/spatial
 terms, respectively. In the following sections, we will discuss how to
 efficiently solve the line integral in Equation~(\ref{eq:deconv:gT}).
 
-\subsection{Computing $\g$}
+\subsection{Computing $\g^\top$}
 \label{sec:g}
 %
 In the case that the star's rotation is rigid (i.e., differential rotation
@@ -503,24 +512,81 @@ the formulae above and Equation~(\ref{eq:g:gT}) up to spherical
 harmonic degree $l=10$.
 
 This completes our derivation of the analytic expression for the
-observed spectrum (Equation~\ref{eq:deconv:F}).
+observed spectrum (Equation~\ref{eq:deconv:F}). As we show later,
+this equation allows us to compute the forward model for the
+spectrum very efficiently, particularly if we make use of Fast-Fourier
+Transform (FFT) -based convolution techniques. However, a convolution
+can also be represented as a matrix dot product, which we can use to
+express the model for the observed spectrum as a purely linear
+operation on the map decomposition $\alm(\lnlam_0)$. In the following section
+we derive this expression and show how it can be used to obtain
+fast, analytic solutions to the Doppler problem.
 
 \subsection{Linearization}
 \label{sec:linear}
 
-\section{Performance}
-\label{sec:performance}
-Evaluation of the model via Equation~(\ref{eq:deconv:F}) requires 
-first the rotation of the $(\lmax + 1)^2$
-$\g$ functions (each of length $W$) to the correct stellar 
-rotational phase, an operation that scales approximately
-as $W \lmax^3$,
-followed by $(\lmax + 1)^2$
-linear convolutions of the rotated $\g$ functions with the 
-spectral components (each of length $K$), which scales
-approximately as $W K \lmax^2$. Since typically $K \gg \lmax$,
-the latter computation dominates and the entire evaluation 
-takes $\mathcal{O}(W K \lmax^2)$ operations.
+\begin{figure}[ht!]
+    \begin{centering}
+    \includegraphics[width=0.8\linewidth]{figures/linalg.pdf}
+    \oscaption{linalg}{%
+        The Doppler design matrix $\bvec{D}$ (Equation~\ref{eq:linear:f}), 
+        constructed from a grid of Toeplitz
+        matrices, each of shape $K \times (K + W - 1)$, where $K$
+        is the number of wavelength bins in the observed spectrum and
+        $W$ is the width of the convolution kernels.
+        The $N$ columns of $\bvec{D}$ correspond
+        to the Toeplitz matrices for each of the $N$ spherical harmonics
+        (shown at the top);
+        the $M$ rows correspond to the Toeplitz matrices rotated to each
+        of the $M$ stellar phases observed (indicated graphically 
+        to the left of $\bvec{D}$).
+        \label{fig:linalg}
+    }
+    \end{centering}
+\end{figure}
+
+Although the convolution operator (Equation~\ref{eq:deconv:convolution_def})
+is defined for continuous functions, the problem of Doppler imaging deals with
+discrete measurements of a spectrum in bins of log wavelength. Provided our
+wavelength grid is fine enough, we may therefore approximate 
+Equation~(\ref{eq:deconv:convolution_def}) with a discrete convolution.
+For discrete arrays $\bvec{f}$ and $\bvec{h}$, we have
+%
+\begin{align}
+    \label{eq:linear:convolution_def}
+    \bvec{f} * \bvec{h} = \bvec{T}(\bvec{f}) \, \bvec{h}
+\end{align}
+%
+where $\bvec{T}(\bvec{f})$ is a Toeplitz matrix, a matrix whose diagonals
+are constant from top left to bottom right. In this case, the diagonals
+are constructed from the values of $\bvec{f}$. If $\bvec{f}$ has length
+$N$, element $f_n$ is placed everywhere along the $k^\mathrm{th}$ diagonal 
+of $\bvec{T}$ for $k = -N / 2 + n$; all other entries of $\bvec{T}$ are 
+set to zero.
+
+Given this formulation, we may re-write Equation~(\ref{eq:deconv:F}) as a
+purely linear operation on $\alm(\lnlam_0)$:
+%
+\begin{align}
+    \label{eq:linear:f}
+    \bvec{f}
+    &=
+    \bvec{D}(\g^\top, \R)
+    \,
+    \alm
+    \quad,
+\end{align}
+%
+where we introduce the \emph{Doppler design matrix} $\bvec{D}$, constructed
+by concatenating the Toeplitz matrices for each of the components of the
+convolution kernel $\g^\top(\lnlam, \Dargs)$ after rotating it (via $\R(t)$) 
+to the correct stellar phase.
+
+
+\section{Validation}
+\label{sec:validation}
+
+Words here. Figure~\ref{fig:spot} and Figure~\ref{fig:compare}.
 
 \begin{figure}[p!]
     \begin{centering}
@@ -559,24 +625,24 @@ takes $\mathcal{O}(W K \lmax^2)$ operations.
     \end{centering}
 \end{figure}
 
-\begin{figure}[p!]
-    \begin{centering}
-    \includegraphics[width=1.0\linewidth]{figures/linalg.pdf}
-    \oscaption{linalg}{%
-        The Doppler design matrix, constructed from a grid of Toeplitz
-        matrices, each of shape $K \times (K + W - 1)$, where $K$
-        is the number of wavelength bins in the observed spectrum and
-        $W$ is the width of the convolution kernels.
-        The $N$ columns of $\D$ correspond
-        to the Toeplitz matrices for each of the $N$ spherical harmonics
-        (shown at the top);
-        the $M$ rows correspond to the Toeplitz matrices rotated to each
-        of the $M$ stellar phases observed (indicated graphically 
-        to the left of $\bvec{D}$).
-        \label{fig:linalg}
-    }
-    \end{centering}
-\end{figure}
+
+\section{Performance}
+\label{sec:performance}
+
+Evaluation of the model via Equation~(\ref{eq:deconv:F}) requires 
+first the rotation of the $(\lmax + 1)^2$
+$\g$ functions (each of length $W$) to the correct stellar 
+rotational phase, an operation that scales approximately
+as $W \lmax^3$,
+followed by $(\lmax + 1)^2$
+linear convolutions of the rotated $\g$ functions with the 
+spectral components (each of length $K$), which scales
+approximately as $W K \lmax^2$. Since typically $K \gg \lmax$,
+the latter computation dominates and the entire evaluation 
+takes $\mathcal{O}(W K \lmax^2)$ operations.
+
+
+
 
 %
 %
