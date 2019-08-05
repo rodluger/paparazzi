@@ -11,8 +11,9 @@
 \newcommand{\alm}{\bvec{a}}
 \newcommand{\Y}{\bvec{Y}}
 \newcommand{\x}{\bvec{x}}
-\newcommand{\g}{\bvec{g}}
+\newcommand{\kT}{\bvec{k}^\top}
 \newcommand{\D}{\mathcal{D}}
+\newcommand{\Doppler}{\bvec{D}}
 \newcommand{\Surf}{\mathcal{S}}
 \newcommand{\Curve}{\mathcal{C}}
 \newcommand{\Dargs}{\bvec{d}}
@@ -177,6 +178,7 @@ convenience, we may write this equation in vector form:
 where
 %
 \begin{align}
+    \label{eq:deconv:alm}
     \alm(\lnlam_0, t) \equiv
 \Big( 
     a_{0,0}(\lnlam_0, t) \quad\quad\quad\quad\quad\quad 
@@ -291,7 +293,7 @@ to a line integral:
     \hspace*{-0.6em}\Y^\top(\x)
     \mathrm{d}\Curve(\lnlam, \x, \Dargs)
     \nonumber \\[0.5em]
-    &\equiv \g^\top(\lnlam, \Dargs)
+    &\equiv \kT(\lnlam, \Dargs)
     \quad.
 \end{align}
 %
@@ -305,7 +307,7 @@ We thus have
     \label{eq:deconv:F}
     F(\lnlam, t, \Dargs) 
     &=
-    \g^\top(\lnlam, \Dargs) \, \R(t)
+    \kT(\lnlam, \Dargs) \, \R(t)
     *
     \alm(\lnlam_0)
     \quad.
@@ -316,7 +318,7 @@ observed spectrum into velocity terms, temporal terms, and spectral/spatial
 terms, respectively. In the following sections, we will discuss how to
 efficiently solve the line integral in Equation~(\ref{eq:deconv:gT}).
 
-\subsection{Computing $\g^\top$}
+\subsection{Computing the kernel $\kT$}
 \label{sec:g}
 %
 In the case that the star's rotation is rigid (i.e., differential rotation
@@ -351,7 +353,7 @@ spherical harmonics to polynomials on the sphere:
 %
 \begin{align}
     \label{eq:g:gT}
-    \g^\top(\lnlam, \Dargs) &\equiv
+    \kT(\lnlam, \Dargs) &\equiv
     \s^\top(\lnlam, \Dargs)
     \AOne
 \end{align}
@@ -395,7 +397,7 @@ the unit sphere, the coordinate $z$ is given by $\sqrt{1 - x^2 - y^2}$.
     \begin{centering}
     \includegraphics[width=\linewidth]{figures/g.pdf}
     \oscaption{g}{%
-        The Doppler $\g$ basis for a rigidly rotating star
+        The Doppler $\kT$ basis for a rigidly rotating star
         computed from Equation~(\ref{eq:g:gT}) and
         Equation~(\ref{eq:g:sTrecurrence}) up to spherical 
         harmonic degree $l=10$. Rows correspond to the degree $l$ and
@@ -507,7 +509,7 @@ we may compute any term in the series via the expressions
     s_{i,\,j,\,k} &= x \, s_{i-1,\,j,\,k} \quad.
 \end{align}
 %
-Figure~\ref{fig:g} shows the $\g$ basis computed from
+Figure~\ref{fig:g} shows the $\kT$ basis computed from
 the formulae above and Equation~(\ref{eq:g:gT}) up to spherical 
 harmonic degree $l=10$.
 
@@ -529,17 +531,18 @@ fast, analytic solutions to the Doppler problem.
     \begin{centering}
     \includegraphics[width=0.8\linewidth]{figures/linalg.pdf}
     \oscaption{linalg}{%
-        The Doppler design matrix $\bvec{D}$ (Equation~\ref{eq:linear:f}), 
+        The Doppler design matrix $\Doppler$ (Equation~\ref{eq:linear:f}), 
         constructed from a grid of Toeplitz
-        matrices, each of shape $K \times (K + W - 1)$, where $K$
+        matrices, each of shape $K \times K'$, where $K$
         is the number of wavelength bins in the observed spectrum and
-        $W$ is the width of the convolution kernels.
-        The $N$ columns of $\bvec{D}$ correspond
+        $K' = K + W - 1$ is the number of bins in the model spectrum,
+        where $W$ is the width of the convolution kernel.
+        The $N$ columns of $\Doppler$ correspond
         to the Toeplitz matrices for each of the $N$ spherical harmonics
         (shown at the top);
         the $M$ rows correspond to the Toeplitz matrices rotated to each
         of the $M$ stellar phases observed (indicated graphically 
-        to the left of $\bvec{D}$).
+        to the left of $\Doppler$).
         \label{fig:linalg}
     }
     \end{centering}
@@ -571,16 +574,29 @@ purely linear operation on $\alm(\lnlam_0)$:
     \label{eq:linear:f}
     \bvec{f}
     &=
-    \bvec{D}(\g^\top, \R)
+    \Doppler(\kT, \R)
     \,
     \alm
     \quad,
 \end{align}
 %
-where we introduce the \emph{Doppler design matrix} $\bvec{D}$, constructed
-by concatenating the Toeplitz matrices for each of the components of the
-convolution kernel $\g^\top(\lnlam, \Dargs)$ after rotating it (via $\R(t)$) 
-to the correct stellar phase.
+where we introduce the $(K \times N K')$ Doppler design matrix $\Doppler$, 
+constructed
+by concatenating the Toeplitz matrices for each of the $N$ components of the
+convolution kernel $\kT(\lnlam, \Dargs)$ after rotating it (via $\R(t)$) 
+to the correct stellar phase. 
+%
+The $(K \times 1)$ vector $\mathbf{f}$ is the model for 
+the flux observed at each wavelength at a particular time, and the 
+$(N K' \times 1)$ vector $\alm$ is the vector representation of the
+spatially-dependent spectrum of the star. The latter is constructed
+by concatenating the ...
+(Equation~\ref{eq:deconv:alm})
+
+
+
+In Figure~\ref{fig:linalg} we show an
+example of $\Doppler$.
 
 
 \section{Validation}
@@ -631,11 +647,11 @@ Words here. Figure~\ref{fig:spot} and Figure~\ref{fig:compare}.
 
 Evaluation of the model via Equation~(\ref{eq:deconv:F}) requires 
 first the rotation of the $(\lmax + 1)^2$
-$\g$ functions (each of length $W$) to the correct stellar 
+$\kT$ kernels (each of length $W$) to the correct stellar 
 rotational phase, an operation that scales approximately
 as $W \lmax^3$,
 followed by $(\lmax + 1)^2$
-linear convolutions of the rotated $\g$ functions with the 
+linear convolutions of the rotated $\kT$ kernels with the 
 spectral components (each of length $K$), which scales
 approximately as $W K \lmax^2$. Since typically $K \gg \lmax$,
 the latter computation dominates and the entire evaluation 
