@@ -6,7 +6,7 @@ from collections import OrderedDict
 from theano.tensor.shared_randomstreams import RandomStreams
 srng = RandomStreams(seed=13)
 
-__all__ = ["Adam", "AdaGrad", "RMSProp", "SGD", "NAdam"]
+__all__ = ["Adam", "AdaGrad", "RMSProp", "NAdam"]
 
 
 def Adam(cost, params, lr=0.001, b1=0.9, b2=0.999, e=1e-8):
@@ -105,16 +105,4 @@ def RMSProp(cost, params, lr=1.0, rho=0.9, e=1e-6):
         updates[accu] = accu_new
         updates[param] = param - (lr * grad / tt.sqrt(accu_new + e))
 
-    return updates
-
-def SGD(cost, params, cost_size, lr=0.001):
-    """broken
-
-    """
-    updates = OrderedDict()
-    i = theano.shared(np.arange(cost_size // 2))
-    grads = tt.grad(tt.sum(cost[i]), params)
-    for param, grad in zip(params, grads):
-        updates[param] = param - lr * grad
-    updates[i] = srng.choice(size=(cost_size // 2,), a=cost_size, replace=False)
     return updates

@@ -23,31 +23,40 @@ class Doppler(object):
     
     """
 
-    def __init__(self, ydeg=15, vsini=40, inc=40.0):
+    def __init__(self, ydeg=15, vsini=40, inc=40.0,
+                 u_mu=0.0, u_sig=0.01, vT_mu=1.0, vT_sig=0.3,
+                 vT_rho=3.e-5, baseline_mu=1.0, baseline_sig=0.1):
         """
 
         """
         self.ydeg = ydeg
         self.inc = inc
         self.vsini = vsini
-        self._reset_data()
-    
-    def _set_lnlam(self, lnlam):
-        # Set the log-wavelength grid
-        self._lnlam = np.atleast_1d(lnlam)
-        self.K = self._lnlam.shape[0]
-        assert self.K >= 3, "The wavelength grid must have at least 3 bins."
-        assert self.K % 2 == 1, "The number of wavelength bins must be odd."
-        assert len(self._lnlam.shape) == 1, "Invalid wavelength grid shape."
-        assert np.allclose(np.diff(self._lnlam), 
-                           self._lnlam[1] - self._lnlam[0])
-        self._reset_cache()
 
-    def _set_theta(self, theta):
-        # Set the angular phase
-        self._theta = np.atleast_1d(theta) * np.pi / 180.
-        self.M = len(theta)
-        self._reset_cache()
+        # Reset!
+        self._D = None
+        self._theta = None
+        self._lnlam = None
+        self.F = None
+        self.ferr = None
+        self.u_true = None
+        self.vT_true = None
+        self.baseline_true = None
+    
+        # Inference params
+        self.u_mu = u_mu
+        self.u_sig = u_sig
+        self.vT_mu = vT_mu
+        self._vT_sig = vT_sig
+        self._vT_rho = vT_rho
+        self.baseline_mu = baseline_mu
+        self.baseline_sig = baseline_sig
+        self._vT_CInv = None
+        self._F_CInv = None
+
+        # Initialize
+        self.u = self.u_mu * np.ones(self.N - 1)
+        self.vT = None
 
     @property
     def ydeg(self):
@@ -61,7 +70,6 @@ class Doppler(object):
     def ydeg(self, value):
         # Degree of the Ylm expansion
         self._ydeg = value
-        self.N = (value + 1) ** 2
 
         # Grab the `A1` matrix from `starry`
         self._map = starry.Map(value)
@@ -70,7 +78,8 @@ class Doppler(object):
         # Grab the rotation matrix op
         self._R = self._map.ops.R
 
-        self._reset_cache()
+        # Reset
+        self._D = None
 
     @property
     def vsini(self):
@@ -83,7 +92,7 @@ class Doppler(object):
     @vsini.setter
     def vsini(self, value):
         self._vsini = value
-        self._reset_cache()
+        self._D = None
 
     @property
     def inc(self):
@@ -97,7 +106,7 @@ class Doppler(object):
     def inc(self, value):
         self._inc = value * np.pi / 180.0
         self._map.inc = value
-        self._reset_cache()
+        self._D = None
 
     @property
     def lnlam(self):
@@ -108,49 +117,74 @@ class Doppler(object):
         if self._lnlam is None:
             raise ValueError("Please load a dataset first.")
         return self._lnlam
-    
+
+    def _set_lnlam(self, lnlam):
+        # Set the log-wavelength grid
+        self._lnlam = np.atleast_1d(lnlam)
+        assert self.K >= 3, "The wavelength grid must have at least 3 bins."
+        assert self.K % 2 == 1, "The number of wavelength bins must be odd."
+        assert len(self._lnlam.shape) == 1, "Invalid wavelength grid shape."
+        assert np.allclose(np.diff(self._lnlam), 
+                           self._lnlam[1] - self._lnlam[0])
+        self._D = None
+        self._compute_gp()
+
     @property
     def lnlam_padded(self):
         """
         The padded log-wavelength grid.
             
         """
-        if self._lnlam_padded is None:
-            # Kernel width
-            betasini = self.vsini / CLIGHT
-            hw = (np.abs(0.5 * np.log((1 + betasini) / 
-                                      (1 - betasini)))) 
-            dlam = self.lnlam[1] - self.lnlam[0]
-            self.W = 2 * int(np.ceil(hw / dlam)) + 1
-
-            # Pad the wavelength array to circumvent edge effects
-            dlam = self.lnlam[1] - self.lnlam[0]
-            hw = (self.W - 1) // 2
-            pad_l = np.linspace(self.lnlam[0] - hw * dlam, 
-                self.lnlam[0], hw + 1)[:-1]
-            pad_r = np.linspace(self.lnlam[-1], 
-                self.lnlam[-1] + hw * dlam, hw + 1)[1:]
-            self._lnlam_padded = np.concatenate((pad_l, self.lnlam, pad_r))
-
-        return self._lnlam_padded
+        dlam = self.lnlam[1] - self.lnlam[0]
+        hw = (self.W - 1) // 2
+        pad_l = np.linspace(self.lnlam[0] - hw * dlam, 
+            self.lnlam[0], hw + 1)[:-1]
+        pad_r = np.linspace(self.lnlam[-1], 
+            self.lnlam[-1] + hw * dlam, hw + 1)[1:]
+        return np.concatenate((pad_l, self.lnlam, pad_r))
 
     @property
-    def x(self):
+    def K(self):
         """
-        The `x` coordinate of lines of constant Doppler shift.
+        The number of (observed) wavelength bins.
         
         """
-        if self._x is None:
-            betasini = self.vsini / CLIGHT
-            Kp = self.lnlam_padded.shape[0]
-            hw = (self.W - 1) // 2
-            lam_kernel = self.lnlam_padded[Kp // 2 - hw:Kp // 2 + hw + 1]
-            self._x = (1 / betasini) * (np.exp(-2 * lam_kernel) - 1) / \
-                                       (np.exp(-2 * lam_kernel) + 1)
-            self._x[self.x < -1.0] = -1.0
-            self._x[self.x > 1.0] = 1.0
+        return self.lnlam.shape[0]
+    
+    @property
+    def Kp(self):
+        """
+        The number of (internal, padded) wavelength bins.
+        
+        """
+        return self.K + self.W - 1
 
-        return self._x
+    @property
+    def W(self):
+        """
+        The width of the convolution kernel in bins.
+
+        """
+        betasini = self.vsini / CLIGHT
+        hw = (np.abs(0.5 * np.log((1 + betasini) / (1 - betasini)))) 
+        dlam = self.lnlam[1] - self.lnlam[0]
+        return 2 * int(np.ceil(hw / dlam)) + 1
+
+    @property
+    def M(self):
+        """
+        The number of epochs in the dataset.
+
+        """
+        return self.theta.shape[0]
+
+    @property
+    def N(self):
+        """
+        The number of spherical harmonic coefficients.
+
+        """
+        return (self.ydeg + 1) ** 2
 
     @property
     def theta(self):
@@ -162,32 +196,68 @@ class Doppler(object):
             raise ValueError("Please load a dataset first.")
         return self._theta * 180.0 / np.pi
 
-    def _reset_cache(self):
-        self._lnlam_padded = None
-        self._x = None
-        self.W = None
-        self._g = None
-        self._T = None
+    def _set_theta(self, theta):
+        # Set the angular phase (radians internally)
+        self._theta = np.atleast_1d(theta) * np.pi / 180.
         self._D = None
-        self.u = None
-        self.vT = None
 
-    def _reset_data(self):
-        self._theta = None
-        self._lnlam = None
-        self.F = None
-        self.ferr = None
-        self.u_true = None
-        self.vT_true = None
-        self.u = None
-        self.vT = None
+    @property
+    def vT_sig(self):
+        return self._vT_sig
+    
+    @vT_sig.setter
+    def vT_sig(self, value):
+        self._vT_sig = value
+        self._compute_gp()
+    
+    @property
+    def vT_rho(self):
+        return self._vT_rho
+    
+    @vT_rho.setter
+    def vT_rho(self, value):
+        self._vT_rho = value
+        self._compute_gp()
 
-    def _s(self):
-        # Compute the `s^T` solution vector.
-        sijk = np.zeros((self.ydeg + 1, self.ydeg + 1, 2, len(self.x)))
+    def _compute_gp(self):
+        # Compute the GP prior on the spectrum
+        if self._lnlam is None:
+            pass
+        if self.vT_rho > 0.0:
+            kernel = celerite.terms.Matern32Term(np.log(self.vT_sig), 
+                                                 np.log(self.vT_rho))
+            gp = celerite.GP(kernel)
+            vT_C = gp.get_matrix(self.lnlam_padded)
+        else:
+            vT_C = np.eye(self.Kp) * self.vT_sig ** 2
+        self._vT_cho_C = cho_factor(vT_C)
+        self._vT_CInv = cho_solve(self._vT_cho_C, np.eye(self.Kp))
+
+    def x(self):
+        """
+        Return the `x` coordinate of lines of constant Doppler shift.
+        
+        """
+        betasini = self.vsini / CLIGHT
+        hw = (self.W - 1) // 2
+        Kp = self.Kp
+        lam_kernel = self.lnlam_padded[Kp // 2 - hw:Kp // 2 + hw + 1]
+        x = (1 / betasini) * (np.exp(-2 * lam_kernel) - 1) / \
+                             (np.exp(-2 * lam_kernel) + 1)
+        x[x < -1.0] = -1.0
+        x[x > 1.0] = 1.0
+        return x
+
+    def sT(self):
+        """
+        Return the `s^T` solution vector.
+        
+        """
+        x = self.x()
+        sijk = np.zeros((self.ydeg + 1, self.ydeg + 1, 2, len(x)))
         
         # Initial conditions
-        r2 = (1 - self.x ** 2)
+        r2 = (1 - x ** 2)
         sijk[0, 0, 0] = 2 * r2 ** 0.5
         sijk[0, 0, 1] = 0.5 * np.pi * r2
 
@@ -198,10 +268,10 @@ class Doppler(object):
         
         # Upward recursion in i
         for i in range(1, self.ydeg + 1):
-            sijk[i] = sijk[i - 1] * self.x
+            sijk[i] = sijk[i - 1] * x
 
         # Full vector
-        s = np.empty((self.N, len(self.x)))
+        s = np.empty((self.N, len(x)))
         n = np.arange(self.N)
         LAM = np.floor(np.sqrt(n))
         DEL = 0.5 * (n - LAM ** 2)
@@ -211,8 +281,7 @@ class Doppler(object):
         s[n] = sijk[i, j, k]
         return s
 
-    @property
-    def g(self):
+    def gT(self):
         """
         Return the vectorized convolution kernel `g^T`.
 
@@ -220,14 +289,11 @@ class Doppler(object):
         for each term in the  spherical harmonic decomposition of the 
         surface.
         """
-        if self._g is None:
-            g = self._A1T.dot(self._s())
-            norm = np.trapz(g[0])
-            self._g = g / norm
-        
-        return self._g
+        g = self._A1T.dot(self.sT())
+        norm = np.trapz(g[0])
+        g /= norm
+        return g
 
-    @property
     def T(self):
         """
         Return the Toeplitz super-matrix.
@@ -235,24 +301,28 @@ class Doppler(object):
         This is a horizontal stack of Toeplitz convolution matrices, one per
         spherical harmonic.
         """
-        if self._T is None:
-            self._T = [None for n in range(self.N)]
-            for n in range(self.N):
-                diagonals = np.tile(self.g[n].reshape(-1, 1), self.K)
-                offsets = np.arange(self.W)
-                self._T[n] = diags(diagonals, offsets, 
-                                  (self.K, self.K + self.W - 1), format="csr")
-        return self._T
+        W = self.W
+        Kp = self.Kp
+        K = self.K
+        g = self.gT()
+        T = [None for n in range(self.N)]
+        for n in range(self.N):
+            diagonals = np.tile(g[n].reshape(-1, 1), K)
+            offsets = np.arange(W)
+            T[n] = diags(diagonals, offsets, (K, Kp), format="csr")
+        return T
 
-    @property
-    def D(self, theta=0.0, quiet=False):
+    def D(self, quiet=False):
         """
-        Return the full Doppler design matrix evaluated for angles
-        `theta` (in degrees).
+        Return the full Doppler design matrix.
 
         """
+        # Allow caching of this matrix.
         if self._D is None:
-            
+
+            if not quiet:
+                print("Computing Doppler matrix...")
+
             # Rotation matrices
             sini = np.sin(self._inc)
             cosi = np.cos(self._inc)
@@ -261,31 +331,36 @@ class Doppler(object):
 
             # The design matrix
             Dt = [None for t in range(self.M)]
+            T = self.T()
             for t in tqdm(range(self.M), disable=quiet):
                 TR = [None for n in range(self.N)]
                 for l in range(self.ydeg + 1):
                     idx = slice(l ** 2, (l + 1) ** 2)
-                    TR[idx] = np.tensordot(R[t][l].T, self.T[idx], axes=1)
+                    TR[idx] = np.tensordot(R[t][l].T, T[idx], axes=1)
                 Dt[t] = hstack(TR)
             self._D = vstack(Dt).tocsr()
-        
         return self._D
 
     def load_data(self, theta, lnlam, F, ferr=1.e-4):
         """Load a dataset.
         
         Args:
-            theta (ndarray): Array of rotational phases in degrees of length `M`.
-            lnlam (ndarray): Uniformly spaced log-wavelength array of length `K`.
+            theta (ndarray): Array of rotational phases in degrees 
+                of length `M`.
+            lnlam (ndarray): Uniformly spaced log-wavelength array 
+                of length `K`.
             F (ndarray): Matrix of observed spectra of shape `(M, K)`.
-            ferr (float, optional): Uncertainty on the flux. Defaults to 1.e-4.
+            ferr (float, optional): Uncertainty on the flux. 
+                Defaults to 1.e-4.
         """
-        self._reset_data()
         self._set_theta(theta)
         self._set_lnlam(lnlam)
         self.F = F
         self.ferr = ferr
-        self.F_CInv = np.ones_like(self.F) / self.ferr ** 2
+        self._F_CInv = np.ones_like(self.F) / self.ferr ** 2
+        self.u_true = None
+        self.vT_true = None
+        self.baseline_true = None
     
     def generate_data(self, R=3e5, nlam=200, sigma=7.5e-6, nlines=20, 
             ntheta=11, ferr=1.e-4, image=None):
@@ -305,8 +380,6 @@ class Doppler(object):
             image (string, optional): Path to the image to expand in Ylms.
                 Defaults to "vogtstar.jpg"
         """
-        self._reset_data()
-
         # The theta array in degrees
         theta = np.linspace(-180, 180, ntheta + 1)[:-1]
         self._set_theta(theta)
@@ -315,18 +388,18 @@ class Doppler(object):
         dlam = np.log(1.0 + 1.0 / R)
         lnlam = np.arange(-(nlam // 2), nlam // 2 + 1) * dlam
         self._set_lnlam(lnlam)
+        lnlam_padded = self.lnlam_padded
 
         # Now let's generate a synthetic spectrum. We do this on the
         # *padded* wavelength grid to avoid convolution edge effects.
         # A deep line at the center of the wavelength range
-        vT = 1 - 0.5 * np.exp(-0.5 * self.lnlam_padded ** 2 / sigma ** 2)
+        vT = 1 - 0.5 * np.exp(-0.5 * lnlam_padded ** 2 / sigma ** 2)
 
         # Scatter some smaller lines around for good measure
         for _ in range(nlines):
             amp = 0.1 * np.random.random()
-            mu = 2.1 * (0.5 - np.random.random()) * self.lnlam_padded.max()
-            vT -= amp * np.exp(-0.5 * 
-                    (self.lnlam_padded - mu) ** 2 / sigma ** 2)
+            mu = 2.1 * (0.5 - np.random.random()) * lnlam_padded.max()
+            vT -= amp * np.exp(-0.5 * (lnlam_padded - mu) ** 2 / sigma ** 2)
 
         # Now generate our map
         if image is None:
@@ -337,7 +410,7 @@ class Doppler(object):
 
         # Compute the map matrix & the flux matrix
         A = u.reshape(-1, 1).dot(vT.reshape(1, -1))
-        F = self.D.dot(A.reshape(-1)).reshape(ntheta, -1)
+        F = self.D().dot(A.reshape(-1)).reshape(ntheta, -1)
 
         # Let's divide out the baseline flux. This is a bummer,
         # since it contains really important information about
@@ -352,170 +425,199 @@ class Doppler(object):
         # Store the dataset
         self.u_true = u[1:]
         self.vT_true = vT
+        self.baseline_true = baseline.reshape(-1)
         self.F = F
         self.ferr = ferr
         self._F_CInv = np.ones_like(self.F) / self.ferr ** 2
-    
-    @property
+
+    def show(self, **kwargs):
+        """
+
+        """
+        self._map[1:, :] = self.u
+        self._map.show(**kwargs)
+
     def baseline(self):
         """
-        
+        Return the photometric baseline at each epoch.
+
         """
         self._map[1:, :] = self.u
         return self._map.flux(theta=self.theta).eval().reshape(-1, 1)
 
-    @property
     def model(self):
         """
-        
+        Return the full model for the flux matrix `F`.
+
         """
         A = np.append([1], self.u).reshape(-1, 1).dot(self.vT.reshape(1, -1))
-        model = self.D.dot(A.reshape(-1)).reshape(self.M, -1)
-        model /= self.baseline
+        model = self.D().dot(A.reshape(-1)).reshape(self.M, -1)
+        model /= self.baseline()
         return model
 
-    def loss(self, u_mu=0.0, u_sig=0.01, vT_mu=1.0, vT_sig=0.3, vT_rho=3.e-5, 
-             vT_CInv=None, baseline_mu=1.0, baseline_sig=0.1):
+    def loss(self):
         """
+        Return the loss function for the current parameters.
 
         """
-        # Gaussian process prior on `vT`
-        if vT_CInv is None:
-            Kp = self.lnlam_padded.shape[0]
-            if vT_rho > 0.0:
-                kernel = celerite.terms.Matern32Term(np.log(vT_sig), 
-                                                     np.log(vT_rho))
-                gp = celerite.GP(kernel)
-                vT_C = gp.get_matrix(self.lnlam_padded)
-            else:
-                vT_C = np.eye(Kp) * vT_sig ** 2
-            vT_cho_C = cho_factor(vT_C)
-            vT_CInv = cho_solve(vT_cho_C, np.eye(Kp))
-
         # Likelihood and prior
-        lnlike = -0.5 * np.sum((self.F - self.model).reshape(-1) ** 2 * self._F_CInv.reshape(-1))
-        lnprior = -0.5 * np.sum((self.u - u_mu) ** 2 / u_sig ** 2) + \
-                  -0.5 * np.sum((self.baseline - baseline_mu) ** 2 / baseline_sig ** 2) + \
-                  -0.5 * np.dot(np.dot((self.vT - vT_mu).reshape(1, -1), vT_CInv), (self.vT - vT_mu).reshape(-1, 1))
-        return -(lnlike + lnprior)
+        lnlike = -0.5 * np.sum((self.F - self.model()).reshape(-1) ** 2 
+                        * self._F_CInv.reshape(-1))
+        lnprior = -0.5 * np.sum((self.u - self.u_mu) ** 2 
+                        / self.u_sig ** 2) + \
+                  -0.5 * np.sum((self.baseline() - self.baseline_mu) ** 2 
+                        / self.baseline_sig ** 2) + \
+                  -0.5 * np.dot(np.dot((self.vT - self.vT_mu).reshape(1, -1), 
+                        self._vT_CInv), (self.vT - self.vT_mu).reshape(-1, 1))
+        return -(lnlike + lnprior).item()
 
-    def compute_u(self, T=1.0, mu=0.0, sig=0.01, baseline=None):
+    def compute_u(self, T=1.0, baseline=None):
         """
-        Linear solve for `u` given `v^T` and a baseline.
+        Linear solve for `u` given `v^T` and an optional baseline 
+        and temperature.
 
         """
         if baseline is None:
-            baseline = self.baseline
+            baseline = self.baseline()
         else:
             baseline = baseline.reshape(-1, 1)
         V = sparse_block_diag([self.vT.reshape(-1, 1) for n in range(self.N)])
-        A_ = np.array(self.D.dot(V).todense())
+        A_ = np.array(self.D().dot(V).todense())
         A0, A = A_[:, 0], A_[:, 1:]
         ATCInv = np.multiply(A.T, 
             (self._F_CInv / T / baseline ** 2).reshape(-1))
         ATCInvA = ATCInv.dot(A)
         ATCInvf = np.dot(ATCInv, 
             (self.F * baseline).reshape(-1) - A0)
-        cinv = np.ones(self.N - 1) / sig ** 2
-        mu = np.ones(self.N - 1) * mu
+        cinv = np.ones(self.N - 1) / self.u_sig ** 2
+        mu = np.ones(self.N - 1) * self.u_mu
         np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + cinv)
         self.u = np.linalg.solve(ATCInvA, ATCInvf + cinv * mu)
     
-    def compute_vT(self, cho_C=None, T=1.0, mu=1.0, sig=0.3, rho=3.e-5, baseline=None):
+    def compute_vT(self, T=1.0, baseline=None):
         """
-        Linear solve for `v^T` given `u`.
+        Linear solve for `v^T` given `u` and an optional baseline 
+        and temperature.
 
         """
         if baseline is None:
-            baseline = self.baseline
+            baseline = self.baseline()
         else:
             baseline = baseline.reshape(-1, 1)
-        Kp = self.lnlam_padded.shape[0]
-
-        # Gaussian process prior on `vT`
-        if cho_C is None:
-            if rho > 0.0:
-                kernel = celerite.terms.Matern32Term(np.log(sig), 
-                                                     np.log(rho))
-                gp = celerite.GP(kernel)
-                C = gp.get_matrix(self.lnlam_padded)
-            else:
-                C = np.eye(Kp) * sig ** 2
-            cho_C = cho_factor(C)
-
+        Kp = self.Kp
         offsets = -np.arange(0, self.N) * Kp
         U = diags([np.ones(Kp)] + 
                   [np.ones(Kp) * self.u[n] for n in range(self.N - 1)], 
                   offsets, shape=(self.N * Kp, Kp))
-        A = np.array(self.D.dot(U).todense())
+        A = np.array(self.D().dot(U).todense())
         ATCInv = np.multiply(A.T, 
             (self._F_CInv / T / baseline ** 2).reshape(-1))
         ATCInvA = ATCInv.dot(A)
         ATCInvf = np.dot(ATCInv, (self.F * baseline).reshape(-1))
-        CInv = cho_solve(cho_C, np.eye(Kp))
-        CInvmu = cho_solve(cho_C, np.ones(Kp) * mu)
+        CInv = cho_solve(self._vT_cho_C, np.eye(Kp))
+        CInvmu = cho_solve(self._vT_cho_C, np.ones(Kp) * self.vT_mu)
         self.vT = np.linalg.solve(ATCInvA + CInv, ATCInvf + CInvmu)
     
     def solve(self, u=None, vT=None, baseline=None,
-              u_guess=None, vT_guess=None,
-              u_mu=0.0, u_sig=0.01, 
-              vT_mu=1.0, vT_sig=0.3, vT_rho=3.e-5, 
-              baseline_mu=1.0, baseline_sig=0.1,
-              niter=100, T=1.0, **kwargs):
+              u_guess=None, vT_guess=None, niter1=10, 
+              niter2=100, T1=1.0, T2=1.0, optimizer="NAdam", quiet=False,
+              **kwargs):
         """
         
         """
-        # Gaussian process prior on `vT`
-        Kp = self.lnlam_padded.shape[0]
-        if vT_rho > 0.0:
-            kernel = celerite.terms.Matern32Term(np.log(vT_sig), 
-                                                    np.log(vT_rho))
-            gp = celerite.GP(kernel)
-            vT_C = gp.get_matrix(self.lnlam_padded)
+        if optimizer.lower() == "nadam":
+            optimizer = NAdam
+        elif optimizer.lower() == "adam":
+            optimizer = Adam
         else:
-            Kp = self.lnlam_padded.shape[0]
-            vT_C = np.eye(Kp) * vT_sig ** 2
-        vT_cho_C = cho_factor(vT_C)
-        vT_CInv = cho_solve(vT_cho_C, np.eye(Kp))
+            raise ValueError("Invalid optimizer.")
 
-        # Simple linear solves
-        if (u is not None):
+        # Figure out what to solve for
+        if (u is not None) and (vT is not None):
+
+            # Nothing to do here but ingest the values!
+            self.u = u
+            self.vT = vT
+            return self.loss()
+
+        elif (u is not None):
             
             # Easy: it's a linear problem
             self.u = u
-            self.compute_vT(vT_cho_C, T=T, mu=vT_mu)
-            return self.loss(u_mu=u_mu, u_sig=u_sig, vT_mu=vT_mu,
-                             vT_CInv=vT_CInv, baseline_mu=baseline_mu, 
-                             baseline_sig=baseline_sig)
+            self.compute_vT(T=T1)
+            return self.loss()
         
-        elif (vT is not None):
+        else:
 
-            self.vT = vT
+            if (vT is not None) and (baseline is not None):
 
-            # Linear if we know the baseline
-            if (baseline is not None):
-
-                self.compute_u(T=T, mu=u_mu, sig=u_sig, baseline=baseline)
-                return self.loss(u_mu=u_mu, u_sig=u_sig, vT_mu=vT_mu,
-                             vT_CInv=vT_CInv, baseline_mu=baseline_mu, 
-                             baseline_sig=baseline_sig)
+                # Still a linear problem!
+                self.vT = vT
+                self.compute_u(T=T1, baseline=baseline)
+                return self.loss()
 
             else:
 
-                # Non-linear
-                if (u_guess is None):
-                    baseline_guess = np.atleast_1d(baseline_mu).reshape(-1) + \
-                                     baseline_sig * np.random.randn(self.M)
-                    self.compute_u(T=T, mu=u_mu, sig=u_sig, 
-                                   baseline=baseline_guess)
-                else:
-                    self.u = u_guess
+                # Non-linear. Let's use (N)Adam.
 
+                if (vT is not None):
+
+                    # We know `vT` and need to solve for 
+                    # `u` w/o any baseline knowledge.
+                    vT_guess = vT
+
+                else:
+
+                    # We know *nothing*!
+
+                    # Estimate `v^T` from the deconvolved mean spectrum
+                    if (vT_guess is None):
+
+                        fmean = np.mean(self.F, axis=0)
+                        fmean -= np.mean(fmean)
+                        diagonals = np.tile(self.gT()[0].reshape(-1, 1), 
+                            self.K)
+                        offsets = np.arange(self.W)
+                        A = diags(diagonals, offsets, (self.K, self.Kp), 
+                                format="csr")
+
+                        # TODO: Make the variance below a user param
+
+                        LInv = 1e-4 * np.eye(A.shape[1])
+                        vT_guess = 1.0 + np.linalg.solve(
+                            A.T.dot(A).toarray() + LInv, A.T.dot(fmean))
+
+                # Estimate `u` from a flat baseline
+                if (u_guess is None):
+
+                    self.vT = vT_guess
+                    self.compute_u(T=T1, baseline=np.ones(self.M))
+                    u_guess = self.u
+
+                # Initialize the variables
+                self.u = u_guess
+                self.vT = vT_guess
+
+                # Iterative bi-linear solve to get us started
+                if not quiet:
+                    print("Running bi-linear solver...")
+                loss_val = np.zeros(niter1 + niter2 + 1)
+                loss_val[0] = self.loss()
+                for n in tqdm(1 + np.arange(niter1), disable=quiet):
+                    self.compute_u(T=T1)
+                    self.compute_vT(T=T1)
+                    loss_val[n] = self.loss()
+
+                # Theano nonlienar solve. Variables:
                 u = theano.shared(self.u)
                 vT = theano.shared(self.vT)
+                if (vT is not None):
+                    theano_vars = [u]
+                else:
+                    theano_vars = [u, vT]
 
                 # Compute the model
-                D = ts.as_sparse_variable(self.D)
+                D = ts.as_sparse_variable(self.D())
                 a = tt.reshape(tt.dot(tt.reshape(
                                     tt.concatenate([[1.0], u]), (-1, 1)), 
                                     tt.reshape(vT, (1, -1))), (-1,))
@@ -528,88 +630,32 @@ class Doppler(object):
                 r = tt.reshape(self.F - M, (-1,))
                 cov = tt.reshape(self._F_CInv, (-1,))
                 lnlike = -0.5 * tt.sum(r ** 2 * cov)
-                lnprior = -0.5 * tt.sum((u - u_mu) ** 2 / u_sig ** 2) + \
-                          -0.5 * tt.sum((b - baseline_mu) ** 2 / baseline_sig ** 2) + \
-                          -0.5 * tt.dot(tt.dot(tt.reshape((vT - vT_mu), (1, -1)), vT_CInv), tt.reshape((vT - vT_mu), (-1, 1)))[0, 0]
+                lnprior = -0.5 * tt.sum((u - self.u_mu) ** 2 
+                                / self.u_sig ** 2) + \
+                          -0.5 * tt.sum((b - self.baseline_mu) ** 2 
+                                / self.baseline_sig ** 2) + \
+                          -0.5 * tt.dot(tt.dot(tt.reshape((vT - self.vT_mu), 
+                                (1, -1)), self._vT_CInv), 
+                                tt.reshape((vT - self.vT_mu), (-1, 1)))[0, 0]
                 loss = -(lnlike + lnprior)
-                loss_T = -(lnlike / T + lnprior)
+                loss_T = -(lnlike / T2 + lnprior) # tempered loss
                 best_loss = loss.eval()
                 best_u = u.eval()
-                loss_val = np.zeros(niter + 1)
-                loss_val[0] = best_loss
+                best_vT = vT.eval()
 
                 # Optimize
-                upd = NAdam(loss_T, [u], **kwargs)
-                train = theano.function([], [u, loss], updates=upd)
-                for n in tqdm(1 + np.arange(niter)):
-                    u_val, loss_val[n] = train()
+                if not quiet:
+                    print("Running non-linear solver...")
+                upd = optimizer(loss_T, theano_vars, **kwargs)
+                train = theano.function([], [u, vT, loss], updates=upd)
+                for n in tqdm(niter1 + 1 + np.arange(niter2), disable=quiet):
+                    u_val, vT_val, loss_val[n] = train()
                     if (loss_val[n] < best_loss):
                         best_loss = loss_val[n]
                         best_u = u_val
+                        best_vT = vT_val
 
+                # We are done!
                 self.u = best_u
+                self.vT = best_vT
                 return loss_val
-
-        elif (u is not None) and (vT is not None):
-            self.u = u
-            self.vT = vT
-            return self.loss(u_mu=u_mu, u_sig=u_sig, vT_mu=vT_mu,
-                             vT_CInv=vT_CInv, baseline_mu=baseline_mu, 
-                             baseline_sig=baseline_sig)
-        else:
-
-            # TODO!
-            # Non-linear
-            if u_guess is None or vT_guess is None:
-                raise ValueError("Please provide guesses")
-            self.u = u_guess
-            self.vT = vT_guess
-
-            u = theano.shared(self.u)
-            vT = theano.shared(self.vT)
-
-            # Compute the model
-            D = ts.as_sparse_variable(self.D)
-            a = tt.reshape(tt.dot(tt.reshape(
-                                tt.concatenate([[1.0], u]), (-1, 1)), 
-                                tt.reshape(vT, (1, -1))), (-1,))
-            self._map[1:, :] = u
-            b = self._map.flux(theta=self.theta)
-            B = tt.reshape(b, (-1, 1))
-            M = tt.reshape(ts.dot(D, a), (self.M, -1)) / B
-
-            # Compute the loss
-            r = tt.reshape(self.F - M, (-1,))
-            cov = tt.reshape(self._F_CInv, (-1,))
-            lnlike = -0.5 * tt.sum(r ** 2 * cov)
-            lnprior = -0.5 * tt.sum((u - u_mu) ** 2 / u_sig ** 2) + \
-                        -0.5 * tt.sum((b - baseline_mu) ** 2 / baseline_sig ** 2) + \
-                        -0.5 * tt.dot(tt.dot(tt.reshape((vT - vT_mu), (1, -1)), vT_CInv), tt.reshape((vT - vT_mu), (-1, 1)))[0, 0]
-            loss = -(lnlike + lnprior)
-            loss_T = -(lnlike / T + lnprior)
-            best_loss = loss.eval()
-            best_u = u.eval()
-            best_vT = vT.eval()
-            loss_val = np.zeros(niter + 1)
-            loss_val[0] = best_loss
-
-            # Optimize
-            upd = NAdam(loss_T, [u, vT], **kwargs)
-            train = theano.function([], [u, vT, loss], updates=upd)
-            for n in tqdm(1 + np.arange(niter)):
-                u_val, vT_val, loss_val[n] = train()
-                if (loss_val[n] < best_loss):
-                    best_loss = loss_val[n]
-                    best_u = u_val
-                    best_vT = vT_val
-
-            self.u = best_u
-            self.vT = best_vT
-            return loss_val
-    
-    def show(self, **kwargs):
-        """
-
-        """
-        self._map[1:, :] = self.u
-        self._map.show(**kwargs)
