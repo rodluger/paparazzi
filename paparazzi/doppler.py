@@ -81,7 +81,6 @@ class Doppler(object):
         # Reset the cache
         self._D = None
         self._g = None
-        self._T = None
 
     @property
     def ydeg(self):
@@ -321,34 +320,14 @@ class Doppler(object):
             self._g /= norm
         return self._g
 
-    def T(self):
-        """
-        Return the Toeplitz super-matrix.
-
-        This is a horizontal stack of Toeplitz convolution matrices, one per
-        spherical harmonic. 
-        
-        
-        ### nOT YET These matrices are then stacked vertically for
-        ###each rotational phase.
-        """
-        # Allow caching of this matrix.
-        if self._T is None:
-            W = self.W
-            Kp = self.Kp
-            K = self.K
-            g = self.gT()
-            self._T = [None for n in range(self.N)]
-            for n in range(self.N):
-                diagonals = np.tile(g[n].reshape(-1, 1), K)
-                offsets = np.arange(W)
-                self._T[n] = diags(diagonals, offsets, (K, Kp), format="csr")
-        return self._T
-
     def D(self, quiet=False):
         """
-        Return the full Doppler design matrix.
+        Return the full Doppler matrix.
 
+        This is a horizontal stack of Toeplitz convolution matrices, one per
+        spherical harmonic. These matrices are then stacked vertically for
+        each rotational phase.
+        
         """
         # Allow caching of this matrix.
         if self._D is None:
@@ -356,22 +335,41 @@ class Doppler(object):
             if not quiet:
                 print("Computing Doppler matrix...")
 
-            # Rotation matrices
+            W = self.W
+            Kp = self.Kp
+            K = self.K
+            g0 = self.gT()
+
+            # Rotation axis
             sini = np.sin(self._inc)
             cosi = np.cos(self._inc)
             axis = [0, sini, cosi]
-            R = [self._R(axis, t * np.pi / 180.0) for t in self.theta]
 
-            # The design matrix
-            Dt = [None for t in range(self.M)]
-            T = self.T()
-            for t in tqdm(range(self.M), disable=quiet):
-                TR = [None for n in range(self.N)]
+            # Compute the Toeplitz matrices for each phase
+            D = [None for m in range(self.M)]
+            for m in tqdm(range(self.M), disable=quiet):
+
+                # Rotate the kernels
+                # Note that we are computing R^T(theta) = R(-theta) here
+                RT = self._R(axis, -self.theta[m] * np.pi / 180.0)
+                g = np.empty_like(g0)
                 for l in range(self.ydeg + 1):
                     idx = slice(l ** 2, (l + 1) ** 2)
-                    TR[idx] = np.tensordot(R[t][l].T, T[idx], axes=1)
-                Dt[t] = hstack(TR)
-            self._D = vstack(Dt).tocsr()
+                    g[idx] = RT[l].dot(g0[idx])
+
+                # Compute the Toeplitz matrices for this phase
+                T = [None for n in range(self.N)]
+                for n in range(self.N):
+                    diagonals = np.tile(g[n].reshape(-1, 1), K)
+                    offsets = np.arange(W)
+                    T[n] = diags(diagonals, offsets, (K, Kp), format="csr")
+
+                # Stack 'em
+                D[m] = hstack(T)
+
+            # Stack 'em
+            self._D = vstack(D).tocsr()
+
         return self._D
 
     def load_data(self, theta, lnlam, F, ferr=1.e-4):

@@ -21,18 +21,12 @@ nt = 15
 theta = np.append([-180], np.linspace(-90, 90, nt))
 
 # DEBUG
-#import time
-#tstart = time.time()
-
 dop = pp.Doppler(ydeg, vsini=vsini, inc=90)
 dop.generate_data(u=ylm, R=3.e5, nlam=149, sigma=2.e-5, 
                   nlines=1, theta=theta, ferr=0.0)
 lnlam = dop.lnlam
 F0 = dop.F[0]
 F = dop.F[1:]
-
-# DEBUG
-#print(time.time() - tstart)
 
 # Render the images
 img = map.render(theta=theta[1:], res=100)
