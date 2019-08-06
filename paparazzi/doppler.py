@@ -334,7 +334,7 @@ class Doppler(object):
         if self._D is None:
 
             if not quiet:
-                print("Computing Doppler matrix...")
+                print("Computing Doppler matrix...", end=" ", flush=True)
 
             W = self.W
             Kp = self.Kp
@@ -349,14 +349,19 @@ class Doppler(object):
             # Pre-compute a skeleton sparse Doppler matrix row in CSR format. 
             # We will directly edit its `data` attribute, whose structure is
             # *super* convenient, as we'll see below.
-            diagonals = np.ones((W, K))
-            offsets = np.arange(W)
-            Tn = diags(diagonals, offsets, (K, Kp))
-            Dm = hstack([csr_matrix(Tn) for n in range(self.N)]).tocsr()
-            D = [csr_matrix(Dm) for m in range(self.M)]
+            indptr = (self.N * W) * np.arange(K + 1, dtype='int32')
+            i0 = np.arange(W)
+            i1 = Kp * np.arange(self.N)
+            i2 = np.arange(K)
+            indices = ((i0.reshape(-1, 1) + 
+                        i1.reshape(1, -1)).T.reshape(-1, 1) + 
+                        i2.reshape(1, -1)).T.reshape(-1)
+            data = np.ones(W * K * self.N)
+            D = [csr_matrix((data, indices, indptr), shape=(K, self.N * Kp)) 
+                 for m in range(self.M)]
 
             # Loop through each epoch
-            for m in tqdm(range(self.M), disable=quiet):
+            for m in range(self.M):
 
                 # Rotate the kernels
                 # Note that we are computing R^T(theta) = R(-theta) here
@@ -370,7 +375,11 @@ class Doppler(object):
                 D[m].data = np.tile(g.reshape(-1), K)
 
             # Stack the rows and we are done!
+            # TODO: This can probably be sped up.
             self._D = vstack(D).tocsr()
+
+            if not quiet:
+                print("Done.")
 
         return self._D
 
