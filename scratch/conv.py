@@ -12,17 +12,19 @@ def conv1d(vector, kernel, flip=False):
     One-dimensional linear convolution of a vector with a 1d kernel.
 
     """
-    return tt.nnet.conv2d(tt.shape_padleft(vector, 3), 
-                          tt.shape_padleft(kernel, 3), 
-                          input_shape=(1, 1, 1, -1),
-                          filter_shape=(1, 1, 1, -1),
-                          filter_flip=flip)[0, 0, 0, :]
+    return tt.nnet.conv2d(
+        tt.shape_padleft(vector, 3),
+        tt.shape_padleft(kernel, 3),
+        input_shape=(1, 1, 1, -1),
+        filter_shape=(1, 1, 1, -1),
+        filter_flip=flip,
+    )[0, 0, 0, :]
 
 
 def convdot(vectors, kernels, N):
     f = conv1d(vectors[0], kernels[0])
     for n in range(1, N):
-       f += conv1d(vectors[n], kernels[n])
+        f += conv1d(vectors[n], kernels[n])
     return f
 
 
@@ -31,9 +33,14 @@ def flux(lam, t, A, ydeg=5, vsini=40.0, inc=60.0, P=1.0):
     doppler = pp.Doppler(lam, ydeg=ydeg, vsini=vsini, inc=inc, P=P)
     G = doppler._g()
     map = starry.Map(ydeg, nw=len(doppler.lam_padded))
-    axis = map.ops.get_axis(inc * np.pi / 180., 0.0)
+    axis = map.ops.get_axis(inc * np.pi / 180.0, 0.0)
     theta = (2 * np.pi / P * t) % (2 * np.pi)
-    F = tt.as_tensor_variable([convdot(map.ops.rotate(axis, th, A), G, N) for n, th in enumerate(theta)])
+    F = tt.as_tensor_variable(
+        [
+            convdot(map.ops.rotate(axis, th, A), G, N)
+            for n, th in enumerate(theta)
+        ]
+    )
     return F
 
 
@@ -64,8 +71,9 @@ for i in tqdm(range(100)):
 
 # Conv
 A_t = tt.dmatrix()
-F_t = theano.function([A_t], 
-        flux(lam, t, A_t, ydeg=ydeg, vsini=vsini, inc=inc, P=P))
+F_t = theano.function(
+    [A_t], flux(lam, t, A_t, ydeg=ydeg, vsini=vsini, inc=inc, P=P)
+)
 
 for i in tqdm(range(100)):
     foo = F_t(A)

@@ -9,7 +9,8 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import numpy as np
 import starry
 import paparazzi as pp
-CLIGHT = 3.e5
+
+CLIGHT = 3.0e5
 
 
 # Get the Ylm expansion of a Gaussian spot
@@ -23,10 +24,11 @@ ylm = np.array(map.y)
 assert np.nanmin(map.render()) > 0
 
 # This work
-vsini = 40.0 # km/s
+vsini = 40.0  # km/s
 dop = pp.Doppler(ydeg, vsini=vsini)
-dop.generate_data(u=ylm, R=3.e6, nlam=1999, sigma=2.e-5, 
-                  nlines=1, theta=[0.0], ferr=0.0)
+dop.generate_data(
+    u=ylm, R=3.0e6, nlam=1999, sigma=2.0e-5, nlines=1, theta=[0.0], ferr=0.0
+)
 F = dop.F[0] / dop.F[0][0]
 
 # The rest frame spectrum
@@ -37,7 +39,7 @@ obs = (lnlam_padded >= lnlam[0]) & (lnlam_padded <= lnlam[-1])
 
 # Numerical
 npts = np.zeros(3, dtype=int)
-res_arr = [50, 100, 300] #, 600]
+res_arr = [50, 100, 300]  # , 600]
 Fnum = np.array([np.zeros_like(lnlam) for i in range(len(res_arr))])
 for i, res in enumerate(res_arr):
     x, y, z = map.ops.compute_ortho_grid(res).eval()
@@ -61,8 +63,13 @@ ax[0].set_xlim(-3, 3)
 alpha = [0.2, 0.5, 1.0]
 npts_rounded = np.array(np.round(1e-4 * npts, 1) * 1e4, dtype=int)
 for i in range(len(Fnum)):
-    ax[1].plot(1e4 * lnlam, np.abs(F - Fnum[i]), 
-               label=r"$n = %d$" % npts_rounded[i], color="k", alpha=alpha[i])
+    ax[1].plot(
+        1e4 * lnlam,
+        np.abs(F - Fnum[i]),
+        label=r"$n = %d$" % npts_rounded[i],
+        color="k",
+        alpha=alpha[i],
+    )
 ax[0].set_ylabel(r"spectrum")
 ax[0].legend(fontsize=12, loc="lower left")
 ax[1].set_yscale("log")
@@ -75,6 +82,6 @@ ax[1].set_ylabel(r"residuals")
 aximg = inset_axes(ax[0], width="15%", height="45%", loc=4, borderpad=1)
 img = map.render(res=300).reshape(300, 300)
 aximg.imshow(img, origin="lower", cmap="plasma", vmin=0.042, vmax=0.353)
-aximg.axis('off')
+aximg.axis("off")
 
 fig.savefig("compare.pdf", bbox_inches="tight")

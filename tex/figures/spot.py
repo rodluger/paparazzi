@@ -20,12 +20,13 @@ ylm = np.array(map.y)
 assert np.nanmin(map.render()) > 0
 
 # Generate the dataset
-vsini = 40.0 # km/s
+vsini = 40.0  # km/s
 nt = 15
 theta = np.append([-180], np.linspace(-90, 90, nt))
 dop = pp.Doppler(ydeg, vsini=vsini, inc=90)
-dop.generate_data(u=ylm, R=3.e5, nlam=149, sigma=2.e-5, 
-                  nlines=1, theta=theta, ferr=0.0)
+dop.generate_data(
+    u=ylm, R=3.0e5, nlam=149, sigma=2.0e-5, nlines=1, theta=theta, ferr=0.0
+)
 lnlam = dop.lnlam
 F0 = dop.F[0]
 F = dop.F[1:]
@@ -49,26 +50,31 @@ for t in range(nt):
     # Plot spectrum
     ax[t, 1].plot(dop.lnlam, F0, "k:", lw=1, alpha=0.5)
     ax[t, 1].plot(dop.lnlam, F[t], "k-")
-    ax[t, 1].axis('off')
-    
+    ax[t, 1].axis("off")
+
     # Plot residuals
     color = [cmap(x) for x in np.linspace(0.75, 0.0, 5)]
     lw = np.linspace(2.5, 0.5, 5)
     alpha = np.linspace(0.25, 1, 5)
     for i in range(5):
-        ax[t, 2].plot(lnlam, F[t] - F0, ls="-", 
-                      lw=lw[i], color=color[i], alpha=alpha[i])
-    ax[t, 2].axis('off')
+        ax[t, 2].plot(
+            lnlam, F[t] - F0, ls="-", lw=lw[i], color=color[i], alpha=alpha[i]
+        )
+    ax[t, 2].axis("off")
     ax[t, 2].set_ylim(-0.02, 0.02)
-    
+
     # Plot current stellar image
-    ax[t, 0].imshow(img[t], origin="lower", 
-                    extent=(-1, 1, -1, 1),
-                    cmap=cmap, vmin=vmin,
-                    vmax=vmax)
+    ax[t, 0].imshow(
+        img[t],
+        origin="lower",
+        extent=(-1, 1, -1, 1),
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+    )
     ax[t, 0].set_xlim(-3, 1.05)
     ax[t, 0].set_ylim(-1.05, 1.05)
-    ax[t, 0].axis('off')
+    ax[t, 0].axis("off")
 
 ax[0, 1].set_title("spectrum", y=1.4)
 ax[0, 2].set_title("residuals", y=1.4)

@@ -3,11 +3,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 import starry
 import subprocess
+
 np.random.seed(13)
 
 
-def plot(doppler, loss=[], name="vogtstar", nframes=None, 
-         render_movies=False, open_plots=False, overlap=2.0):
+def plot(
+    doppler,
+    loss=[],
+    name="vogtstar",
+    nframes=None,
+    render_movies=False,
+    open_plots=False,
+    overlap=2.0,
+):
     """
     Plot the results of the Doppler imaging problem for the Vogtstar.
 
@@ -23,7 +31,7 @@ def plot(doppler, loss=[], name="vogtstar", nframes=None,
     baseline = doppler.baseline()
     model = doppler.model()
     F = doppler.F
-    lnlam  = doppler.lnlam
+    lnlam = doppler.lnlam
     lnlam_padded = doppler.lnlam_padded
     M = doppler.M
     inc = doppler.inc
@@ -91,8 +99,9 @@ def plot(doppler, loss=[], name="vogtstar", nframes=None,
     map[1:, :] = u
     img = map.render(theta=theta_img)
     if render_movies:
-        map.show(theta=np.linspace(-180, 180, 50), 
-                 mp4="%s_inferred.mp4" % name)
+        map.show(
+            theta=np.linspace(-180, 180, 50), mp4="%s_inferred.mp4" % name
+        )
         files.append("inferred.mp4")
     img_rect = map.render(projection="rect", res=300).reshape(300, 300)
 
@@ -100,12 +109,22 @@ def plot(doppler, loss=[], name="vogtstar", nframes=None,
     fig, ax = plt.subplots(2, figsize=(10, 8))
     vmin = min(np.nanmin(img_rect), np.nanmin(img_true_rect))
     vmax = max(np.nanmax(img_rect), np.nanmax(img_true_rect))
-    im = ax[0].imshow(img_true_rect, origin="lower", 
-                      extent=(-180, 180, -90, 90), cmap="plasma",
-                      vmin=vmin, vmax=vmax)
-    im = ax[1].imshow(img_rect, origin="lower", 
-                      extent=(-180, 180, -90, 90), cmap="plasma",
-                      vmin=vmin, vmax=vmax)
+    im = ax[0].imshow(
+        img_true_rect,
+        origin="lower",
+        extent=(-180, 180, -90, 90),
+        cmap="plasma",
+        vmin=vmin,
+        vmax=vmax,
+    )
+    im = ax[1].imshow(
+        img_rect,
+        origin="lower",
+        extent=(-180, 180, -90, 90),
+        cmap="plasma",
+        vmin=vmin,
+        vmax=vmax,
+    )
     fig.colorbar(im, ax=ax.ravel().tolist())
     for axis in ax:
         latlines = np.linspace(-90, 90, 7)[1:-1]
@@ -124,20 +143,36 @@ def plot(doppler, loss=[], name="vogtstar", nframes=None,
 
     # Plot the "Joy Division" graph
     fig = plt.figure(figsize=(8, 10))
-    ax_img = [plt.subplot2grid((nframes, 8), (n, 0), rowspan=1, colspan=1)
-                for n in range(nframes)]
+    ax_img = [
+        plt.subplot2grid((nframes, 8), (n, 0), rowspan=1, colspan=1)
+        for n in range(nframes)
+    ]
     ax_f = [plt.subplot2grid((nframes, 8), (0, 1), rowspan=1, colspan=7)]
-    ax_f += [plt.subplot2grid((nframes, 8), (n, 1), rowspan=1, colspan=7, 
-                sharex=ax_f[0], sharey=ax_f[0]) for n in range(1, nframes)]
+    ax_f += [
+        plt.subplot2grid(
+            (nframes, 8),
+            (n, 1),
+            rowspan=1,
+            colspan=7,
+            sharex=ax_f[0],
+            sharey=ax_f[0],
+        )
+        for n in range(1, nframes)
+    ]
     for n in range(nframes):
-        ax_img[n].imshow(img[n], extent=(-1, 1, -1, 1), 
-                         origin="lower", cmap="plasma", vmin=vmin,
-                         vmax=vmax)
-        ax_img[n].axis('off')
+        ax_img[n].imshow(
+            img[n],
+            extent=(-1, 1, -1, 1),
+            origin="lower",
+            cmap="plasma",
+            vmin=vmin,
+            vmax=vmax,
+        )
+        ax_img[n].axis("off")
         m = int(np.round(np.linspace(0, M - 1, nframes)[n]))
         ax_f[n].plot(lnlam, F[m], "k.", ms=2, alpha=0.75, clip_on=False)
         ax_f[n].plot(lnlam, model[m], "C1-", lw=1, clip_on=False)
-        ax_f[n].axis('off')
+        ax_f[n].axis("off")
     ymed = np.median(F)
     ydel = 0.5 * (np.max(F) - np.min(F)) / overlap
     ax_f[0].set_ylim(ymed - ydel, ymed + ydel)
@@ -153,7 +188,7 @@ def plot(doppler, loss=[], name="vogtstar", nframes=None,
     ax.axvspan(lnlam[-1], lnlam_padded[-1], color="k", alpha=0.3)
     ax.set_xlim(lnlam_padded[0], lnlam_padded[-1])
     ax.set_xlabel(r"$\Delta \ln \lambda$")
-    ax.set_ylabel(r"Normalized intensity")  
+    ax.set_ylabel(r"Normalized intensity")
     ax.legend(loc="lower left", fontsize=14)
     fig.savefig("%s_spectrum.pdf" % name, bbox_inches="tight")
     files.append("spectrum.pdf")
@@ -212,5 +247,6 @@ def learn_map(high_snr=False):
     dop.solve(vT=vT, baseline=baseline)
 
     plot(dop, open_plots=True, render_movies=True)
+
 
 learn_everything(True)
