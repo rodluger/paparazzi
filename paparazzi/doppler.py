@@ -192,7 +192,7 @@ class Doppler(object):
         betasini = self.vsini / CLIGHT
         hw = (np.abs(0.5 * np.log((1 + betasini) / (1 - betasini)))) 
         dlam = self.lnlam[1] - self.lnlam[0]
-        return 2 * int(np.ceil(hw / dlam)) + 1
+        return 2 * int(np.floor(hw / dlam)) + 1
 
     @property
     def M(self):
@@ -268,8 +268,9 @@ class Doppler(object):
         lam_kernel = self.lnlam_padded[Kp // 2 - hw:Kp // 2 + hw + 1]
         x = (1 / betasini) * (np.exp(-2 * lam_kernel) - 1) / \
                              (np.exp(-2 * lam_kernel) + 1)
-        x[x < -1.0] = -1.0
-        x[x > 1.0] = 1.0
+        if np.any(np.abs(x) >= 1.0):
+            raise ValueError(
+                "Error computing the kernel width. This is likely a bug!")
         return x
 
     def sT(self):
@@ -345,8 +346,16 @@ class Doppler(object):
             cosi = np.cos(self._inc)
             axis = [0, sini, cosi]
 
-            # Compute the Toeplitz matrices for each phase
-            D = [None for m in range(self.M)]
+            # Pre-compute a skeleton sparse Doppler matrix row in CSR format. 
+            # We will directly edit its `data` attribute, whose structure is
+            # *super* convenient, as we'll see below.
+            diagonals = np.ones((W, K))
+            offsets = np.arange(W)
+            Tn = diags(diagonals, offsets, (K, Kp))
+            Dm = hstack([csr_matrix(Tn) for n in range(self.N)]).tocsr()
+            D = [csr_matrix(Dm) for m in range(self.M)]
+
+            # Loop through each epoch
             for m in tqdm(range(self.M), disable=quiet):
 
                 # Rotate the kernels
@@ -357,17 +366,10 @@ class Doppler(object):
                     idx = slice(l ** 2, (l + 1) ** 2)
                     g[idx] = RT[l].dot(g0[idx])
 
-                # Compute the Toeplitz matrices for this phase
-                T = [None for n in range(self.N)]
-                for n in range(self.N):
-                    diagonals = np.tile(g[n].reshape(-1, 1), K)
-                    offsets = np.arange(W)
-                    T[n] = diags(diagonals, offsets, (K, Kp), format="csr")
+                # Populate the Doppler matrix
+                D[m].data = np.tile(g.reshape(-1), K)
 
-                # Stack 'em
-                D[m] = hstack(T)
-
-            # Stack 'em
+            # Stack the rows and we are done!
             self._D = vstack(D).tocsr()
 
         return self._D

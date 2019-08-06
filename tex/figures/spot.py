@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+"""
+Show the effect a rotating spot has on an absorption line.
+
+"""
 import matplotlib.pyplot as plt
 import numpy as np
 import starry
@@ -19,8 +23,6 @@ assert np.nanmin(map.render()) > 0
 vsini = 40.0 # km/s
 nt = 15
 theta = np.append([-180], np.linspace(-90, 90, nt))
-
-# DEBUG
 dop = pp.Doppler(ydeg, vsini=vsini, inc=90)
 dop.generate_data(u=ylm, R=3.e5, nlam=149, sigma=2.e-5, 
                   nlines=1, theta=theta, ferr=0.0)
