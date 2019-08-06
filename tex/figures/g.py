@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
+"""
+Plots the basis of `g` kernels.
+
+"""
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-from utils import RigidRotationSolver
+import paparazzi as pp
 
 
-# Instantiate the solver
+# Get the `g` functions at high res
 ydeg = 10
-solver = RigidRotationSolver(ydeg)
-npts = 1000
-wsini_c = 2.0e-6
-maxD = 0.5 * np.log((1 + wsini_c) / (1 - wsini_c))
-D = np.linspace(-maxD, maxD, npts)
-g = solver.g(D, wsini_c)
+dop = pp.Doppler(ydeg=ydeg)
+dop.generate_data(R=1e6, nlam=99, u=np.zeros(dop.N - 1))
+g = dop.gT()
 
 # Set up the plot
 fig, ax = plt.subplots(ydeg + 1, 2 * ydeg + 1, figsize=(16, 10), 
@@ -31,7 +32,7 @@ n = 0
 for i, l in enumerate(range(ydeg + 1)):
     for j, m in enumerate(range(-l, l + 1)):
         j += ydeg - l
-        ax[i, j].plot(g[:, n])
+        ax[i, j].plot(g[n])
         n += 1
 
 # Labels

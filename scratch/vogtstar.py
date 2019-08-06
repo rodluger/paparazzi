@@ -9,6 +9,7 @@ np.random.seed(13)
 def plot(doppler, loss=[], name="vogtstar", nframes=None, 
          render_movies=False, open_plots=False, overlap=2.0):
     """
+    Plot the results of the Doppler imaging problem for the Vogtstar.
 
     """
     # Get the values we'll need for plotting
@@ -47,7 +48,7 @@ def plot(doppler, loss=[], name="vogtstar", nframes=None,
         # Compute the loss @ true value
         doppler.u = u_true
         doppler.vT = vT_true
-        loss_true = doppler.loss
+        loss_true = doppler.loss()
 
         # Plot
         fig, ax = plt.subplots(1, figsize=(8, 5))
@@ -179,62 +180,13 @@ def learn_everything(high_snr=False):
         niter2 = 0
 
     # Generate data
-    D = pp.Doppler(ydeg=15)
-    D.generate_data(ferr=ferr)
-
-    # Compute loss @ true value
-    D.u = D.u_true
-    D.vT = D.vT_true
-    loss_true = D.loss()
+    dop = pp.Doppler(ydeg=15)
+    dop.generate_data(ferr=ferr)
 
     # Solve!
-    loss = D.solve(niter1=niter1, niter2=niter2, lr=1e-4)
+    loss = dop.solve(niter1=niter1, niter2=niter2, lr=2e-4)
 
-    # Plot the results
-    fig, ax = plt.subplots(1, figsize=(6, 8))
-    ax.plot(loss)
-    ax.axhline(loss_true, color="C1", ls="--")
-    ax.set_yscale("log")
-
-    fig = plt.figure()
-    plt.plot(D.vT_true)
-    plt.plot(D.vT)
-
-    fig = plt.figure()
-    plt.plot(D.F.reshape(-1))
-    plt.plot(D.model.reshape(-1))
-
-    # Render the true map
-    D._map[1:, :] = D.u_true
-    img_true_rect = D._map.render(projection="rect", res=300).eval().reshape(300, 300)
-
-    # Render the inferred map
-    D._map[1:, :] = D.u
-    img_rect = D._map.render(projection="rect", res=300).eval().reshape(300, 300)
-        
-    # Plot them side by side
-    fig, ax = plt.subplots(2, figsize=(10, 8))
-    vmin = min(np.nanmin(img_rect), np.nanmin(img_true_rect))
-    vmax = max(np.nanmax(img_rect), np.nanmax(img_true_rect))
-    im = ax[0].imshow(img_true_rect, origin="lower", 
-                        extent=(-180, 180, -90, 90), cmap="plasma",
-                        vmin=vmin, vmax=vmax)
-    im = ax[1].imshow(img_rect, origin="lower", 
-                        extent=(-180, 180, -90, 90), cmap="plasma",
-                        vmin=vmin, vmax=vmax)
-    fig.colorbar(im, ax=ax.ravel().tolist())
-    for axis in ax:
-        latlines = np.linspace(-90, 90, 7)[1:-1]
-        lonlines = np.linspace(-180, 180, 13)
-        for lat in latlines:
-            axis.axhline(lat, color="k", lw=0.5, alpha=0.5, zorder=100)
-        for lon in lonlines:
-            axis.axvline(lon, color="k", lw=0.5, alpha=0.5, zorder=100)
-        axis.set_xticks(lonlines)
-        axis.set_yticks(latlines)
-        axis.set_xlabel("Longitude [deg]", fontsize=12)
-        axis.set_ylabel("Latitude [deg]", fontsize=12)
-    plt.show()
+    plot(dop, loss=loss, open_plots=True, render_movies=True)
 
 
 def learn_map(high_snr=False):
@@ -261,4 +213,4 @@ def learn_map(high_snr=False):
 
     plot(dop, open_plots=True, render_movies=True)
 
-learn_map(True)
+learn_everything(True)

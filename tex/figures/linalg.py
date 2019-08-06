@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+"""
+Plots an image of the Doppler design matrix for a low
+degree inference problem.
+
+"""
 import matplotlib.pyplot as plt
 import numpy as np
 import paparazzi as pp
@@ -78,6 +83,7 @@ def get_ortho_longitude_lines(inc=np.pi/2, obl=0, theta=0,
                               dlon=np.pi/6, npts=1000):
     """
     Return the lines of constant longitude on an orthographic projection.
+    
     """
 
     # Angular quantities
@@ -167,7 +173,7 @@ nlam = 121
 lnlam = np.linspace(-6e-4, 6e-4, nlam)
 doppler = pp.Doppler(ydeg=ydeg, vsini=vsini, inc=inc)
 doppler._set_lnlam(lnlam)
-g = doppler.g
+g = doppler.gT()
 T = [None for n in range(doppler.N)]
 for n in range(doppler.N):
     diagonals = np.tile(g[n].reshape(-1, 1), doppler.K)
@@ -244,7 +250,8 @@ for n in range(ntheta):
     lat_lines = get_ortho_latitude_lines(inc=inc * np.pi / 180)
     for x, y in lat_lines:
         axins.plot(x, y, '#aaaaaa', lw=0.5, zorder=100)
-    lon_lines = get_ortho_longitude_lines(inc=inc * np.pi / 180, theta=np.pi + theta[n])
+    lon_lines = get_ortho_longitude_lines(inc=inc * np.pi / 180, 
+                                          theta=np.pi + theta[n])
     for n, l in enumerate(lon_lines):
         if n == 0:
             axins.plot(l[0], l[1], 'r-', lw=1.5, zorder=101)

@@ -20,21 +20,40 @@ __all__ = ["Doppler"]
 
 class Doppler(object):
     """
-    
+    Doppler imaging solver class.
+
+    Args:
+        ydeg (int, optional): Spherical harmonic degree. Defaults to 15.
+        vsini (int, optional): Projected equatorial velocity in km/s. 
+            Defaults to 40.
+        inc (float, optional): Inclination in degrees. Defaults to 40.0.
+        u_mu (float or ndarray, optional): Prior mean on the spherical 
+            harmonic coefficients. Defaults to 0.0.
+        u_sig (float or ndarray, optional): Prior standard deviation on 
+            the spherical harmonic coefficients. Defaults to 0.01.
+        vT_mu (float or ndarray, optional): Prior mean on the spectrum. 
+            Defaults to 1.0.
+        vT_sig (float, optional): Prior standard deviation on
+            the spectrum. Defaults to 0.3.
+        vT_rho (float, optional): Prior lengthscale on the Gaussian Process
+            prior on the spectrum. Set to zero to disable the GP.
+            Defaults to 3.e-5.
+        baseline_mu (float or ndarray, optional): Prior mean on the 
+            baseline. Defaults to 1.0.
+        baseline_sig (float or ndarray, optional): Prior standard 
+            deviation on the baseline. Defaults to 0.1.
     """
 
     def __init__(self, ydeg=15, vsini=40, inc=40.0,
                  u_mu=0.0, u_sig=0.01, vT_mu=1.0, vT_sig=0.3,
                  vT_rho=3.e-5, baseline_mu=1.0, baseline_sig=0.1):
-        """
-
-        """
+        # Stellar params
         self.ydeg = ydeg
         self.inc = inc
         self.vsini = vsini
 
         # Reset!
-        self._D = None
+        self._reset_cache()
         self._theta = None
         self._lnlam = None
         self.F = None
@@ -58,6 +77,12 @@ class Doppler(object):
         self.u = self.u_mu * np.ones(self.N - 1)
         self.vT = None
 
+    def _reset_cache(self):
+        # Reset the cache
+        self._D = None
+        self._g = None
+        self._T = None
+
     @property
     def ydeg(self):
         """
@@ -79,7 +104,7 @@ class Doppler(object):
         self._R = self._map.ops.R
 
         # Reset
-        self._D = None
+        self._reset_cache()
 
     @property
     def vsini(self):
@@ -92,7 +117,7 @@ class Doppler(object):
     @vsini.setter
     def vsini(self, value):
         self._vsini = value
-        self._D = None
+        self._reset_cache()
 
     @property
     def inc(self):
@@ -106,7 +131,7 @@ class Doppler(object):
     def inc(self, value):
         self._inc = value * np.pi / 180.0
         self._map.inc = value
-        self._D = None
+        self._reset_cache()
 
     @property
     def lnlam(self):
@@ -126,7 +151,7 @@ class Doppler(object):
         assert len(self._lnlam.shape) == 1, "Invalid wavelength grid shape."
         assert np.allclose(np.diff(self._lnlam), 
                            self._lnlam[1] - self._lnlam[0])
-        self._D = None
+        self._reset_cache()
         self._compute_gp()
 
     @property
@@ -199,7 +224,7 @@ class Doppler(object):
     def _set_theta(self, theta):
         # Set the angular phase (radians internally)
         self._theta = np.atleast_1d(theta) * np.pi / 180.
-        self._D = None
+        self._reset_cache()
 
     @property
     def vT_sig(self):
@@ -283,34 +308,42 @@ class Doppler(object):
 
     def gT(self):
         """
-        Return the vectorized convolution kernel `g^T`.
+        Return the vectorized convolution kernels `g^T`.
 
         This is a matrix whose rows are equal to the convolution kernels
         for each term in the  spherical harmonic decomposition of the 
         surface.
         """
-        g = self._A1T.dot(self.sT())
-        norm = np.trapz(g[0])
-        g /= norm
-        return g
+        # Allow caching of this matrix.
+        if self._g is None:
+            self._g = self._A1T.dot(self.sT())
+            norm = np.trapz(self._g[0])
+            self._g /= norm
+        return self._g
 
     def T(self):
         """
         Return the Toeplitz super-matrix.
 
         This is a horizontal stack of Toeplitz convolution matrices, one per
-        spherical harmonic.
+        spherical harmonic. 
+        
+        
+        ### nOT YET These matrices are then stacked vertically for
+        ###each rotational phase.
         """
-        W = self.W
-        Kp = self.Kp
-        K = self.K
-        g = self.gT()
-        T = [None for n in range(self.N)]
-        for n in range(self.N):
-            diagonals = np.tile(g[n].reshape(-1, 1), K)
-            offsets = np.arange(W)
-            T[n] = diags(diagonals, offsets, (K, Kp), format="csr")
-        return T
+        # Allow caching of this matrix.
+        if self._T is None:
+            W = self.W
+            Kp = self.Kp
+            K = self.K
+            g = self.gT()
+            self._T = [None for n in range(self.N)]
+            for n in range(self.N):
+                diagonals = np.tile(g[n].reshape(-1, 1), K)
+                offsets = np.arange(W)
+                self._T[n] = diags(diagonals, offsets, (K, Kp), format="csr")
+        return self._T
 
     def D(self, quiet=False):
         """
@@ -362,8 +395,8 @@ class Doppler(object):
         self.vT_true = None
         self.baseline_true = None
     
-    def generate_data(self, R=3e5, nlam=200, sigma=7.5e-6, nlines=20, 
-            ntheta=11, ferr=1.e-4, image=None):
+    def generate_data(self, R=3e5, nlam=200, sigma=7.5e-6, nlines=21, 
+                      ntheta=11, ferr=1.e-4, u=None, image=None, theta=None):
         """Generate a synthetic dataset.
         
         Args:
@@ -372,16 +405,28 @@ class Doppler(object):
                 Defaults to 200.
             sigma (float, optional): Line width in log space. Defaults to 
                 7.5e-6, equivalent to ~0.05A at 6430A.
-            nlines (int, optional): Number of additional small lines to include. 
-                Defaults to 20.
+            nlines (int, optional): Total number of lines to include. 
+                Defaults to 21.
             ntheta (int, optional): Number of spectra. Defaults to 11.
             ferr (float, optional): Gaussian error to add to the fluxes. 
                 Defaults to 1.e-3
+            u (ndarray, optional): The spherical harmonic vector for the map.
+                Defaults to ``None``, in which case the ``image`` is loaded.
             image (string, optional): Path to the image to expand in Ylms.
                 Defaults to "vogtstar.jpg"
+            theta (ndarray, optional): The rotational phase in degrees
+                at each epoch. Defaults to ``None``, in which case this is
+                set to vary uniformly between -180 and 180 with ``ntheta``
+                epochs.
         """
         # The theta array in degrees
-        theta = np.linspace(-180, 180, ntheta + 1)[:-1]
+        if theta is None:
+            if ntheta <= 1:
+                theta = [0.0]
+            else:
+                theta = np.linspace(-180, 180, ntheta + 1)[:-1]
+        else:
+            ntheta = len(theta)
         self._set_theta(theta)
 
         # The log-wavelength array
@@ -396,42 +441,49 @@ class Doppler(object):
         vT = 1 - 0.5 * np.exp(-0.5 * lnlam_padded ** 2 / sigma ** 2)
 
         # Scatter some smaller lines around for good measure
-        for _ in range(nlines):
+        for _ in range(nlines - 1):
             amp = 0.1 * np.random.random()
             mu = 2.1 * (0.5 - np.random.random()) * lnlam_padded.max()
             vT -= amp * np.exp(-0.5 * (lnlam_padded - mu) ** 2 / sigma ** 2)
 
         # Now generate our map
-        if image is None:
-            image = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
-                                 "vogtstar.jpg")
-        self._map.load(image)
+        if u is None:
+            if image is None:
+                image = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
+                                    "vogtstar.jpg")
+            self._map.load(image)
+        else:
+            if len(u) == self.N - 1:
+                self._map[1:, :] = u
+            elif len(u) == self.N:
+                self._map[1:, :] = u[1:]
+            else:
+                raise ValueError("The vector `u` has the wrong size.")
         u = np.array(self._map.y.eval())
 
-        # Compute the map matrix & the flux matrix
-        A = u.reshape(-1, 1).dot(vT.reshape(1, -1))
-        F = self.D().dot(A.reshape(-1)).reshape(ntheta, -1)
+        # Compute the model
+        self.u = u[1:]
+        self.vT = vT
+        F = self.model()
 
-        # Let's divide out the baseline flux. This is a bummer,
-        # since it contains really important information about
-        # the map, but unfortunately we can't typically
-        # measure it with a spectrograph.
-        baseline = self._map.flux(theta=self.theta).eval().reshape(-1, 1)
-        F /= baseline
-
-        # Finally, we add some noise
+        # Add some noise
         F += ferr * np.random.randn(*F.shape)
 
         # Store the dataset
-        self.u_true = u[1:]
-        self.vT_true = vT
-        self.baseline_true = baseline.reshape(-1)
+        self.u_true = self.u
+        self.vT_true = self.vT
+        self.baseline_true = self.baseline().reshape(-1)
         self.F = F
         self.ferr = ferr
         self._F_CInv = np.ones_like(self.F) / self.ferr ** 2
 
+        # Reset the coeffs
+        self.u = self.u_mu * np.ones(self.N - 1)
+        self.vT = None
+
     def show(self, **kwargs):
         """
+        Show the image of the current map solution.
 
         """
         self._map[1:, :] = self.u
@@ -451,7 +503,11 @@ class Doppler(object):
 
         """
         A = np.append([1], self.u).reshape(-1, 1).dot(self.vT.reshape(1, -1))
+        
+        # TODO: convolve
         model = self.D().dot(A.reshape(-1)).reshape(self.M, -1)
+        
+        
         model /= self.baseline()
         return model
 
@@ -520,10 +576,31 @@ class Doppler(object):
     
     def solve(self, u=None, vT=None, baseline=None,
               u_guess=None, vT_guess=None, niter1=10, 
-              niter2=100, T1=1.0, T2=1.0, optimizer="NAdam", quiet=False,
-              **kwargs):
-        """
+              niter2=100, T1=1.0, T2=1.0, optimizer="NAdam", dcf=10.0,
+              quiet=False, **kwargs):
+        """Solve the Doppler imaging problem.
         
+        Args:
+            u ([type], optional): [description]. Defaults to None.
+            vT ([type], optional): [description]. Defaults to None.
+            baseline ([type], optional): [description]. Defaults to None.
+            u_guess ([type], optional): [description]. Defaults to None.
+            vT_guess ([type], optional): [description]. Defaults to None.
+            niter1 (int, optional): [description]. Defaults to 10.
+            niter2 (int, optional): [description]. Defaults to 100.
+            T1 (float, optional): [description]. Defaults to 1.0.
+            T2 (float, optional): [description]. Defaults to 1.0.
+            optimizer (str, optional): [description]. Defaults to "NAdam".
+            dcf (float, optional): Factor by which to scale the 
+                uncertainty on the mean spectrum when using it as a
+                predictor for the de-convolved rest frame spectrum.
+                If your answer depends sensitively on this value, you
+                probably need a better guess for `v^T`.
+                Defaults to 0.1.
+            quiet (bool, optional): [description]. Defaults to False.
+        
+        Returns:
+            The array of loss values during the optimization.
         """
         if optimizer.lower() == "nadam":
             optimizer = NAdam
@@ -580,10 +657,8 @@ class Doppler(object):
                         offsets = np.arange(self.W)
                         A = diags(diagonals, offsets, (self.K, self.Kp), 
                                 format="csr")
-
-                        # TODO: Make the variance below a user param
-
-                        LInv = 1e-4 * np.eye(A.shape[1])
+                        LInv = dcf ** 2 * self.ferr ** 2 / self.vT_sig ** 2 * \
+                                np.eye(A.shape[1])
                         vT_guess = 1.0 + np.linalg.solve(
                             A.T.dot(A).toarray() + LInv, A.T.dot(fmean))
 
