@@ -145,6 +145,9 @@ def plot(
         A = np.linalg.solve(U.T, P.T)
         img_sig_rect = np.sqrt(np.sum(A ** 2, axis=0)).reshape(res, res)
 
+        # This is how I'd compute the *prior* uncertainty on the pixels
+        # prior_sig = P[0].dot(doppler.u_sig * P[0])
+
     # Normalize to the maximum for plotting
     vmax = max(np.nanmax(img_rect), np.nanmax(img_true_rect))
     img /= vmax
@@ -326,9 +329,16 @@ def learn_everything(high_snr=False):
     dop.generate_data(ferr=ferr)
 
     # Solve!
-    loss = dop.solve(niter1=niter1, niter2=niter2, lr=5e-4)
+    loss, cho_u, cho_vT = dop.solve(niter1=niter1, niter2=niter2, lr=5e-4)
 
-    plot(dop, loss=loss, open_plots=True, render_movies=True)
+    plot(
+        dop,
+        loss=loss,
+        cho_u=cho_u,
+        cho_vT=cho_vT,
+        open_plots=True,
+        render_movies=True,
+    )
 
 
 def learn_map(high_snr=False):
@@ -357,4 +367,25 @@ def learn_map(high_snr=False):
     plot(dop, cho_u=cho_u, open_plots=False, render_movies=False)
 
 
-learn_map(True)
+def learn_map_and_baseline(high_snr=False):
+    """
+
+    """
+    # High or low SNR?
+    if high_snr:
+        ferr = 1e-4
+    else:
+        ferr = 1e-3
+
+    # Generate data
+    dop = pp.Doppler(ydeg=15)
+    dop.generate_data(ferr=ferr)
+
+    # Compute u
+    loss, cho_u, _ = dop.solve(vT=dop.vT_true, niter1=10, niter2=50)
+
+    # Plot
+    plot(dop, loss=loss, cho_u=cho_u, open_plots=True, render_movies=False)
+
+
+learn_everything()

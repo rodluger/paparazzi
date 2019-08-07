@@ -715,14 +715,20 @@ class Doppler(object):
             raise ValueError("Invalid optimizer.")
 
         # Figure out what to solve for
-        if (u is not None) and (vT is not None):
+        known = []
+        if vT is not None:
+            known += ["vT"]
+        if u is not None:
+            known += ["u"]
+
+        if ("u" in known) and ("vT" in known):
 
             # Nothing to do here but ingest the values!
             self.u = u
             self.vT = vT
             return self.loss(), None, None
 
-        elif u is not None:
+        elif "u" in known:
 
             # Easy: it's a linear problem
             self.u = u
@@ -731,7 +737,7 @@ class Doppler(object):
 
         else:
 
-            if (vT is not None) and (baseline is not None):
+            if ("vT" in known) and (baseline is not None):
 
                 # Still a linear problem!
                 self.vT = vT
@@ -742,7 +748,7 @@ class Doppler(object):
 
                 # Non-linear. Let's use (N)Adam.
 
-                if vT is not None:
+                if "vT" in known:
 
                     # We know `vT` and need to solve for
                     # `u` w/o any baseline knowledge.
@@ -792,72 +798,121 @@ class Doppler(object):
                 loss_val[0] = self.loss()
                 for n in tqdm(1 + np.arange(niter1), disable=quiet):
                     self.compute_u(T=T1)
-                    self.compute_vT(T=T1)
+                    if "vT" not in known:
+                        self.compute_vT(T=T1)
                     loss_val[n] = self.loss()
 
-                # Theano nonlienar solve. Variables:
-                u = theano.shared(self.u)
-                vT = theano.shared(self.vT)
-                if vT is not None:
-                    theano_vars = [u]
-                else:
-                    theano_vars = [u, vT]
+                # Non-linear solve
+                if niter2 > 0:
 
-                # Compute the model
-                D = ts.as_sparse_variable(self.D())
-                a = tt.reshape(
-                    tt.dot(
-                        tt.reshape(tt.concatenate([[1.0], u]), (-1, 1)),
-                        tt.reshape(vT, (1, -1)),
-                    ),
-                    (-1,),
-                )
-                self._map[1:, :] = u
-                b = self._map.flux(theta=self.theta)
-                B = tt.reshape(b, (-1, 1))
-                M = tt.reshape(ts.dot(D, a), (self.M, -1)) / B
+                    # Theano nonlienar solve. Variables:
+                    u = theano.shared(self.u)
+                    vT = theano.shared(self.vT)
+                    if "vT" in known:
+                        theano_vars = [u]
+                    else:
+                        theano_vars = [u, vT]
 
-                # Compute the loss
-                r = tt.reshape(self.F - M, (-1,))
-                cov = tt.reshape(self._F_CInv, (-1,))
-                lnlike = -0.5 * tt.sum(r ** 2 * cov)
-                lnprior = (
-                    -0.5 * tt.sum((u - self.u_mu) ** 2 / self.u_sig ** 2)
-                    + -0.5
-                    * tt.sum(
-                        (b - self.baseline_mu) ** 2 / self.baseline_sig ** 2
-                    )
-                    + -0.5
-                    * tt.dot(
+                    # Compute the model
+                    D = ts.as_sparse_variable(self.D())
+                    a = tt.reshape(
                         tt.dot(
-                            tt.reshape((vT - self.vT_mu), (1, -1)),
-                            self._vT_CInv,
+                            tt.reshape(tt.concatenate([[1.0], u]), (-1, 1)),
+                            tt.reshape(vT, (1, -1)),
                         ),
-                        tt.reshape((vT - self.vT_mu), (-1, 1)),
-                    )[0, 0]
-                )
-                loss = -(lnlike + lnprior)
-                loss_T = -(lnlike / T2 + lnprior)  # tempered loss
-                best_loss = loss.eval()
-                best_u = u.eval()
-                best_vT = vT.eval()
+                        (-1,),
+                    )
+                    self._map[1:, :] = u
+                    b = self._map.flux(theta=self.theta)
+                    B = tt.reshape(b, (-1, 1))
+                    M = tt.reshape(ts.dot(D, a), (self.M, -1)) / B
 
-                # Optimize
-                if not quiet:
-                    print("Running non-linear solver...")
-                upd = optimizer(loss_T, theano_vars, **kwargs)
-                train = theano.function([], [u, vT, loss], updates=upd)
-                for n in tqdm(niter1 + 1 + np.arange(niter2), disable=quiet):
-                    u_val, vT_val, loss_val[n] = train()
-                    if loss_val[n] < best_loss:
-                        best_loss = loss_val[n]
-                        best_u = u_val
-                        best_vT = vT_val
+                    # Compute the loss
+                    r = tt.reshape(self.F - M, (-1,))
+                    cov = tt.reshape(self._F_CInv, (-1,))
+                    lnlike = -0.5 * tt.sum(r ** 2 * cov)
+                    lnprior = (
+                        -0.5 * tt.sum((u - self.u_mu) ** 2 / self.u_sig ** 2)
+                        + -0.5
+                        * tt.sum(
+                            (b - self.baseline_mu) ** 2
+                            / self.baseline_sig ** 2
+                        )
+                        + -0.5
+                        * tt.dot(
+                            tt.dot(
+                                tt.reshape((vT - self.vT_mu), (1, -1)),
+                                self._vT_CInv,
+                            ),
+                            tt.reshape((vT - self.vT_mu), (-1, 1)),
+                        )[0, 0]
+                    )
+                    loss = -(lnlike + lnprior)
+                    loss_T = -(lnlike / T2 + lnprior)  # tempered loss
+                    best_loss = loss.eval()
+                    best_u = u.eval()
+                    best_vT = vT.eval()
 
-                # TODO: If `vT` is known, return the approximate covariance
+                    # Optimize
+                    if not quiet:
+                        print("Running non-linear solver...")
+                    upd = optimizer(loss_T, theano_vars, **kwargs)
+                    train = theano.function([], [u, vT, loss], updates=upd)
+                    for n in tqdm(
+                        niter1 + 1 + np.arange(niter2), disable=quiet
+                    ):
+                        u_val, vT_val, loss_val[n] = train()
+                        if loss_val[n] < best_loss:
+                            best_loss = loss_val[n]
+                            best_u = u_val
+                            best_vT = vT_val
+
+                    # We are done!
+                    self.u = best_u
+                    self.vT = best_vT
+
+                # If `vT` is known, return the approximate covariance
                 # for `u` based on a Taylor expansion of the problem.
+                # TODO: Experimental! Very possibly bugged!
+                """
+                if "vT" in known:
 
-                # We are done!
-                self.u = best_u
-                self.vT = best_vT
-                return loss_val, None, None
+                    # f = A . u / B . u + const.
+                    V = sparse_block_diag(
+                        [self.vT.reshape(-1, 1) for n in range(self.N)]
+                    )
+                    A = np.array(self.D().dot(V).todense())[:, 1:]
+                    B = self._map.X(theta=self.theta).eval()[:, 1:]
+                    B = np.repeat(B, 201, axis=0)
+
+                    # Taylor expansion to get the linear design matrix,
+                    #   f ~ C . u + const.
+                    Au0 = np.dot(A, self.u)
+                    Bu0 = np.dot(B, self.u)
+                    C = (1 / Bu0).reshape(-1, 1) * A - (
+                        Au0 / Bu0 ** 2
+                    ).reshape(-1, 1) * B
+
+                    # Compute the (untempered) cov. under the linear model
+                    CTCInv = np.multiply(C.T, self._F_CInv.reshape(-1))
+                    CTCInvC = CTCInv.dot(C)
+                    cinv = np.ones(self.N - 1) / self.u_sig ** 2
+                    np.fill_diagonal(CTCInvC, CTCInvC.diagonal() + cinv)
+                    cho_u = cho_factor(CTCInvC)
+                """
+
+                # Estimate the covariance of `u` conditioned on `vT`
+                # and the covariance of `vT` conditioned on `u`.
+                # NOTE: Let's try to work out the stuff above for cho_u.
+                u_curr = np.array(self.u)
+                cho_u = self.compute_u()
+                self.u = u_curr
+
+                if "vT" not in known:
+                    vT_curr = np.array(self.vT)
+                    cho_vT = self.compute_vT()
+                    self.vT = vT_curr
+                else:
+                    cho_vT = None
+
+                return loss_val, cho_u, cho_vT
