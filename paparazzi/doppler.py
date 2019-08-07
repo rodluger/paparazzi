@@ -388,13 +388,13 @@ class Doppler(object):
                 # Rotate the kernels
                 # Note that we are computing R^T(theta) = R(-theta) here
                 RT = self._R(axis, -self.theta[m] * np.pi / 180.0)
-                g = np.empty_like(kT0)
+                kT = np.empty_like(kT0)
                 for l in range(self.ydeg + 1):
                     idx = slice(l ** 2, (l + 1) ** 2)
-                    g[idx] = RT[l].dot(kT0[idx])
+                    kT[idx] = RT[l].dot(kT0[idx])
 
                 # Populate the Doppler matrix
-                D[m].data = np.tile(g.reshape(-1), K)
+                D[m].data = np.tile(kT.reshape(-1), K)
 
             # Stack the rows and we are done!
             # TODO: This can probably be sped up.
@@ -547,16 +547,37 @@ class Doppler(object):
         A = np.append([1], self.u).reshape(-1, 1).dot(self.vT.reshape(1, -1))
         # If `D` is available, use it; otherwise, do a convolution.
         if self._D is not None:
+
+            # Just the dot product with the design matrix
             model = self.D().dot(A.reshape(-1)).reshape(self.M, -1)
+
         else:
-            kT = self.kT()
-            model = np.sum(
-                [
-                    np.convolve(kT[n][::-1], A[n], mode="valid")
-                    for n in range(self.N)
-                ],
-                axis=0,
-            ).reshape(self.M, -1)
+
+            # Pre-compute some stuff
+            kT0 = self.kT()
+            sini = np.sin(self._inc)
+            cosi = np.cos(self._inc)
+            axis = [0, sini, cosi]
+
+            # Loop through each epoch
+            model = np.empty((self.M, self.K))
+            for m in range(self.M):
+
+                # Rotate the kernels (note that R^T(theta) = R(-theta))
+                RT = self._R(axis, -self.theta[m] * np.pi / 180.0)
+                kT = np.empty_like(kT0)
+                for l in range(self.ydeg + 1):
+                    idx = slice(l ** 2, (l + 1) ** 2)
+                    kT[idx] = RT[l].dot(kT0[idx])
+
+                # Compute the model for this epoch
+                model[m] = np.sum(
+                    [
+                        np.convolve(kT[n][::-1], A[n], mode="valid")
+                        for n in range(self.N)
+                    ],
+                    axis=0,
+                )
         model /= self.baseline()
         return model
 
@@ -705,8 +726,8 @@ class Doppler(object):
 
             # Easy: it's a linear problem
             self.u = u
-            self.compute_vT(T=T1)
-            return self.loss(), None, None
+            cho_vT = self.compute_vT(T=T1)
+            return self.loss(), None, cho_vT
 
         else:
 
@@ -714,8 +735,8 @@ class Doppler(object):
 
                 # Still a linear problem!
                 self.vT = vT
-                self.compute_u(T=T1, baseline=baseline)
-                return self.loss(), None, None
+                cho_u = self.compute_u(T=T1, baseline=baseline)
+                return self.loss(), cho_u, None
 
             else:
 
@@ -832,6 +853,9 @@ class Doppler(object):
                         best_loss = loss_val[n]
                         best_u = u_val
                         best_vT = vT_val
+
+                # TODO: If `vT` is known, return the approximate covariance
+                # for `u` based on a Taylor expansion of the problem.
 
                 # We are done!
                 self.u = best_u

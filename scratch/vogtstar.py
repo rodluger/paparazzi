@@ -244,7 +244,11 @@ def learn_map(high_snr=False):
     vT = dop.vT_true
 
     # Compute u
-    dop.solve(vT=vT, baseline=baseline)
+    _, cho_u, _ = dop.solve(vT=vT, baseline=baseline)
+
+    import pdb
+
+    pdb.set_trace()
 
     plot(dop, open_plots=True, render_movies=True)
 
