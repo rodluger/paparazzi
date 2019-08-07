@@ -249,4 +249,4 @@ def learn_map(high_snr=False):
     plot(dop, open_plots=True, render_movies=True)
 
 
-learn_everything(True)
+learn_map(True)
