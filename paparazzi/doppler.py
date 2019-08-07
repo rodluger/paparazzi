@@ -545,10 +545,18 @@ class Doppler(object):
 
         """
         A = np.append([1], self.u).reshape(-1, 1).dot(self.vT.reshape(1, -1))
-
-        # TODO: convolve
-        model = self.D().dot(A.reshape(-1)).reshape(self.M, -1)
-
+        # If `D` is available, use it; otherwise, do a convolution.
+        if self._D is not None:
+            model = self.D().dot(A.reshape(-1)).reshape(self.M, -1)
+        else:
+            kT = self.kT()
+            model = np.sum(
+                [
+                    np.convolve(kT[n][::-1], A[n], mode="valid")
+                    for n in range(self.N)
+                ],
+                axis=0,
+            ).reshape(self.M, -1)
         model /= self.baseline()
         return model
 
@@ -581,6 +589,8 @@ class Doppler(object):
         Linear solve for `u` given `v^T` and an optional baseline 
         and temperature.
 
+        Returns the Cholesky decomposition of the covariance of `u`.
+
         """
         if baseline is None:
             baseline = self.baseline()
@@ -597,12 +607,16 @@ class Doppler(object):
         cinv = np.ones(self.N - 1) / self.u_sig ** 2
         mu = np.ones(self.N - 1) * self.u_mu
         np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + cinv)
-        self.u = np.linalg.solve(ATCInvA, ATCInvf + cinv * mu)
+        cho_C = cho_factor(ATCInvA)
+        self.u = cho_solve(cho_C, ATCInvf + cinv * mu)
+        return cho_C
 
     def compute_vT(self, T=1.0, baseline=None):
         """
         Linear solve for `v^T` given `u` and an optional baseline 
         and temperature.
+
+        Returns the Cholesky decomposition of the covariance of `vT`.
 
         """
         if baseline is None:
@@ -625,7 +639,9 @@ class Doppler(object):
         ATCInvf = np.dot(ATCInv, (self.F * baseline).reshape(-1))
         CInv = cho_solve(self._vT_cho_C, np.eye(Kp))
         CInvmu = cho_solve(self._vT_cho_C, np.ones(Kp) * self.vT_mu)
-        self.vT = np.linalg.solve(ATCInvA + CInv, ATCInvf + CInvmu)
+        cho_vT = cho_factor(ATCInvA + CInv)
+        self.vT = cho_solve(cho_vT, ATCInvf + CInvmu)
+        return cho_vT
 
     def solve(
         self,
@@ -665,7 +681,10 @@ class Doppler(object):
             quiet (bool, optional): [description]. Defaults to False.
         
         Returns:
-            The array of loss values during the optimization.
+            ``(loss, cho_u, cho_vT)``, a tuple containing the array of
+            loss values during the optimization and the Cholesky factorization
+            of the covariance matrices of ``u`` and ``vT``, if available 
+            (otherwise the latter two are set to ``None``.)
         """
         if optimizer.lower() == "nadam":
             optimizer = NAdam
@@ -680,14 +699,14 @@ class Doppler(object):
             # Nothing to do here but ingest the values!
             self.u = u
             self.vT = vT
-            return self.loss()
+            return self.loss(), None, None
 
         elif u is not None:
 
             # Easy: it's a linear problem
             self.u = u
             self.compute_vT(T=T1)
-            return self.loss()
+            return self.loss(), None, None
 
         else:
 
@@ -696,7 +715,7 @@ class Doppler(object):
                 # Still a linear problem!
                 self.vT = vT
                 self.compute_u(T=T1, baseline=baseline)
-                return self.loss()
+                return self.loss(), None, None
 
             else:
 
@@ -817,4 +836,4 @@ class Doppler(object):
                 # We are done!
                 self.u = best_u
                 self.vT = best_vT
-                return loss_val
+                return loss_val, None, None
