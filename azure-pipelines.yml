@@ -1,10 +1,9 @@
-# Python package
-# Create and test a Python package on multiple Python versions.
-# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/python
-
-# no PR builds
+# no pull requests
 pr: none
+
+# environment variables
+variables:
+- group: paparazzi-variables
 
 pool:
   vmImage: Ubuntu-16.04
