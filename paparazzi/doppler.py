@@ -91,7 +91,7 @@ class Doppler(object):
     def _reset_cache(self):
         # Reset the cache
         self._D = None
-        self._g = None
+        self._kT = None
 
     @property
     def ydeg(self):
@@ -325,20 +325,20 @@ class Doppler(object):
         s[n] = sijk[i, j, k]
         return s
 
-    def gT(self):
+    def kT(self):
         """
-        Return the vectorized convolution kernels `g^T`.
+        Return the vectorized convolution kernels `k^T`.
 
         This is a matrix whose rows are equal to the convolution kernels
         for each term in the  spherical harmonic decomposition of the 
         surface.
         """
         # Allow caching of this matrix.
-        if self._g is None:
-            self._g = self._A1T.dot(self.sT())
-            norm = np.trapz(self._g[0])
-            self._g /= norm
-        return self._g
+        if self._kT is None:
+            self._kT = self._A1T.dot(self.sT())
+            norm = np.trapz(self._kT[0])
+            self._kT /= norm
+        return self._kT
 
     def D(self, quiet=False):
         """
@@ -358,7 +358,7 @@ class Doppler(object):
             W = self.W
             Kp = self.Kp
             K = self.K
-            g0 = self.gT()
+            kT0 = self.kT()
 
             # Rotation axis
             sini = np.sin(self._inc)
@@ -388,10 +388,10 @@ class Doppler(object):
                 # Rotate the kernels
                 # Note that we are computing R^T(theta) = R(-theta) here
                 RT = self._R(axis, -self.theta[m] * np.pi / 180.0)
-                g = np.empty_like(g0)
+                g = np.empty_like(kT0)
                 for l in range(self.ydeg + 1):
                     idx = slice(l ** 2, (l + 1) ** 2)
-                    g[idx] = RT[l].dot(g0[idx])
+                    g[idx] = RT[l].dot(kT0[idx])
 
                 # Populate the Doppler matrix
                 D[m].data = np.tile(g.reshape(-1), K)
@@ -718,7 +718,7 @@ class Doppler(object):
                         fmean = np.mean(self.F, axis=0)
                         fmean -= np.mean(fmean)
                         diagonals = np.tile(
-                            self.gT()[0].reshape(-1, 1), self.K
+                            self.kT()[0].reshape(-1, 1), self.K
                         )
                         offsets = np.arange(self.W)
                         A = diags(

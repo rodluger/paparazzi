@@ -219,7 +219,7 @@ def learn_everything(high_snr=False):
     dop.generate_data(ferr=ferr)
 
     # Solve!
-    loss = dop.solve(niter1=niter1, niter2=niter2, lr=2e-4)
+    loss = dop.solve(niter1=niter1, niter2=niter2, lr=5e-4)
 
     plot(dop, loss=loss, open_plots=True, render_movies=True)
 

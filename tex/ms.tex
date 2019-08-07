@@ -4,12 +4,10 @@
 \input{cortex}
 
 
-\newcommand{\s}{\bvec{s}}
-\newcommand{\p}{\bvec{p}}
+\newcommand{\sT}{\bvec{s}^\top}
 \newcommand{\R}{\bvec{R}}
 \newcommand{\AOne}{\bvec{A_1}}
 \newcommand{\alm}{\bvec{a}}
-\newcommand{\Y}{\bvec{Y}}
 \newcommand{\x}{\bvec{x}}
 \newcommand{\kT}{\bvec{k}^\top}
 \newcommand{\D}{\mathcal{D}}
@@ -19,6 +17,10 @@
 \newcommand{\Dargs}{\bvec{d}}
 \newcommand{\lmax}{\ensuremath{l_\mathrm{max}}}
 
+% TODO: Use blackboard bold (bbm)
+\newcommand{\ylmbasis}{\boldsymbol{\psi}^\top}
+\newcommand{\pbasis}{\boldsymbol{\phi}^\top}
+\newcommand{\pbasisn}{\ensuremath{\phi_n}}
 
 % Bibliography stuff
 \bibliographystyle{aasjournal}
@@ -136,11 +138,11 @@ as a convolution:
 where $\delta$ is the
 Dirac delta function and
 $*$ denotes the linear convolution operator, defined for
-two arbitrary functions $f$ and $h$ as the integral
+two arbitrary functions $g$ and $h$ as the integral
 %
 \begin{align}
     \label{eq:deconv:convolution_def}
-    (f * h)(t) \equiv \int_{-\infty}^\infty f(\tau) h(t - \tau) d\tau
+    (g * h)(t) \equiv \int_{-\infty}^\infty f(\tau) h(t - \tau) d\tau
 \end{align}
 %
 for some independent coordinate $t$ and dummy parameter $\tau$.
@@ -168,9 +170,9 @@ coefficient at log wavelength in the rest frame $\lnlam_0$ and time $t$. For
 convenience, we may write this equation in vector form:
 %
 \begin{align}
-    \label{eq:deconv:Ixi0vec}
+    \label{eq:deconv:Ivec}
     I(\lnlam_0, \x, t) &=
-    \Y^\top(\x) \,
+    \ylmbasis(\x) \,
     \alm(\lnlam_0, t)
     \quad ,
 \end{align}
@@ -192,7 +194,7 @@ where
 is the vector of spherical harmonic coefficients and
 %
 \begin{align}
-    \Y^\top(\x) \equiv 
+    \ylmbasis(\x) \equiv 
 \Big( 
     Y_{0,0}(\x) \quad\quad\quad\quad\quad\quad 
     Y_{1,-1}(\x) \quad\quad\quad\quad\quad\quad 
@@ -226,9 +228,9 @@ $\R(t)$; we discuss this later.
 The equation for the specific intensity in the rest frame now reads
 %
 \begin{align}
-    \label{eq:deconv:Ixi0vecfull}
+    \label{eq:deconv:Ivecfull}
     I(\lnlam_0, \x, t) &=
-    \Y^\top(\x)
+    \ylmbasis(\x)
     \,
     \R(t)
     \,
@@ -247,7 +249,7 @@ observed spectrum:
     \label{eq:deconv:F2d}
     F(\lnlam, t, \Dargs) &=
     \iint\limits_{\Surf(\x)}
-    \Y^\top(\x)
+    \ylmbasis(\x)
     \,
     \R(t)
     \,
@@ -257,7 +259,7 @@ observed spectrum:
     \nonumber \\[0.5em]
     &=
     \iint\limits_{\Surf(\x)}
-    \Y^\top(\x)
+    \ylmbasis(\x)
     \delta\big(\lnlam_0 + \D(\x, \Dargs)\big)
     \mathrm{d}\Surf(\x)
     \,
@@ -282,15 +284,15 @@ delta function in the integrand allows us to reduce the double integral
 to a line integral:
 %
 \begin{align}
-    \label{eq:deconv:gT}
+    \label{eq:deconv:kT}
     \iint\limits_{\Surf(\x)}
-    \Y^\top(\x)
+    \ylmbasis(\x)
     \delta\big(\lnlam_0 + \D(\x, \Dargs)\big)
     \mathrm{d}\Surf(\x)
     \, \,
     &=  
     \int\limits_{\Curve(\lnlam, \x, \Dargs)}
-    \hspace*{-0.6em}\Y^\top(\x)
+    \hspace*{-0.6em}\ylmbasis(\x)
     \mathrm{d}\Curve(\lnlam, \x, \Dargs)
     \nonumber \\[0.5em]
     &\equiv \kT(\lnlam, \Dargs)
@@ -316,10 +318,10 @@ We thus have
 Equation~(\ref{eq:deconv:F}) is the deconvolution of the
 observed spectrum into velocity terms, temporal terms, and spectral/spatial
 terms, respectively. In the following sections, we will discuss how to
-efficiently solve the line integral in Equation~(\ref{eq:deconv:gT}).
+efficiently solve the line integral in Equation~(\ref{eq:deconv:kT}).
 
 \subsection{Computing the kernel $\kT$}
-\label{sec:g}
+\label{sec:kT}
 %
 In the case that the star's rotation is rigid (i.e., differential rotation
 is negligible) and other effects such as convective blueshift
@@ -335,7 +337,7 @@ we have
 and
 %
 \begin{align}
-    \label{eq:g:D}
+    \label{eq:kT:D}
     \D(\x, \Dargs) &= 
         \frac{1}{2}\ln\left( 
             \dfrac{1 + \dfrac{\omega \sin i \, x}{c}}
@@ -348,58 +350,13 @@ where the parameters $\Dargs$ of the Doppler field are the
 angular velocity, $\omega$, and the inclination of the star with
 respect to $\hat{y}$, $i$. 
 
-In order to solve Equation~(\ref{eq:deconv:gT}), let us change basis from
-spherical harmonics to polynomials on the sphere:
-%
-\begin{align}
-    \label{eq:g:gT}
-    \kT(\lnlam, \Dargs) &\equiv
-    \s^\top(\lnlam, \Dargs)
-    \AOne
-\end{align}
-%
-where
-%
-\begin{align}
-    \label{eq:g:sTdef}
-    \s^\top(\lnlam, \Dargs)
-    &\equiv
-    \int\limits_{\Curve(\lnlam, \x, \Dargs)}
-    \tilde{\p}^\top(\x)
-    \mathrm{d}\Curve(\lnlam, \x, \Dargs)
-\end{align}
-%
-is the vector of integral solutions for each spherical harmonic,
-%
-\begin{align}
-    \tilde{\p}(\x) \equiv 
-\Big( 
-    1 \quad\quad\quad\quad\quad\quad 
-    x \quad\quad\quad\quad\quad\quad 
-    z \quad\quad\quad\quad\quad\quad 
-    y \quad\quad\quad\quad\quad\quad 
-    x^2 \quad\quad\quad\quad\quad\quad 
-    xz \quad\quad\quad\quad\quad\quad 
-    xy \quad\quad\quad\quad\quad\quad
-    yz \quad\quad\quad\quad\quad\quad 
-    y^2 \quad\quad\quad\quad\quad\quad
-    ... 
-\Big)^\top
-\end{align}
-%
-is the polynomial basis \citep[Equation 7 in][]{Luger2019},
-and $\AOne$ is the change of basis matrix from spherical harmonics
-to polynomials 
-\citep[Equation B11 in][]{Luger2019}. On the observer-facing surface of 
-the unit sphere, the coordinate $z$ is given by $\sqrt{1 - x^2 - y^2}$.
-
-\begin{figure}[h!]
+\begin{figure}[t!]
     \begin{centering}
-    \includegraphics[width=\linewidth]{figures/g.pdf}
+    \includegraphics[width=\linewidth]{figures/kT.pdf}
     \oscaption{g}{%
         The Doppler $\kT$ basis for a rigidly rotating star
-        computed from Equation~(\ref{eq:g:gT}) and
-        Equation~(\ref{eq:g:sTrecurrence}) up to spherical 
+        computed from Equation~(\ref{eq:kT:kT}) and
+        Equation~(\ref{eq:kT:sTrecurrence}) up to spherical 
         harmonic degree $l=10$. Rows correspond to the degree $l$ and
         columns correspond to the order $m$. These functions encode
         the contribution of each spherical harmonic to the rotational
@@ -407,17 +364,18 @@ the unit sphere, the coordinate $z$ is given by $\sqrt{1 - x^2 - y^2}$.
         rotational axis is chosen to be aligned with $\hat{y}$,
         none of the $m < 0$ harmonics contribute to the observed
         spectrum.
-        \label{fig:g}
+        \label{fig:kT}
     }
     \end{centering}
 \end{figure}
 
-If we assume the star is unocculted, the region of integration $\Surf$ 
-is simply the unit disk, so $\Curve(\lnlam, \x, \Dargs)$ 
+If we assume the star is unocculted, the region of integration $\Surf(\x)$ 
+in Equation~(\ref{eq:deconv:kT}) is simply the unit disk, 
+so $\Curve(\lnlam, \x, \Dargs)$ 
 is the set of all points
 that satisfy both $\lnlam_0 + \D(\x, \Dargs) = 0$ and 
 $x^2 + y^2 \le 1$.
-Solving Equation~(\ref{eq:g:D}) for $x$, we find that 
+Solving Equation~(\ref{eq:kT:D}) for $x$, we find that 
 the curves $\Curve(\lnlam, \x, \Dargs)$ 
 are simply vertical lines on the unit disk given by 
 %
@@ -429,88 +387,26 @@ are simply vertical lines on the unit disk given by
     \quad .
 \end{align}
 %
-The integral in Equation~(\ref{eq:g:sTdef}) is therefore just an integral
-over $y$:
+The integral in Equation~(\ref{eq:deconv:kT}) is therefore just the line integral
+of the spherical harmonic basis over $y$:
 %
 \begin{align}
-    \label{eq:g:sT}
-    \s^\top(\lnlam, \Dargs) 
+    \label{eq:kT:kT}
+    \kT(\lnlam, \Dargs) 
     &=    
     \int\limits_{-\sqrt{1 - x^2}}^
                 {\sqrt{1 - x^2}}
-    \tilde{\p}^\top
+    \ylmbasis
     \Big(x, y\Big)
     \mathrm{d}y
     \quad .
 \end{align}
 %
-From \citet{Luger2019}, the $n^\mathrm{th}$ term of the polynomial basis
-is a polynomial in $x$, $y$, and $z = \sqrt{1 - x^2 - y^2}$:
+In the Appendix we derive an analytic solution to this integral and show
+how to recursively solve it for all terms in the spherical harmonic basis. 
 %
-\begin{proof}{PolynomialBasis}
-    \tilde{p}_n 
-    &=
-    x^i y^j z^k
-\end{proof}
-%
-where $i, j, k$ are integers given by
-%
-\begin{proof}{PolynomialBasis}
-    \label{eq:g:lm}
-    i &= \floor*{\Lambda - \Delta}
-    \nonumber \\[0.5em]
-    j &= \floor*{\Delta}
-    \nonumber \\[0.5em]
-    k &= \ceil*{\Delta} - \floor*{\Delta}
-\end{proof}
-%
-with
-%
-\begin{proof}{PolynomialBasis}
-    \Lambda &= \floor*{\sqrt{n}}
-    \nonumber \\[0.5em]
-    \Delta &= \frac{n - \Lambda^2}{2}
-    \quad .
-\end{proof}
-%
-We may now explicitly write down the $n^\mathrm{th}$ term of 
-Equation~(\ref{eq:g:sT}),
-%
-\begin{align}
-    \label{eq:g:sTexpression}
-    s_n(\lnlam, \Dargs) 
-    &=    
-    s_{i,\,j,\,k}(\lnlam, \Dargs) 
-    =    
-    x^i
-    \int\limits_{-\sqrt{1 - x^2}}^
-                {\sqrt{1 - x^2}}
-        y^j
-        \left(1 - x^2 - y^2\right)^{\frac{k}{2}} \,
-    \mathrm{d}y 
-    \quad .
-\end{align}
-%
-As we show in the Appendix, the solution to this integral
-is analytic and expressible in terms of simple recurrence
-relations. Given the boundary conditions
-%
-\begin{align}
-    s_{0,\,0,\,0} &= 2 \sqrt{1-x^2} \nonumber \\
-    s_{0,\,0,\,1} &= \frac{\pi}{2} \big(1-x^2\big) \nonumber \\
-    s_{0,\,1,\,k} &= 0 \quad ,
-\end{align}
-%
-we may compute any term in the series via the expressions
-%
-\begin{align}
-    \label{eq:g:sTrecurrence}
-    s_{0,\,j,\,k} &= \frac{j - 1}{j + 1 + k} \big(1 - x^2\big) s_{0,\,j-2,\,k} \nonumber \\
-    s_{i,\,j,\,k} &= x \, s_{i-1,\,j,\,k} \quad.
-\end{align}
-%
-Figure~\ref{fig:g} shows the $\kT$ basis computed from
-the formulae above and Equation~(\ref{eq:g:gT}) up to spherical 
+Figure~\ref{fig:kT} shows the $\kT$ basis computed from
+the formulae above and Equation~(\ref{eq:kT:kT}) up to spherical 
 harmonic degree $l=10$.
 
 This completes our derivation of the analytic expression for the
@@ -553,50 +449,96 @@ is defined for continuous functions, the problem of Doppler imaging deals with
 discrete measurements of a spectrum in bins of log wavelength. Provided our
 wavelength grid is fine enough, we may therefore approximate 
 Equation~(\ref{eq:deconv:convolution_def}) with a discrete convolution.
-For discrete arrays $\bvec{f}$ and $\bvec{h}$, we have
+For discrete arrays $\bvec{g}$ and $\bvec{h}$, we have
 %
 \begin{align}
     \label{eq:linear:convolution_def}
-    \bvec{f} * \bvec{h} = \bvec{T}(\bvec{f}) \, \bvec{h}
+    \bvec{g} * \bvec{h} = \bvec{G} \, \bvec{h}
 \end{align}
 %
-where $\bvec{T}(\bvec{f})$ is a Toeplitz matrix, a matrix whose diagonals
+where $\bvec{G}$ is a Toeplitz matrix, a matrix whose diagonals
 are constant from top left to bottom right. In this case, the diagonals
-are constructed from the values of $\bvec{f}$. If $\bvec{f}$ has length
-$N$, element $f_n$ is placed everywhere along the $k^\mathrm{th}$ diagonal 
-of $\bvec{T}$ for $k = -N / 2 + n$; all other entries of $\bvec{T}$ are 
-set to zero.
+are constructed from the values of $\bvec{g}$. If $\bvec{g}$ has length
+$N$, element $g_n$ is placed everywhere along the $k^\mathrm{th}$ diagonal 
+of $\bvec{G}$ for $k = -N / 2 + n$; all other entries of $\bvec{G}$ are 
+set to zero. Note that the matrix $\bvec{G}$ need not be square; in fact,
+for our purposes, it is a $(K \times K')$ matrix, where $K$ is the 
+size of the observed wavelength grid and $K' = K + W - 1$ is the size of the
+wavelength grid in the rest frame, where $W$ is the width of the convolution
+kernel.
 
 Given this formulation, we may re-write Equation~(\ref{eq:deconv:F}) as a
 purely linear operation on $\alm(\lnlam_0)$:
 %
 \begin{align}
-    \label{eq:linear:f}
-    \bvec{f}
+    \label{eq:linear:ft}
+    \bvec{f}_t
     &=
-    \Doppler(\kT, \R)
+    \Doppler_t
     \,
     \alm
     \quad,
 \end{align}
 %
-where we introduce the $(K \times N K')$ Doppler design matrix $\Doppler$, 
-constructed
-by concatenating the Toeplitz matrices for each of the $N$ components of the
-convolution kernel $\kT(\lnlam, \Dargs)$ after rotating it (via $\R(t)$) 
-to the correct stellar phase. 
+where $\Doppler_t$ is a $(K \times N K')$ matrix constructed
+by horizontally concatenating the Toeplitz matrices for each of the $N$ 
+components of the convolution kernel $\kT(\lnlam, \Dargs)$ after rotating 
+them (via $\R(t)$) to the stellar phase at time $t$. 
 %
 The $(K \times 1)$ vector $\mathbf{f}$ is the model for 
 the flux observed at each wavelength at a particular time, and the 
 $(N K' \times 1)$ vector $\alm$ is the vector representation of the
 spatially-dependent spectrum of the star. The latter is constructed
-by concatenating the ...
-(Equation~\ref{eq:deconv:alm})
+by flattening the spherical harmonic expansion of the star
+such that the first $K'$ terms in $\alm$ correspond
+to the the values of $a_{0,0}$ at each wavelength $\lnlam_0$,
+followed by the values of $a_{0,0}$ at each wavelength, and so forth.
 
-
-
-In Figure~\ref{fig:linalg} we show an
+In general, our data will consist of observations made at several
+epochs, corresponding to different rotational phases of the star. 
+If we concatenate all $M$ spectra $\bvec{f}_t$ into the $(MK \times 1)$ 
+vector $\bvec{f}$, we may write
+%
+\begin{align}
+    \label{eq:linear:f}
+    \bvec{f}
+    &=
+    \Doppler
+    \,
+    \alm
+    \quad,
+\end{align}
+%
+where $\Doppler$ is the full $(MK \times N K')$ Doppler design matrix, 
+constructed by vertically concatenating the individual matrices $\Doppler_t$.
+This equation represents the full linearization of the problem, where we
+have expressed the quantity we can observe, $\bvec{f}$, as a linear
+operation on the quantity of interest, the spectral/spatial decomposition
+of the stellar surface, $\alm$. Figure~\ref{fig:linalg} shows an
 example of $\Doppler$.
+
+\section{The inverse problem}
+\label{sec:inverse}
+%
+In the previous section we showed how to express the data vector $\bvec{f}$,
+a series of spectra obtained at different epochs, as a purely linear
+operation on the map vector $\alm$, the spherical harmonic decomposition of
+the specific intensity on the surface of the star. The advantage of this
+linearity is that, given suitable priors, it allows one to compute both 
+the maximum likelihood solution for $\alm$ \emph{and} its uncertainty
+\emph{analytically}.
+
+Equation~(\ref{eq:deconv:Ivecfull})
+
+\subsection{Continuum normalization}
+
+\subsection{Limb darkening}
+
+
+
+\section{Other stuff}
+\subsection{Limb darkening}
+\subsection{Differential rotation and convective blueshift}
 
 
 \section{Validation}
@@ -609,7 +551,7 @@ Words here. Figure~\ref{fig:spot} and Figure~\ref{fig:compare}.
     \includegraphics[width=0.6\linewidth]{figures/spot.pdf}
     \oscaption{spot}{%
         Time evolution of a Gaussian absorption line on a rigidly rotating, 
-        spotted star computed from the analytic formulae in \S\ref{sec:g}.
+        spotted star computed from the analytic formulae in \S\ref{sec:kT}.
         The stellar surface is modeled as a spherical harmonic expansion
         up to $l=20$, and the line shape is assumed to be the same everywhere;
         the spot simply downweights the local intensity at all wavelengths.
@@ -671,11 +613,100 @@ takes $\mathcal{O}(W K \lmax^2)$ operations.
 %
 %
 
-\section{Integrals}
-\subsection{Equation~(\ref{eq:g:sTexpression})}
+\section{Solving the $\kT$ integral}
 %
-In this section we derive the recurrence relations
-(\ref{eq:g:sTrecurrence}) for computing $\s^\top$.
+In this section we will show how to compute the integral in
+Equation~(\ref{eq:kT:kT}), yielding the terms of the convolution
+kernel $\kT$. It is convenient to first change basis from spherical harmonics to 
+polynomials on the sphere:
+%
+\begin{align}
+    \label{eq:appendix:kT}
+    \kT(\lnlam, \Dargs) 
+    &=    
+    \int\limits_{-\sqrt{1 - x^2}}^
+                {\sqrt{1 - x^2}}
+    \pbasis
+    \Big(x, y\Big)
+    \mathrm{d}y
+    \,
+    \AOne
+    \nonumber \\[0.5em]
+    &\equiv
+    \sT(\lnlam, \Dargs) 
+    \,
+    \AOne
+    \quad,
+\end{align}
+%
+where $\AOne$ is the change of basis matrix from spherical harmonics
+to polynomials \citep[Equation B11 in][]{Luger2019} and
+%
+\begin{align}
+    \pbasis(\x) \equiv 
+\Big( 
+    1 \quad\quad\quad\quad\quad\quad 
+    x \quad\quad\quad\quad\quad\quad 
+    z \quad\quad\quad\quad\quad\quad 
+    y \quad\quad\quad\quad\quad\quad 
+    x^2 \quad\quad\quad\quad\quad\quad 
+    xz \quad\quad\quad\quad\quad\quad 
+    xy \quad\quad\quad\quad\quad\quad
+    yz \quad\quad\quad\quad\quad\quad 
+    y^2 \quad\quad\quad\quad\quad\quad
+    ... 
+\Big)^\top
+\quad,
+\end{align}
+%
+is the polynomial basis \citep[Equation 7][]{Luger2019}. 
+Specifically, the $n^\mathrm{th}$ term of the polynomial basis
+is a polynomial in $x$, $y$, and $z = \sqrt{1 - x^2 - y^2}$:
+%
+\begin{proof}{PolynomialBasis}
+    \pbasisn
+    &=
+    x^i y^j z^k
+\end{proof}
+%
+where $i, j, k$ are integers given by
+%
+\begin{proof}{PolynomialBasis}
+    \label{eq:kT:lm}
+    i &= \floor*{\Lambda - \Delta}
+    \nonumber \\[0.5em]
+    j &= \floor*{\Delta}
+    \nonumber \\[0.5em]
+    k &= \ceil*{\Delta} - \floor*{\Delta}
+\end{proof}
+%
+with
+%
+\begin{proof}{PolynomialBasis}
+    \Lambda &= \floor*{\sqrt{n}}
+    \nonumber \\[0.5em]
+    \Delta &= \frac{n - \Lambda^2}{2}
+    \quad .
+\end{proof}
+%
+We may now explicitly write down the $n^\mathrm{th}$ term of 
+the vector $\sT(\lnlam, \Dargs)$ in Equation~(\ref{eq:appendix:kT}),
+%
+\begin{align}
+    \label{eq:kT:sTexpression}
+    s_n(\lnlam, \Dargs) 
+    &=    
+    s_{i,\,j,\,k}(\lnlam, \Dargs) 
+    =    
+    x^i
+    \int\limits_{-\sqrt{1 - x^2}}^
+                {\sqrt{1 - x^2}}
+        y^j
+        \left(1 - x^2 - y^2\right)^{\frac{k}{2}} \,
+    \mathrm{d}y 
+    \quad .
+\end{align}
+%
 When $i = k = 0$, the integral is easy to evaluate:
 %
 \begin{align}
@@ -761,6 +792,25 @@ Given these expressions, recursing upward in $i$ is easy:
 \begin{align}
     s_{i,\,j,\,k} &= x \, s_{i-1,\,j,\,k} \quad.
 \end{align}
+%
+This completes our derivation. To summarize, given the boundary conditions
+%
+\begin{align}
+    s_{0,\,0,\,0} &= 2 \sqrt{1-x^2} \nonumber \\
+    s_{0,\,0,\,1} &= \frac{\pi}{2} \big(1-x^2\big) \nonumber \\
+    s_{0,\,1,\,k} &= 0 \quad ,
+\end{align}
+%
+we may compute any term in $\sT$ via the expressions
+%
+\begin{align}
+    \label{eq:kT:sTrecurrence}
+    s_{0,\,j,\,k} &= \frac{j - 1}{j + 1 + k} \big(1 - x^2\big) s_{0,\,j-2,\,k} \nonumber \\
+    s_{i,\,j,\,k} &= x \, s_{i-1,\,j,\,k} \quad.
+\end{align}
+%
+The terms of the convolution kernel $\kT$ are then obtained by dotting
+this vector into the change of basis matrix $\AOne$, as discussed above.
 
 % Bibliography
 \bibliography{bib}

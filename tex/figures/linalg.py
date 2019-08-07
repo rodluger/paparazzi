@@ -177,10 +177,10 @@ nlam = 121
 lnlam = np.linspace(-6e-4, 6e-4, nlam)
 doppler = pp.Doppler(ydeg=ydeg, vsini=vsini, inc=inc)
 doppler._set_lnlam(lnlam)
-g = doppler.gT()
+kT = doppler.kT()
 T = [None for n in range(doppler.N)]
 for n in range(doppler.N):
-    diagonals = np.tile(g[n].reshape(-1, 1), doppler.K)
+    diagonals = np.tile(kT[n].reshape(-1, 1), doppler.K)
     if np.any(diagonals):
         diagonals[diagonals == 0] = 1e-5
     offsets = np.arange(doppler.W)

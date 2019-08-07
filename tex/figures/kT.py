@@ -13,7 +13,7 @@ import paparazzi as pp
 ydeg = 10
 dop = pp.Doppler(ydeg=ydeg)
 dop.generate_data(R=1e6, nlam=99, u=np.zeros(dop.N - 1))
-g = dop.gT()
+kT = dop.kT()
 
 # Set up the plot
 fig, ax = plt.subplots(
@@ -33,7 +33,7 @@ n = 0
 for i, l in enumerate(range(ydeg + 1)):
     for j, m in enumerate(range(-l, l + 1)):
         j += ydeg - l
-        ax[i, j].plot(g[n])
+        ax[i, j].plot(kT[n])
         n += 1
 
 # Labels
@@ -50,4 +50,4 @@ for i, l in enumerate(range(ydeg + 1)):
     )
 
 # Save
-fig.savefig("g.pdf", bbox_inches="tight")
+fig.savefig("kT.pdf", bbox_inches="tight")
