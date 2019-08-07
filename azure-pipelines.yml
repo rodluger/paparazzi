@@ -17,7 +17,7 @@ steps:
     conda create --yes --quiet --name paparazzi python=3.7 pip
   displayName: 'Setup conda'
 
-  - script: |
+- script: |
     . $CONDA/etc/profile.d/conda.sh
     conda activate paparazzi
     pip install -U pip
