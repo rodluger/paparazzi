@@ -281,14 +281,14 @@ def plot_results(
             axis.axvline(lon, color="k", lw=0.5, alpha=0.5, zorder=100)
         axis.set_xticks(lonlines)
         axis.set_yticks(latlines)
-        axis.set_xlabel("Longitude [deg]", fontsize=12)
-        axis.set_ylabel("Latitude [deg]", fontsize=12)
+        # axis.set_xlabel("Longitude [deg]", fontsize=16)
+        # axis.set_ylabel("Latitude [deg]", fontsize=16)
     fig.savefig("%s_rect.pdf" % name, bbox_inches="tight")
     files.append("rect.pdf")
     plt.close()
 
     # Plot the "Joy Division" graph
-    fig = plt.figure(figsize=(8, 10))
+    fig = plt.figure(figsize=(8, 11))
     ax_img = [
         plt.subplot2grid((nframes, 8), (n, 0), rowspan=1, colspan=1)
         for n in range(nframes)

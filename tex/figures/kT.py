@@ -38,7 +38,7 @@ for i, l in enumerate(range(ydeg + 1)):
 
 # Labels
 for j, m in enumerate(range(-ydeg, ydeg + 1)):
-    ax[-1, j].set_xlabel("%d" % m, fontsize=14, fontweight="bold", alpha=0.5)
+    ax[-1, j].set_xlabel("%d" % m, fontsize=14, alpha=0.5)
 for i, l in enumerate(range(ydeg + 1)):
     ax[i, ydeg - l].set_ylabel(
         "%d" % l, fontsize=14, rotation=45, labelpad=20, alpha=0.5

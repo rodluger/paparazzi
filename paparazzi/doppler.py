@@ -444,7 +444,7 @@ class Doppler(object):
         nlam=200,
         sigma=7.5e-6,
         nlines=21,
-        ntheta=11,
+        ntheta=16,
         ferr=1.0e-4,
         u=None,
         image=None,
