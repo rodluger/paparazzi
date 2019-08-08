@@ -317,22 +317,16 @@ def learn_everything(high_snr=False):
     # High or low SNR?
     if high_snr:
         ferr = 1e-4
-        niter1 = [2, 2, 2, 2, 2, 2, 2, 5]
-        niter2 = 0
-        lr = 1e-4
-        baseline_guess = None
-        T1 = [5000.0, 1000.0, 500.0, 100.0, 50.0, 10.0, 5.0, 1.0]
-        T2 = 1.0
-
-        # DEBUG
-        T1 = np.logspace(np.log10(5000), 0, 20)
+        T1 = np.logspace(np.log10(5000), np.log10(3), 20)
         niter1 = np.ones_like(T1, dtype=int)
+        T2 = [3.0, 1.0]
+        niter2 = [1000, 1000]  # 2500
+        lr = 1e-4
     else:
         ferr = 1e-3
         niter1 = 1
         niter2 = 250
         lr = 2e-3
-        baseline_guess = None
         T1 = 10.0
         T2 = 1.0
 
@@ -342,12 +336,7 @@ def learn_everything(high_snr=False):
 
     # Solve!
     loss, cho_u, cho_vT = dop.solve(
-        baseline_guess=baseline_guess,
-        niter1=niter1,
-        niter2=niter2,
-        lr=lr,
-        T1=T1,
-        T2=T2,
+        niter1=niter1, niter2=niter2, lr=lr, T1=T1, T2=T2
     )
 
     plot(
