@@ -10,7 +10,7 @@ import theano.sparse as ts
 np.random.seed(13)
 
 
-def plot(
+def plot_results(
     doppler,
     loss=[],
     cho_u=None,
@@ -34,7 +34,7 @@ def plot(
     baseline_true = doppler.baseline_true
     u = np.array(doppler.u)
     vT = np.array(doppler.vT)
-    baseline = doppler.baseline()
+    baseline = doppler.baseline().reshape(-1)
     model = doppler.model()
     F = doppler.F
     lnlam = doppler.lnlam
@@ -46,11 +46,32 @@ def plot(
     files = []
 
     # Plot the baseline
+    # HACK: Append the first measurement to the last to get
+    # a plot going from -180 to 180 (endpoints included)
+    theta_ = np.append(theta, [180.0])
+    baseline_true_ = np.append(baseline_true, [baseline_true[0]])
+    baseline_ = np.append(baseline, [baseline[0]])
     fig, ax = plt.subplots(1, figsize=(8, 5))
-    ax.plot(theta, baseline_true, label="true")
-    ax.plot(theta, baseline, label="inferred")
-    ax.legend(loc="upper right")
-    ax.set_xlabel("time")
+    ax.plot(theta_, baseline_true_, label="true")
+    ax.plot(theta_, baseline_, label="inferred")
+    if cho_u is not None:
+        U = np.triu(cho_u[0])
+        B = doppler._map.X(theta=doppler.theta).eval()[:, 1:]
+        A = np.linalg.solve(U.T, B.T)
+        baseline_sig = np.sqrt(np.sum(A ** 2, axis=0))
+        baseline_sig_ = np.append(baseline_sig, [baseline_sig[0]])
+        ax.fill_between(
+            theta,
+            baseline - baseline_sig,
+            baseline + baseline_sig,
+            color="C1",
+            alpha=0.25,
+            lw=0,
+        )
+    ax.legend(loc="lower left")
+    ax.set_xlabel(r"$\theta$ (degrees)")
+    ax.margins(0, None)
+    ax.set_xticks([-180, -135, -90, -45, 0, 45, 90, 135, 180])
     ax.set_ylabel("baseline")
     fig.savefig("%s_baseline.pdf" % name, bbox_inches="tight")
     files.append("baseline.pdf")
@@ -80,6 +101,9 @@ def plot(
     fig, ax = plt.subplots(1, figsize=(12, 5))
     n = np.arange(1, doppler.N)
     ax.plot(n, u_true, "C0-", label="true")
+    lo = (doppler.u_mu - doppler.u_sig) * np.ones_like(u)
+    hi = (doppler.u_mu + doppler.u_sig) * np.ones_like(u)
+    ax.fill_between(n, lo, hi, color="C1", lw=0, alpha=0.25, label="prior")
     ax.plot(n, u, "C1-", label="inferred")
     if cho_u is not None:
         cov_u = cho_solve(cho_u, np.eye(doppler.N - 1))
@@ -88,6 +112,7 @@ def plot(
     ax.set_ylabel("spherical harmonic coefficient")
     ax.set_xlabel("coefficient number")
     ax.legend(loc="upper right")
+    ax.margins(0.01, None)
     fig.savefig("%s_coeffs.pdf" % name, bbox_inches="tight")
     files.append("coeffs.pdf")
     plt.close()
@@ -146,7 +171,17 @@ def plot(
         img_sig_rect = np.sqrt(np.sum(A ** 2, axis=0)).reshape(res, res)
 
         # This is how I'd compute the *prior* uncertainty on the pixels
-        # prior_sig = P[0].dot(doppler.u_sig * P[0])
+        nsamp = 1000
+        prior_std = np.std(
+            [
+                np.dot(
+                    P[0],
+                    doppler.u_sig * np.random.randn(doppler.N - 1)
+                    + doppler.u_mu,
+                )
+                for i in range(nsamp)
+            ]
+        )
 
     # Normalize to the maximum for plotting
     vmax = max(np.nanmax(img_rect), np.nanmax(img_true_rect))
@@ -155,10 +190,12 @@ def plot(
     img_true_rect /= vmax
     if cho_u is not None:
         img_sig_rect /= vmax
+        prior_std /= vmax
 
     # Plot the maps side by side
     if cho_u is not None:
         fig, ax = plt.subplots(3, figsize=(10, 13))
+        fig.subplots_adjust(hspace=0.3)
     else:
         fig, ax = plt.subplots(2, figsize=(10, 8))
     im = ax[0].imshow(
@@ -191,7 +228,7 @@ def plot(
         textcoords="offset points",
         ha="left",
         va="top",
-        fontsize=18,
+        fontsize=22,
         color="w",
         zorder=101,
     )
@@ -203,7 +240,7 @@ def plot(
         textcoords="offset points",
         ha="left",
         va="top",
-        fontsize=18,
+        fontsize=22,
         color="w",
         zorder=101,
     )
@@ -214,10 +251,15 @@ def plot(
             extent=(-180, 180, -90, 90),
             cmap="plasma",
             vmin=0,
+            vmax=prior_std,
         )
+        ticks = np.linspace(0, prior_std, 5)
+        ticklabels = ["%.2f" % t for t in ticks]
+        ticklabels[-1] = r"$\sigma_\mathrm{prior}$"
         divider = make_axes_locatable(ax[2])
         cax = divider.append_axes("right", size="4%", pad=0.25)
-        plt.colorbar(im, cax=cax, format="%.2f")
+        cb = plt.colorbar(im, cax=cax, format="%.2f", ticks=ticks)
+        cb.ax.set_yticklabels(ticklabels)
         ax[2].annotate(
             "uncertainty",
             xy=(0, 1),
@@ -226,7 +268,7 @@ def plot(
             textcoords="offset points",
             ha="left",
             va="top",
-            fontsize=18,
+            fontsize=22,
             color="w",
             zorder=101,
         )
@@ -297,7 +339,7 @@ def plot(
     ax.axvspan(lnlam_padded[0], lnlam[0], color="k", alpha=0.3)
     ax.axvspan(lnlam[-1], lnlam_padded[-1], color="k", alpha=0.3)
     ax.set_xlim(lnlam_padded[0], lnlam_padded[-1])
-    ax.set_xlabel(r"$\Delta \ln \lambda$")
+    ax.set_xlabel(r"$\lambdabar$")
     ax.set_ylabel(r"Normalized intensity")
     ax.legend(loc="lower left", fontsize=14)
     fig.savefig("%s_spectrum.pdf" % name, bbox_inches="tight")
@@ -312,100 +354,116 @@ def plot(
 
 def learn_everything(high_snr=False):
     """
+    In this case, we know nothing: we're going to learn
+    both the map and the spectrum. We're not giving the
+    algorithm an initial guess, either: the spectrum is
+    learned by deconvolving the data, and the initial
+    guess for the map is computed via the linearized
+    problem.
 
     """
     # High or low SNR?
     if high_snr:
+        # We rely heavily on tempering here. Once we get
+        # a good initial guess via the bilinear solver,
+        # we run the non-linear solver with a slow learning
+        # rate.
         ferr = 1e-4
         T = 5000.0
         niter = 1000
         lr = 1e-4
+        name = "learn_everything_high_snr"
     else:
+        # This case is easier; just a little tempering for
+        # good measure, followed by a fast non-linear
+        # refinement.
         ferr = 1e-3
+        T = 10.0
         niter = 250
         lr = 2e-3
-        T = 10.0
+        name = "learn_everything_low_snr"
 
     # Generate data
     dop = pp.Doppler(ydeg=15)
     dop.generate_data(ferr=ferr)
 
+    # Reset all coefficients
+    dop.u = None
+    dop.vT = None
+
     # Solve!
     loss, cho_u, cho_vT = dop.solve(niter=niter, lr=lr, T=T)
-
-    plot(
-        dop,
-        loss=loss,
-        cho_u=cho_u,
-        cho_vT=cho_vT,
-        open_plots=True,
-        render_movies=False,
-    )
+    plot_results(dop, name=name, loss=loss, cho_u=cho_u, cho_vT=cho_vT)
 
 
 def learn_map(high_snr=False):
     """
+    In this case, we know the spectrum and the baseline
+    perfectly. The problem is linear in the map, so solving
+    the Doppler problem is easy!
 
     """
     # High or low SNR?
     if high_snr:
         ferr = 1e-4
+        name = "learn_map_high_snr"
     else:
         ferr = 1e-3
+        name = "learn_map_low_snr"
 
     # Generate data
     dop = pp.Doppler(ydeg=15)
     dop.generate_data(ferr=ferr)
 
-    # Get the true baseline (assumed to be known exactly)
+    # Compute the true baseline (assumed to be known exactly)
     dop.u = dop.u_true
     baseline = dop.baseline()
-    vT = dop.vT_true
 
-    # Compute u
-    loss, cho_u, cho_vT = dop.solve(vT=vT, baseline=baseline)
+    # Reset all coefficients
+    dop.vT = dop.vT_true
+    dop.u = None
 
-    # Plot
-    plot(
-        dop,
-        loss=loss,
-        cho_u=cho_u,
-        cho_vT=cho_vT,
-        open_plots=True,
-        render_movies=False,
-    )
+    # Solve!
+    loss, cho_u, cho_vT = dop.solve(vT=dop.vT, baseline=baseline)
+    plot_results(dop, name=name, loss=loss, cho_u=cho_u, cho_vT=cho_vT)
 
 
 def learn_map_and_baseline(high_snr=False):
     """
+    In this case, we know the rest frame spectrum, but we don't
+    know the map coefficients or the baseline flux. The problem
+    can be linearized to solve for the coefficients, and then
+    refined with the non-linear solver.
 
     """
     # High or low SNR?
     if high_snr:
+        # At high SNR, we need to do a bit of refinement
+        # with the non-linear solver.
         ferr = 1e-4
         niter = 50
         lr = 1e-4
+        name = "learn_map_baseline_high_snr"
     else:
+        # At low SNR, a single run of the bi-linear solver
+        # gets us to the optimum!
         ferr = 1e-3
         niter = 0
-        lr = 1e-3
+        lr = None
+        name = "learn_map_baseline_low_snr"
 
     # Generate data
     dop = pp.Doppler(ydeg=15)
     dop.generate_data(ferr=ferr)
 
-    # Compute u
-    loss, cho_u, cho_vT = dop.solve(vT=dop.vT_true, niter=niter, lr=lr)
+    # Reset all coefficients
+    dop.vT = dop.vT_true
+    dop.u = None
 
-    # Plot
-    plot(
-        dop,
-        loss=loss,
-        cho_u=cho_u,
-        cho_vT=cho_vT,
-        open_plots=True,
-        render_movies=False,
-    )
+    # Solve!
+    loss, cho_u, cho_vT = dop.solve(vT=dop.vT, niter=niter, lr=lr)
+    plot_results(dop, name=name, loss=loss, cho_u=cho_u, cho_vT=cho_vT)
 
 
-learn_everything(True)
+if __name__ == "__main__":
+    learn_map(high_snr=True)

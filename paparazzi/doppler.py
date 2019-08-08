@@ -257,6 +257,18 @@ class Doppler(object):
         self._vT_rho = value
         self._compute_gp()
 
+    @property
+    def u(self):
+        return self._u
+
+    @u.setter
+    def u(self, value):
+        self._u = value
+        if value is None:
+            self._map[1:, :] = 0.0
+        else:
+            self._map[1:, :] = self._u
+
     def _compute_gp(self):
         # Compute the GP prior on the spectrum
         if self._lnlam is None:
@@ -528,15 +540,21 @@ class Doppler(object):
         Show the image of the current map solution.
 
         """
-        self._map[1:, :] = self.u
         self._map.show(**kwargs)
+
+    def render(self, **kwargs):
+        """
+        Render the image of the current map solution.
+
+        """
+        func = theano.function([], self._map.render(**kwargs))
+        return func()
 
     def baseline(self):
         """
         Return the photometric baseline at each epoch.
 
         """
-        self._map[1:, :] = self.u
         return self._map.flux(theta=self.theta).eval().reshape(-1, 1)
 
     def model(self):
@@ -860,8 +878,10 @@ class Doppler(object):
                         ),
                         (-1,),
                     )
-                    self._map[1:, :] = u
-                    b = self._map.flux(theta=self.theta)
+                    b = tt.dot(
+                        self._map.X(theta=self.theta),
+                        tt.reshape(tt.concatenate([[1.0], u]), (-1, 1)),
+                    )
                     B = tt.reshape(b, (-1, 1))
                     M = tt.reshape(ts.dot(D, a), (self.M, -1)) / B
 
