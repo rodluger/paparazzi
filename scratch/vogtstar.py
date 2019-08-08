@@ -317,10 +317,10 @@ def learn_everything(high_snr=False):
     # High or low SNR?
     if high_snr:
         ferr = 1e-4
-        T1 = np.logspace(np.log10(5000), np.log10(3), 20)
+        T1 = np.logspace(np.log10(5000), 0, 20)
         niter1 = np.ones_like(T1, dtype=int)
-        T2 = [3.0, 1.0]
-        niter2 = [1000, 1000]  # 2500
+        T2 = 1.0
+        niter2 = 1000
         lr = 1e-4
     else:
         ferr = 1e-3
@@ -377,7 +377,7 @@ def learn_map(high_snr=False):
         loss=loss,
         cho_u=cho_u,
         cho_vT=cho_vT,
-        open_plots=False,
+        open_plots=True,
         render_movies=False,
     )
 
@@ -389,12 +389,12 @@ def learn_map_and_baseline(high_snr=False):
     # High or low SNR?
     if high_snr:
         ferr = 1e-4
-        niter1 = 5
+        niter1 = 1
         niter2 = 50
         lr = 1e-4
     else:
         ferr = 1e-3
-        niter1 = 0
+        niter1 = 1
         niter2 = 0
         lr = 1e-3
 
@@ -413,9 +413,9 @@ def learn_map_and_baseline(high_snr=False):
         loss=loss,
         cho_u=cho_u,
         cho_vT=cho_vT,
-        open_plots=False,
+        open_plots=True,
         render_movies=False,
     )
 
 
-learn_everything(True)
+learn_map_and_baseline(False)

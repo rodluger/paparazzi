@@ -711,6 +711,7 @@ class Doppler(object):
         niter2=100,
         T1=1.0,
         T2=1.0,
+        lr=2e-3,
         optimizer="NAdam",
         dcf=10.0,
         quiet=False,
@@ -756,6 +757,7 @@ class Doppler(object):
         niter2 = np.atleast_1d(niter2)
         T1 = np.ones_like(niter1) * T1
         T2 = np.ones_like(niter2) * T2
+        lr = np.ones_like(niter2) * lr
 
         # Figure out what to solve for
         known = []
@@ -923,7 +925,7 @@ class Doppler(object):
                             )
 
                         loss_T = -(lnlike / T2[k] + lnprior)  # tempered loss
-                        upd = optimizer(loss_T, theano_vars, **kwargs)
+                        upd = optimizer(loss_T, theano_vars, lr=lr[k], **kwargs)
                         train = theano.function([], [u, vT, loss], updates=upd)
                         for n in tqdm(n0 + np.arange(niter), disable=quiet):
                             u_val, vT_val, loss_val[n] = train()
