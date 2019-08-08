@@ -707,36 +707,15 @@ class Doppler(object):
         u_guess=None,
         vT_guess=None,
         baseline_guess=None,
-        niter1=10,
-        niter2=100,
-        T1=1.0,
-        T2=1.0,
-        lr=2e-3,
+        niter=100,
+        T=1.0,
+        dlogT=-0.25,
         optimizer="NAdam",
         dcf=10.0,
         quiet=False,
         **kwargs
     ):
         """Solve the Doppler imaging problem.
-        
-        Args:
-            u ([type], optional): [description]. Defaults to None.
-            vT ([type], optional): [description]. Defaults to None.
-            baseline ([type], optional): [description]. Defaults to None.
-            u_guess ([type], optional): [description]. Defaults to None.
-            vT_guess ([type], optional): [description]. Defaults to None.
-            niter1 (int, optional): [description]. Defaults to 10.
-            niter2 (int, optional): [description]. Defaults to 100.
-            T1 (float, optional): [description]. Defaults to 1.0.
-            T2 (float, optional): [description]. Defaults to 1.0.
-            optimizer (str, optional): [description]. Defaults to "NAdam".
-            dcf (float, optional): Factor by which to scale the 
-                uncertainty on the mean spectrum when using it as a
-                predictor for the de-convolved rest frame spectrum.
-                If your answer depends sensitively on this value, you
-                probably need a better guess for `v^T`.
-                Defaults to 0.1.
-            quiet (bool, optional): [description]. Defaults to False.
         
         Returns:
             ``(loss, cho_u, cho_vT)``, a tuple containing the array of
@@ -751,13 +730,6 @@ class Doppler(object):
             optimizer = Adam
         else:
             raise ValueError("Invalid optimizer.")
-
-        # Vectorize the iteration params
-        niter1 = np.atleast_1d(niter1)
-        niter2 = np.atleast_1d(niter2)
-        T1 = np.ones_like(niter1) * T1
-        T2 = np.ones_like(niter2) * T2
-        lr = np.ones_like(niter2) * lr
 
         # Figure out what to solve for
         known = []
@@ -777,7 +749,7 @@ class Doppler(object):
 
             # Easy: it's a linear problem
             self.u = u
-            cho_vT = self.compute_vT(T=T1[0])
+            cho_vT = self.compute_vT()
             return self.loss(), None, cho_vT
 
         else:
@@ -786,7 +758,7 @@ class Doppler(object):
 
                 # Still a linear problem!
                 self.vT = vT
-                cho_u = self.compute_u(T=T1[0], baseline=baseline)
+                cho_u = self.compute_u(baseline=baseline)
                 return self.loss(), cho_u, None
 
             else:
@@ -831,43 +803,45 @@ class Doppler(object):
                 if u_guess is None:
 
                     self.vT = vT_guess
-                    self.compute_u(T=T1[0], baseline=baseline_guess)
+                    self.compute_u(T=T, baseline=baseline_guess)
                     u_guess = self.u
 
                 # Initialize the variables
                 self.u = u_guess
                 self.vT = vT_guess
 
-                loss_val = np.zeros(np.sum(niter1) + np.sum(niter2) + 1)
+                # Tempering params
+                if T > 1.0:
+                    T_arr = 10 ** np.arange(np.log10(T), 0, dlogT)
+                    T_arr = np.append(T_arr, [1.0])
+                    niter_bilin = len(T_arr)
+                else:
+                    T_arr = [1.0]
+                    niter_bilin = 1
+
+                # Loss array
+                loss_val = np.zeros(niter_bilin + niter + 1)
                 loss_val[0] = self.loss()
-                n0 = 1
 
-                # Iterative bi-linear solve to get us started
-                if np.sum(niter1) > 0:
+                # Iterative bi-linear solve
+                if niter_bilin > 0:
 
-                    for k, niter in enumerate(niter1):
+                    if not quiet:
+                        print("Running bi-linear solver...")
 
-                        if not quiet:
-                            print(
-                                "Running bi-linear solver (%d/%d)..."
-                                % (k + 1, len(niter1))
-                            )
+                    for n in tqdm(range(niter_bilin), disable=quiet):
 
-                        for n in tqdm(n0 + np.arange(niter), disable=quiet):
+                        # Compute `u` using the previous baseline
+                        self.compute_u(T=T_arr[n], baseline=self.baseline())
 
-                            # Compute `u` using the previous baseline
-                            self.compute_u(T=T1[k], baseline=self.baseline())
+                        # Compute `vT` using the current `u`
+                        if "vT" not in known:
+                            self.compute_vT(T=T_arr[n])
 
-                            # Compute `vT` using the current `u`
-                            if "vT" not in known:
-                                self.compute_vT(T=T1[k])
-
-                            loss_val[n] = self.loss()
-
-                        n0 = n + 1
+                        loss_val[n + 1] = self.loss()
 
                 # Non-linear solve
-                if np.sum(niter2) > 0:
+                if niter > 0:
 
                     # Theano nonlienar solve. Variables:
                     u = theano.shared(self.u)
@@ -916,25 +890,19 @@ class Doppler(object):
                     best_u = u.eval()
                     best_vT = vT.eval()
 
-                    for k, niter in enumerate(niter2):
+                    if not quiet:
+                        print("Running non-linear solver...")
 
-                        if not quiet:
-                            print(
-                                "Running non-linear solver (%d/%d)..."
-                                % (k + 1, len(niter2))
-                            )
-
-                        loss_T = -(lnlike / T2[k] + lnprior)  # tempered loss
-                        upd = optimizer(loss_T, theano_vars, lr=lr[k], **kwargs)
-                        train = theano.function([], [u, vT, loss], updates=upd)
-                        for n in tqdm(n0 + np.arange(niter), disable=quiet):
-                            u_val, vT_val, loss_val[n] = train()
-                            if loss_val[n] < best_loss:
-                                best_loss = loss_val[n]
-                                best_u = u_val
-                                best_vT = vT_val
-
-                        n0 = n + 1
+                    upd = optimizer(loss, theano_vars, **kwargs)
+                    train = theano.function([], [u, vT, loss], updates=upd)
+                    for n in tqdm(
+                        1 + niter_bilin + np.arange(niter), disable=quiet
+                    ):
+                        u_val, vT_val, loss_val[n] = train()
+                        if loss_val[n] < best_loss:
+                            best_loss = loss_val[n]
+                            best_u = u_val
+                            best_vT = vT_val
 
                     # We are done!
                     self.u = best_u

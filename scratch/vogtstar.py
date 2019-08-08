@@ -317,27 +317,21 @@ def learn_everything(high_snr=False):
     # High or low SNR?
     if high_snr:
         ferr = 1e-4
-        T1 = np.logspace(np.log10(5000), 0, 20)
-        niter1 = np.ones_like(T1, dtype=int)
-        T2 = 1.0
-        niter2 = 1000
+        T = 5000.0
+        niter = 1000
         lr = 1e-4
     else:
         ferr = 1e-3
-        niter1 = 1
-        niter2 = 250
+        niter = 250
         lr = 2e-3
-        T1 = 10.0
-        T2 = 1.0
+        T = 10.0
 
     # Generate data
     dop = pp.Doppler(ydeg=15)
     dop.generate_data(ferr=ferr)
 
     # Solve!
-    loss, cho_u, cho_vT = dop.solve(
-        niter1=niter1, niter2=niter2, lr=lr, T1=T1, T2=T2
-    )
+    loss, cho_u, cho_vT = dop.solve(niter=niter, lr=lr, T=T)
 
     plot(
         dop,
@@ -389,13 +383,11 @@ def learn_map_and_baseline(high_snr=False):
     # High or low SNR?
     if high_snr:
         ferr = 1e-4
-        niter1 = 1
-        niter2 = 50
+        niter = 50
         lr = 1e-4
     else:
         ferr = 1e-3
-        niter1 = 1
-        niter2 = 0
+        niter = 0
         lr = 1e-3
 
     # Generate data
@@ -403,9 +395,7 @@ def learn_map_and_baseline(high_snr=False):
     dop.generate_data(ferr=ferr)
 
     # Compute u
-    loss, cho_u, cho_vT = dop.solve(
-        vT=dop.vT_true, niter1=niter1, niter2=niter2, lr=lr
-    )
+    loss, cho_u, cho_vT = dop.solve(vT=dop.vT_true, niter=niter, lr=lr)
 
     # Plot
     plot(
@@ -418,4 +408,4 @@ def learn_map_and_baseline(high_snr=False):
     )
 
 
-learn_map_and_baseline(False)
+learn_everything(True)
