@@ -6,7 +6,8 @@ savefig.dpi : 100
 figure.dpi : 100
 figure.figsize : 12, 4
 font.size : 16
-text.usetex : False
+text.usetex : True
+text.latex.preamble : r"\usepackage{cmbright}"
 font.family : sans-serif
-font.sans-serif : cmss10
+font.sans-serif : Computer Modern Sans
 axes.unicode_minus : False

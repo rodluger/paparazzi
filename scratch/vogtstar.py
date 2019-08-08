@@ -65,7 +65,7 @@ def plot(
         loss_true = doppler.loss()
 
         # Plot
-        fig, ax = plt.subplots(1, figsize=(8, 5))
+        fig, ax = plt.subplots(1, figsize=(12, 5))
         ax.plot(loss, label="loss", color="C0")
         ax.axhline(loss_true, color="C1", ls="--", label="loss @ true values")
         ax.set_yscale("log")
@@ -77,7 +77,7 @@ def plot(
         plt.close()
 
     # Plot the Ylm coeffs
-    fig, ax = plt.subplots(1, figsize=(8, 5))
+    fig, ax = plt.subplots(1, figsize=(12, 5))
     n = np.arange(1, doppler.N)
     ax.plot(n, u_true, "C0-", label="true")
     ax.plot(n, u, "C1-", label="inferred")
@@ -317,19 +317,38 @@ def learn_everything(high_snr=False):
     # High or low SNR?
     if high_snr:
         ferr = 1e-4
-        niter1 = 25
-        niter2 = 2500
+        niter1 = [2, 2, 2, 2, 2, 2, 2, 5]
+        niter2 = 0
+        lr = 1e-4
+        baseline_guess = None
+        T1 = [5000.0, 1000.0, 500.0, 100.0, 50.0, 10.0, 5.0, 1.0]
+        T2 = 1.0
+
+        # DEBUG
+        T1 = np.logspace(np.log10(5000), 0, 20)
+        niter1 = np.ones_like(T1, dtype=int)
     else:
         ferr = 1e-3
-        niter1 = 10
-        niter2 = 0
+        niter1 = 1
+        niter2 = 250
+        lr = 2e-3
+        baseline_guess = None
+        T1 = 10.0
+        T2 = 1.0
 
     # Generate data
     dop = pp.Doppler(ydeg=15)
     dop.generate_data(ferr=ferr)
 
     # Solve!
-    loss, cho_u, cho_vT = dop.solve(niter1=niter1, niter2=niter2, lr=5e-4)
+    loss, cho_u, cho_vT = dop.solve(
+        baseline_guess=baseline_guess,
+        niter1=niter1,
+        niter2=niter2,
+        lr=lr,
+        T1=T1,
+        T2=T2,
+    )
 
     plot(
         dop,
@@ -337,7 +356,7 @@ def learn_everything(high_snr=False):
         cho_u=cho_u,
         cho_vT=cho_vT,
         open_plots=True,
-        render_movies=True,
+        render_movies=False,
     )
 
 
@@ -361,10 +380,17 @@ def learn_map(high_snr=False):
     vT = dop.vT_true
 
     # Compute u
-    _, cho_u, _ = dop.solve(vT=vT, baseline=baseline)
+    loss, cho_u, cho_vT = dop.solve(vT=vT, baseline=baseline)
 
     # Plot
-    plot(dop, cho_u=cho_u, open_plots=False, render_movies=False)
+    plot(
+        dop,
+        loss=loss,
+        cho_u=cho_u,
+        cho_vT=cho_vT,
+        open_plots=False,
+        render_movies=False,
+    )
 
 
 def learn_map_and_baseline(high_snr=False):
@@ -374,18 +400,33 @@ def learn_map_and_baseline(high_snr=False):
     # High or low SNR?
     if high_snr:
         ferr = 1e-4
+        niter1 = 5
+        niter2 = 50
+        lr = 1e-4
     else:
         ferr = 1e-3
+        niter1 = 0
+        niter2 = 0
+        lr = 1e-3
 
     # Generate data
     dop = pp.Doppler(ydeg=15)
     dop.generate_data(ferr=ferr)
 
     # Compute u
-    loss, cho_u, _ = dop.solve(vT=dop.vT_true, niter1=10, niter2=50)
+    loss, cho_u, cho_vT = dop.solve(
+        vT=dop.vT_true, niter1=niter1, niter2=niter2, lr=lr
+    )
 
     # Plot
-    plot(dop, loss=loss, cho_u=cho_u, open_plots=True, render_movies=False)
+    plot(
+        dop,
+        loss=loss,
+        cho_u=cho_u,
+        cho_vT=cho_vT,
+        open_plots=False,
+        render_movies=False,
+    )
 
 
-learn_everything()
+learn_everything(True)

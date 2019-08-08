@@ -607,42 +607,77 @@ class Doppler(object):
 
     def compute_u(self, T=1.0, baseline=None):
         """
-        Linear solve for `u` given `v^T` and an optional baseline 
-        and temperature.
+        Linear solve for ``u`` given ``v^T`` and an optional baseline 
+        and temperature. If the baseline is not given, solves the
+        approximate linear problem, which assumes the difference 
+        between the baseline and ``1.0`` is small.
 
-        Returns the Cholesky decomposition of the covariance of `u`.
+        Returns the Cholesky decomposition of the covariance of ``u``.
 
         """
-        if baseline is None:
-            baseline = self.baseline()
-        else:
-            baseline = baseline.reshape(-1, 1)
+        # Get the design matrix
         V = sparse_block_diag([self.vT.reshape(-1, 1) for n in range(self.N)])
         A_ = np.array(self.D().dot(V).todense())
         A0, A = A_[:, 0], A_[:, 1:]
-        ATCInv = np.multiply(
-            A.T, (self._F_CInv / T / baseline ** 2).reshape(-1)
-        )
-        ATCInvA = ATCInv.dot(A)
-        ATCInvf = np.dot(ATCInv, (self.F * baseline).reshape(-1) - A0)
-        cinv = np.ones(self.N - 1) / self.u_sig ** 2
-        mu = np.ones(self.N - 1) * self.u_mu
-        np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + cinv)
-        cho_C = cho_factor(ATCInvA)
-        self.u = cho_solve(cho_C, ATCInvf + cinv * mu)
+
+        if baseline is not None:
+
+            # The problem is exactly linear!
+            if not hasattr(baseline, "__len__"):
+                baseline = np.ones(self.M) * baseline
+            baseline = baseline.reshape(-1, 1)
+            ATCInv = np.multiply(
+                A.T, (self._F_CInv / T / baseline ** 2).reshape(-1)
+            )
+            ATCInvA = ATCInv.dot(A)
+            ATCInvf = np.dot(ATCInv, (self.F * baseline).reshape(-1) - A0)
+            cinv = np.ones(self.N - 1) / self.u_sig ** 2
+            mu = np.ones(self.N - 1) * self.u_mu
+            np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + cinv)
+            cho_C = cho_factor(ATCInvA)
+            self.u = cho_solve(cho_C, ATCInvf + cinv * mu)
+
+        else:
+
+            # We need to Taylor expand the problem about
+            # a baseline of unity.
+            B = self._map.X(theta=self.theta).eval()[:, 1:]
+            B = np.repeat(B, 201, axis=0)
+
+            # We are Taylor expanding
+            #
+            #   f = (A0 + A . u) / (1 + B . u)
+            #
+            #   as
+            #
+            #   f = A0 + C . u + O(u^2)
+            #
+            # where C is
+            C = A - A0.reshape(-1, 1) * B
+            CTCInv = np.multiply(C.T, (self._F_CInv / T).reshape(-1))
+            CTCInvC = CTCInv.dot(C)
+            cinv = np.ones(self.N - 1) / self.u_sig ** 2
+            np.fill_diagonal(CTCInvC, CTCInvC.diagonal() + cinv)
+            cho_C = cho_factor(CTCInvC)
+            CTCInvy = np.dot(CTCInv, self.F.reshape(-1) - A0)
+            mu = np.ones(self.N - 1) * self.u_mu
+            self.u = cho_solve(cho_C, CTCInvy + cinv * mu)
+
         return cho_C
 
     def compute_vT(self, T=1.0, baseline=None):
         """
-        Linear solve for `v^T` given `u` and an optional baseline 
+        Linear solve for ``v^T`` given ``u`` and an optional baseline 
         and temperature.
 
-        Returns the Cholesky decomposition of the covariance of `vT`.
+        Returns the Cholesky decomposition of the covariance of ``vT``.
 
         """
         if baseline is None:
             baseline = self.baseline()
         else:
+            if not hasattr(baseline, "__len__"):
+                baseline = np.ones(self.M) * baseline
             baseline = baseline.reshape(-1, 1)
         Kp = self.Kp
         offsets = -np.arange(0, self.N) * Kp
@@ -671,6 +706,7 @@ class Doppler(object):
         baseline=None,
         u_guess=None,
         vT_guess=None,
+        baseline_guess=None,
         niter1=10,
         niter2=100,
         T1=1.0,
@@ -707,12 +743,19 @@ class Doppler(object):
             of the covariance matrices of ``u`` and ``vT``, if available 
             (otherwise the latter two are set to ``None``.)
         """
+        # Check the optimizer is valid
         if optimizer.lower() == "nadam":
             optimizer = NAdam
         elif optimizer.lower() == "adam":
             optimizer = Adam
         else:
             raise ValueError("Invalid optimizer.")
+
+        # Vectorize the iteration params
+        niter1 = np.atleast_1d(niter1)
+        niter2 = np.atleast_1d(niter2)
+        T1 = np.ones_like(niter1) * T1
+        T2 = np.ones_like(niter1) * T2
 
         # Figure out what to solve for
         known = []
@@ -732,7 +775,7 @@ class Doppler(object):
 
             # Easy: it's a linear problem
             self.u = u
-            cho_vT = self.compute_vT(T=T1)
+            cho_vT = self.compute_vT(T=T1[0])
             return self.loss(), None, cho_vT
 
         else:
@@ -741,7 +784,7 @@ class Doppler(object):
 
                 # Still a linear problem!
                 self.vT = vT
-                cho_u = self.compute_u(T=T1, baseline=baseline)
+                cho_u = self.compute_u(T=T1[0], baseline=baseline)
                 return self.loss(), cho_u, None
 
             else:
@@ -780,30 +823,49 @@ class Doppler(object):
                             A.T.dot(A).toarray() + LInv, A.T.dot(fmean)
                         )
 
-                # Estimate `u` from a flat baseline
+                # Estimate `u` w/o baseline knowledge
+                # If `baseline_guess` is `None`, this is done via
+                # a Taylor expansion; see ``compute_u()``.
                 if u_guess is None:
 
                     self.vT = vT_guess
-                    self.compute_u(T=T1, baseline=np.ones(self.M))
+                    self.compute_u(T=T1[0], baseline=baseline_guess)
                     u_guess = self.u
 
                 # Initialize the variables
                 self.u = u_guess
                 self.vT = vT_guess
 
-                # Iterative bi-linear solve to get us started
-                if not quiet:
-                    print("Running bi-linear solver...")
-                loss_val = np.zeros(niter1 + niter2 + 1)
+                loss_val = np.zeros(np.sum(niter1) + np.sum(niter2) + 1)
                 loss_val[0] = self.loss()
-                for n in tqdm(1 + np.arange(niter1), disable=quiet):
-                    self.compute_u(T=T1)
-                    if "vT" not in known:
-                        self.compute_vT(T=T1)
-                    loss_val[n] = self.loss()
+                n0 = 1
+
+                # Iterative bi-linear solve to get us started
+                if np.sum(niter1) > 0:
+
+                    for k, niter in enumerate(niter1):
+
+                        if not quiet:
+                            print(
+                                "Running bi-linear solver (%d/%d)..."
+                                % (k + 1, len(niter1))
+                            )
+
+                        for n in tqdm(n0 + np.arange(niter), disable=quiet):
+
+                            # Compute `u` using the previous baseline
+                            self.compute_u(T=T1[k], baseline=self.baseline())
+
+                            # Compute `vT` using the current `u`
+                            if "vT" not in known:
+                                self.compute_vT(T=T1[k])
+
+                            loss_val[n] = self.loss()
+
+                        n0 = n + 1
 
                 # Non-linear solve
-                if niter2 > 0:
+                if np.sum(niter2) > 0:
 
                     # Theano nonlienar solve. Variables:
                     u = theano.shared(self.u)
@@ -848,62 +910,39 @@ class Doppler(object):
                         )[0, 0]
                     )
                     loss = -(lnlike + lnprior)
-                    loss_T = -(lnlike / T2 + lnprior)  # tempered loss
                     best_loss = loss.eval()
                     best_u = u.eval()
                     best_vT = vT.eval()
 
-                    # Optimize
-                    if not quiet:
-                        print("Running non-linear solver...")
-                    upd = optimizer(loss_T, theano_vars, **kwargs)
-                    train = theano.function([], [u, vT, loss], updates=upd)
-                    for n in tqdm(
-                        niter1 + 1 + np.arange(niter2), disable=quiet
-                    ):
-                        u_val, vT_val, loss_val[n] = train()
-                        if loss_val[n] < best_loss:
-                            best_loss = loss_val[n]
-                            best_u = u_val
-                            best_vT = vT_val
+                    for k, niter in enumerate(niter2):
+
+                        if not quiet:
+                            print(
+                                "Running non-linear solver (%d/%d)..."
+                                % (k + 1, len(niter2))
+                            )
+
+                        loss_T = -(lnlike / T2[k] + lnprior)  # tempered loss
+                        upd = optimizer(loss_T, theano_vars, **kwargs)
+                        train = theano.function([], [u, vT, loss], updates=upd)
+                        for n in tqdm(n0 + np.arange(niter2), disable=quiet):
+                            u_val, vT_val, loss_val[n] = train()
+                            if loss_val[n] < best_loss:
+                                best_loss = loss_val[n]
+                                best_u = u_val
+                                best_vT = vT_val
+
+                        n0 = n + 1
 
                     # We are done!
                     self.u = best_u
                     self.vT = best_vT
 
-                # If `vT` is known, return the approximate covariance
-                # for `u` based on a Taylor expansion of the problem.
-                # TODO: Experimental! Very possibly bugged!
-                """
-                if "vT" in known:
-
-                    # f = A . u / B . u + const.
-                    V = sparse_block_diag(
-                        [self.vT.reshape(-1, 1) for n in range(self.N)]
-                    )
-                    A = np.array(self.D().dot(V).todense())[:, 1:]
-                    B = self._map.X(theta=self.theta).eval()[:, 1:]
-                    B = np.repeat(B, 201, axis=0)
-
-                    # Taylor expansion to get the linear design matrix,
-                    #   f ~ C . u + const.
-                    Au0 = np.dot(A, self.u)
-                    Bu0 = np.dot(B, self.u)
-                    C = (1 / Bu0).reshape(-1, 1) * A - (
-                        Au0 / Bu0 ** 2
-                    ).reshape(-1, 1) * B
-
-                    # Compute the (untempered) cov. under the linear model
-                    CTCInv = np.multiply(C.T, self._F_CInv.reshape(-1))
-                    CTCInvC = CTCInv.dot(C)
-                    cinv = np.ones(self.N - 1) / self.u_sig ** 2
-                    np.fill_diagonal(CTCInvC, CTCInvC.diagonal() + cinv)
-                    cho_u = cho_factor(CTCInvC)
-                """
-
                 # Estimate the covariance of `u` conditioned on `vT`
                 # and the covariance of `vT` conditioned on `u`.
-                # NOTE: Let's try to work out the stuff above for cho_u.
+                # Note that the covariance of `u` is computed from
+                # the linearization that allows us to simultaneously
+                # solve for the baseline.
                 u_curr = np.array(self.u)
                 cho_u = self.compute_u()
                 self.u = u_curr
