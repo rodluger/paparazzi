@@ -83,6 +83,7 @@ class Doppler(object):
         self.baseline_sig = baseline_sig
         self._vT_CInv = None
         self._F_CInv = None
+        self.vT_deconv = None
 
         # Initialize
         self.u = self.u_mu * np.ones(self.N - 1)
@@ -814,6 +815,9 @@ class Doppler(object):
                         vT_guess = 1.0 + np.linalg.solve(
                             A.T.dot(A).toarray() + LInv, A.T.dot(fmean)
                         )
+
+                        # Save this for later
+                        self.vT_deconv = vT_guess
 
                 # Estimate `u` w/o baseline knowledge
                 # If `baseline_guess` is `None`, this is done via

@@ -7,7 +7,7 @@ import subprocess
 from scipy.linalg import cho_solve
 import theano.sparse as ts
 
-np.random.seed(13)
+__all__ = ["plot_results"]
 
 
 def plot_results(
@@ -31,6 +31,7 @@ def plot_results(
     theta = doppler.theta
     u_true = doppler.u_true
     vT_true = doppler.vT_true
+    vT_deconv = doppler.vT_deconv
     baseline_true = doppler.baseline_true
     u = np.array(doppler.u)
     vT = np.array(doppler.vT)
@@ -61,14 +62,14 @@ def plot_results(
         baseline_sig = np.sqrt(np.sum(A ** 2, axis=0))
         baseline_sig_ = np.append(baseline_sig, [baseline_sig[0]])
         ax.fill_between(
-            theta,
-            baseline - baseline_sig,
-            baseline + baseline_sig,
+            theta_,
+            baseline_ - baseline_sig_,
+            baseline_ + baseline_sig_,
             color="C1",
             alpha=0.25,
             lw=0,
         )
-    ax.legend(loc="lower left")
+    ax.legend(loc="lower left", fontsize=14)
     ax.set_xlabel(r"$\theta$ (degrees)")
     ax.margins(0, None)
     ax.set_xticks([-180, -135, -90, -45, 0, 45, 90, 135, 180])
@@ -84,6 +85,10 @@ def plot_results(
         doppler.u = u_true
         doppler.vT = vT_true
         loss_true = doppler.loss()
+
+        # Print for the record
+        print("True loss: %.2f" % loss_true)
+        print("Best loss: %.2f" % np.min(loss))
 
         # Plot
         fig, ax = plt.subplots(1, figsize=(12, 5))
@@ -111,7 +116,7 @@ def plot_results(
         ax.fill_between(n, u - sig_u, u + sig_u, color="C1", alpha=0.5)
     ax.set_ylabel("spherical harmonic coefficient")
     ax.set_xlabel("coefficient number")
-    ax.legend(loc="upper right")
+    ax.legend(loc="lower right", fontsize=14)
     ax.margins(0.01, None)
     fig.savefig("%s_coeffs.pdf" % name, bbox_inches="tight")
     files.append("coeffs.pdf")
@@ -333,6 +338,15 @@ def plot_results(
     # Plot the rest frame spectrum
     fig, ax = plt.subplots(1)
     ax.plot(lnlam_padded, vT_true.reshape(-1), "C0-", label="true")
+    if vT_deconv is not None:
+        ax.plot(
+            lnlam_padded,
+            vT_deconv.reshape(-1),
+            "C1--",
+            lw=1,
+            alpha=0.5,
+            label="guess",
+        )
     ax.plot(lnlam_padded, vT.reshape(-1), "C1-", label="inferred")
     if cho_vT is not None:
         cov_vT = cho_solve(cho_vT, np.eye(doppler.Kp))
@@ -345,7 +359,7 @@ def plot_results(
     ax.set_xlim(lnlam_padded[0], lnlam_padded[-1])
     ax.set_xlabel(r"$\lambdabar$")
     ax.set_ylabel(r"Normalized intensity")
-    ax.legend(loc="lower left", fontsize=14)
+    ax.legend(loc="lower left", fontsize=12)
     fig.savefig("%s_spectrum.pdf" % name, bbox_inches="tight")
     files.append("spectrum.pdf")
     plt.close()
@@ -354,120 +368,3 @@ def plot_results(
     if open_plots:
         for file in files:
             subprocess.run(["open", "%s_%s" % (name, file)])
-
-
-def learn_everything(high_snr=False):
-    """
-    In this case, we know nothing: we're going to learn
-    both the map and the spectrum. We're not giving the
-    algorithm an initial guess, either: the spectrum is
-    learned by deconvolving the data, and the initial
-    guess for the map is computed via the linearized
-    problem.
-
-    """
-    # High or low SNR?
-    if high_snr:
-        # We rely heavily on tempering here. Once we get
-        # a good initial guess via the bilinear solver,
-        # we run the non-linear solver with a slow learning
-        # rate.
-        ferr = 1e-4
-        T = 5000.0
-        niter = 1000
-        lr = 1e-4
-        name = "learn_everything_high_snr"
-    else:
-        # This case is easier; just a little tempering for
-        # good measure, followed by a fast non-linear
-        # refinement.
-        ferr = 1e-3
-        T = 10.0
-        niter = 250
-        lr = 2e-3
-        name = "learn_everything_low_snr"
-
-    # Generate data
-    dop = pp.Doppler(ydeg=15)
-    dop.generate_data(ferr=ferr)
-
-    # Reset all coefficients
-    dop.u = None
-    dop.vT = None
-
-    # Solve!
-    loss, cho_u, cho_vT = dop.solve(niter=niter, lr=lr, T=T)
-    plot_results(dop, name=name, loss=loss, cho_u=cho_u, cho_vT=cho_vT)
-
-
-def learn_map(high_snr=False):
-    """
-    In this case, we know the spectrum and the baseline
-    perfectly. The problem is linear in the map, so solving
-    the Doppler problem is easy!
-
-    """
-    # High or low SNR?
-    if high_snr:
-        ferr = 1e-4
-        name = "learn_map_high_snr"
-    else:
-        ferr = 1e-3
-        name = "learn_map_low_snr"
-
-    # Generate data
-    dop = pp.Doppler(ydeg=15)
-    dop.generate_data(ferr=ferr)
-
-    # Compute the true baseline (assumed to be known exactly)
-    dop.u = dop.u_true
-    baseline = dop.baseline()
-
-    # Reset all coefficients
-    dop.vT = dop.vT_true
-    dop.u = None
-
-    # Solve!
-    loss, cho_u, cho_vT = dop.solve(vT=dop.vT, baseline=baseline)
-    plot_results(dop, name=name, loss=loss, cho_u=cho_u, cho_vT=cho_vT)
-
-
-def learn_map_and_baseline(high_snr=False):
-    """
-    In this case, we know the rest frame spectrum, but we don't
-    know the map coefficients or the baseline flux. The problem
-    can be linearized to solve for the coefficients, and then
-    refined with the non-linear solver.
-
-    """
-    # High or low SNR?
-    if high_snr:
-        # At high SNR, we need to do a bit of refinement
-        # with the non-linear solver.
-        ferr = 1e-4
-        niter = 50
-        lr = 1e-4
-        name = "learn_map_baseline_high_snr"
-    else:
-        # At low SNR, a single run of the bi-linear solver
-        # gets us to the optimum!
-        ferr = 1e-3
-        niter = 0
-        lr = None
-        name = "learn_map_baseline_low_snr"
-
-    # Generate data
-    dop = pp.Doppler(ydeg=15)
-    dop.generate_data(ferr=ferr)
-
-    # Reset all coefficients
-    dop.vT = dop.vT_true
-    dop.u = None
-
-    # Solve!
-    loss, cho_u, cho_vT = dop.solve(vT=dop.vT, niter=niter, lr=lr)
-    plot_results(dop, name=name, loss=loss, cho_u=cho_u, cho_vT=cho_vT)
-
-
-if __name__ == "__main__":
-    learn_map(high_snr=True)

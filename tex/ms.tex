@@ -589,19 +589,52 @@ Words here. Figure~\ref{fig:spot} and Figure~\ref{fig:compare}.
 
 \begin{figure}[p!]
     \begin{centering}
-    \includegraphics[width=0.49\linewidth]{figures/learn_map_high_snr_timeseries.pdf}
-    \includegraphics[width=0.49\linewidth]{figures/learn_map_high_snr_rect.pdf}
-    \oscaption{vogtstar}{%
-        Solution to the \vogtstar problem at high SNR when both the rest frame spectrum
-        and the baseline are known.
-        \label{fig:vogtstar_learn_map_high_snr}
+    \includegraphics[width=0.49\linewidth]{figures/vogtstar_u_timeseries.pdf}
+    \includegraphics[width=0.49\linewidth]{figures/vogtstar_u_rect.pdf}
+    \oscaption{vogtstar_u}{%
+        Solution to the \vogtstar problem at high SNR when both 
+        the rest frame spectrum and the baseline are known.
+        \label{fig:vogtstar_u}
+    }
+    \end{centering}
+\end{figure}
+
+\begin{figure}[p!]
+    \begin{centering}
+    \includegraphics[width=0.49\linewidth]{figures/vogtstar_ub_timeseries.pdf}
+    \includegraphics[width=0.49\linewidth]{figures/vogtstar_ub_rect.pdf}
+    \\[0.5em]
+    \includegraphics[width=0.405\linewidth]{figures/vogtstar_ub_baseline.pdf}
+    \includegraphics[width=0.575\linewidth]{figures/vogtstar_ub_coeffs.pdf}
+    \oscaption{vogtstar_ub}{%
+        Similar to Figure~\ref{fig:vogtstar_u}, but assuming the baseline
+        is not known.
+        \label{fig:vogtstar_ub}
+    }
+    \end{centering}
+\end{figure}
+
+\begin{figure}[p!]
+    \begin{centering}
+    \includegraphics[width=0.49\linewidth]{figures/vogtstar_ubvT_timeseries.pdf}
+    \includegraphics[width=0.49\linewidth]{figures/vogtstar_ubvT_rect.pdf}
+    \\[0.5em]
+    \includegraphics[width=0.405\linewidth]{figures/vogtstar_ubvT_baseline.pdf}
+    \includegraphics[width=0.575\linewidth]{figures/vogtstar_ubvT_coeffs.pdf}
+    \\[0.5em]
+    \includegraphics[width=0.98\linewidth]{figures/vogtstar_ubvT_spectrum.pdf}
+    \oscaption{vogtstar_ubvT}{%
+        Similar to Figure~\ref{fig:vogtstar_u}, but assuming we have no
+        information about either the spectrum, the baseline, or the map
+        coefficients.
+        \label{fig:vogtstar_ubvT}
     }
     \end{centering}
 \end{figure}
 
 \begin{figure}[h!]
     \begin{centering}
-    \includegraphics[width=0.95\linewidth]{figures/inclinations.pdf}
+    \includegraphics[width=0.98\linewidth]{figures/inclinations.pdf}
     \oscaption{inclinations}{%
         Recovered \vogtstar map as a function of inclination.
         \label{fig:inclinations}
