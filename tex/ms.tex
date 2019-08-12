@@ -24,6 +24,7 @@
 \newcommand{\pbasis}{\boldsymbol{\phi}^\top}
 \newcommand{\pbasisn}{\ensuremath{\phi_n}}
 
+\newcommand{\azero}{\ensuremath{\bvec{a_0}}}
 
 % Bibliography stuff
 \bibliographystyle{aasjournal}
@@ -239,20 +240,21 @@ spherical harmonic coefficients:
 %
 \begin{align}
     \label{eq:deconv:R}
-    \alm(\lnlam_0, t) = \R(t) \alm(\lnlam_0)
+    \alm(\lnlam_0, t) = \R(t) \, \azero(\lnlam_0)
     \quad ,
 \end{align}
 %
-where $\alm(\lnlam_0) = \alm(\lnlam_0, t=t_0)$ for some reference time $t_0$.
+where $\azero(\lnlam_0) = \bvec{a}(\lnlam_0, t=t_0)$ 
+for some reference time $t_0$.
 For rigid body rotation, the result is exact and $\R(t)$ is the Wigner 
 rotation matrix for real spherical harmonics 
 \citep[e.g.][]{AlvarezCollado1989}, which is implicitly a 
 function of the inclination, obliquity, and rotation period of the star.
-In the case that other processes such as differential rotation or spot 
-evolution are significant
-over the course of an observation, Equation~(\ref{eq:deconv:R}) can be
-made to hold approximately for some effective rotation matrix 
-$\R(t)$; we discuss this later.
+%In the case that other processes such as differential rotation or spot 
+%evolution are significant
+%over the course of an observation, Equation~(\ref{eq:deconv:R}) can be
+%made to hold approximately for some effective rotation matrix 
+%$\R(t)$; we discuss this later.
 
 The equation for the specific intensity in the rest frame now reads
 %
@@ -263,7 +265,7 @@ The equation for the specific intensity in the rest frame now reads
     \,
     \R(t)
     \,
-    \alm(\lnlam_0)
+    \azero(\lnlam_0)
     \quad ,
 \end{align}
 %
@@ -296,7 +298,7 @@ observed spectrum:
     \,
     *
     \,
-    \alm(\lnlam_0)
+    \azero(\lnlam_0)
     \quad ,
 \end{align}
 %
@@ -340,7 +342,7 @@ We thus have
     &=
     \kT(\lnlam, \Dargs) \, \R(t)
     *
-    \alm(\lnlam_0)
+    \azero(\lnlam_0)
     \quad.
 \end{align}
 %
@@ -439,17 +441,83 @@ the formulae above and Equation~(\ref{eq:kT:kT}) up to spherical
 harmonic degree $l=10$.
 
 This completes our derivation of the analytic expression for the
-observed spectrum (Equation~\ref{eq:deconv:F}). As we show later,
-this equation allows us to compute the forward model for the
-spectrum very efficiently, particularly if we make use of Fast-Fourier
-Transform (FFT) -based convolution techniques. However, a convolution
-can also be represented as a matrix dot product, which we can use to
-express the model for the observed spectrum as a purely linear
-operation on the map decomposition $\alm(\lnlam_0)$. In the following section
-we derive this expression and show how it can be used to obtain
-fast, analytic solutions to the Doppler problem.
+observed spectrum (Equation~\ref{eq:deconv:F}). 
 
-\subsection{Linearization}
+\subsection{Example}
+%
+Figure~\ref{fig:spot} shows an example application of the formulae derived 
+in this section. We used \starry to generate a synthetic stellar surface with a 
+single large Gaussian spot at a latitude of $30^\circ$, yielding a vector of
+spherical harmonic coefficients $\bvec{y}$.
+The stellar rest frame spectrum $I(\lnlam_0)$ is taken to be a single Gaussian 
+absorption line that is spatially constant 
+everywhere save for a multiplicative factor equal to the local spot intensity.
+This corresponds to a spectral/spatial expansion vector $\azero(\lnlam_0)$ 
+whose coefficient at degree $l$ and order $m$ is equal to $y_{lm} I(\lnlam_0)$.
+In the Figure, we rotated the star about an axis perpendicular to the line
+of sight (left panel) and computed the observed spectrum using 
+Equation~(\ref{eq:deconv:F}) (center panel). The right panel shows the difference
+between the observed spectrum and the spectrum when the spot is not in view.
+The effect of the spot on the absorption line is evident: a ``bump'' that
+travels from the blueshifted side of to the redshifted side of the line
+in sync with the change in longitude of the spot. This correspondence between
+line shape residuals and spot location is the cornerstone of the Doppler
+imaging technique \citep[compare to, e.g., Figures 1 and 4 in][]{Vogt1983}.
+
+\begin{figure}[p!]
+    \begin{centering}
+    \includegraphics[width=0.6\linewidth]{figures/spot.pdf}
+    \oscaption{spot}{%
+        Time evolution of a Gaussian absorption line on a rigidly rotating, 
+        spotted star computed from the analytic formulae in \S\ref{sec:kT}.
+        The stellar surface is modeled as a spherical harmonic expansion
+        up to $l=20$, and the line shape is assumed to be the same everywhere;
+        the spot simply downweights the local intensity at all wavelengths.
+        As the spot rotates into view (left panel), the line shape changes
+        slightly (center panel). The residuals between the line when the
+        spot is in view (solid) and when it is on the backside of the star
+        (dotted) are shown in the right panel, where
+        a Gaussian-like feature can be seen tracking the spot as it rotates
+        from the blueshifted hemisphere to the redshifted hemisphere of
+        the star.
+        \label{fig:spot}
+    }
+    \end{centering}
+\end{figure}
+
+Figure~\ref{fig:compare} shows one of the spectra in Figure~\ref{fig:spot},
+this time computed using both our formulae (blue line) and the traditional
+technique of discretizing the stellar surface, Doppler-shifting the spectrum
+in each grid cell according to the local radial velocity, interpolating back
+to a uniform wavelength grid, and summing over the spatial dimension
+(dotted orange line). We show the residuals in the lower panel, where it
+is clear that as the number of grid cells increases from 2,000 (light grey)
+to 71,000 (dark grey), the numerical solution approaches the solution
+obtained using our approach. \xxx{Understand---and comment on---the fundamental
+differences between a discrete linear convolution and traditional linear 
+interpolation. Should we expect the numerical solution to actually \emph{converge}
+to the \starry solution, or is the way the two are interpolating fundamentally
+different?}
+
+\begin{figure}[t!]
+    \begin{centering}
+    \includegraphics[width=0.65\linewidth]{figures/compare.pdf}
+    \oscaption{compare}{%
+        The observed spectrum when the spot is in view computed with
+        \starry (blue) and numerically (orange). The problem setup
+        is the same as that in Figure~\ref{fig:spot}. The bottom
+        panel shows the absolute value of the difference between the 
+        two spectra for different number of grid points in the 
+        numerical solution.
+        As the number of grid points increases, the numerical solution
+        approaches the \starry solution.
+        \label{fig:compare}
+    }
+    \end{centering}
+\end{figure}
+
+
+\section{Linearization}
 \label{sec:linear}
 
 \begin{figure}[ht!]
@@ -497,7 +565,7 @@ wavelength grid in the rest frame, where $W$ is the width of the convolution
 kernel.
 
 Given this formulation, we may re-write Equation~(\ref{eq:deconv:F}) as a
-purely linear operation on $\alm(\lnlam_0)$:
+purely linear operation on $\azero(\lnlam_0)$:
 %
 \begin{align}
     \label{eq:linear:ft}
@@ -505,7 +573,7 @@ purely linear operation on $\alm(\lnlam_0)$:
     &=
     \Doppler_t
     \,
-    \alm
+    \azero
     \quad,
 \end{align}
 %
@@ -516,12 +584,12 @@ them (via $\R(t)$) to the stellar phase at time $t$.
 %
 The $(K \times 1)$ vector $\mathbf{f}$ is the model for 
 the flux observed at each wavelength at a particular time, and the 
-$(N K' \times 1)$ vector $\alm$ is the vector representation of the
+$(N K' \times 1)$ vector $\azero$ is the vector representation of the
 spatially-dependent spectrum of the star. The latter is constructed
 by flattening the spherical harmonic expansion of the star
-such that the first $K'$ terms in $\alm$ correspond
-to the the values of $a_{0,0}$ at each wavelength $\lnlam_0$,
-followed by the values of $a_{0,0}$ at each wavelength, and so forth.
+such that the first $K'$ terms in $\azero$ correspond
+to the the values of $(a_0)_{0,0}$ at each wavelength $\lnlam_0$,
+followed by the values of $(a_0)_{1,-1}$ at each wavelength, and so forth.
 
 In general, our data will consist of observations made at several
 epochs, corresponding to different rotational phases of the star. 
@@ -534,7 +602,7 @@ vector $\bvec{f}$, we may write
     &=
     \Doppler
     \,
-    \alm
+    \azero
     \quad,
 \end{align}
 %
@@ -543,7 +611,7 @@ constructed by vertically concatenating the individual matrices $\Doppler_t$.
 This equation represents the full linearization of the problem, where we
 have expressed the quantity we can observe, $\bvec{f}$, as a linear
 operation on the quantity of interest, the spectral/spatial decomposition
-of the stellar surface, $\alm$. Figure~\ref{fig:linalg} shows an
+of the stellar surface, $\azero$. Figure~\ref{fig:linalg} shows an
 example of $\Doppler$.
 
 \section{The inverse problem}
@@ -551,24 +619,25 @@ example of $\Doppler$.
 %
 In the previous section we showed how to express the data vector $\bvec{f}$,
 a series of spectra obtained at different epochs, as a purely linear
-operation on the map vector $\alm$, the spherical harmonic decomposition of
+operation on the map vector $\azero$, the spherical harmonic decomposition of
 the specific intensity on the surface of the star. The advantage of this
 linearity is that, given suitable priors, it allows one to compute both 
-the maximum likelihood solution for $\alm$ \emph{and} its uncertainty
+the maximum likelihood solution for $\azero$ and its uncertainty
 \emph{analytically}. In particular, if one places a (multidimensional)
-Gaussian prior on $\alm$ with mean $\boldsymbol{\mu}$ and 
-covariance $\boldsymbol{\Lambda}$, the maximum \emph{a posteriori} (MAP) 
-solution for $\alm$ is
+Gaussian prior on $\azero$ with mean $\boldsymbol{\mu}_\mathbf{a_0}$ and 
+covariance $\boldsymbol{\Lambda}_\mathbf{a_0}$, the maximum \emph{a posteriori} (MAP) 
+solution for $\azero$ is
 %
 \begin{align}
-    \bvec{\hat{a}} &= 
-    \boldsymbol{\Sigma}_\mathbf{\hat{a}}
+    \label{eq:inverse:ahat}
+    \bvec{\hat{a}_0} &= 
+    \boldsymbol{\Sigma}_\mathbf{\hat{a}_0}
     \left(
         \Doppler^\top
         {\boldsymbol{\Sigma}_\mathbf{f}}^{-1}
         \bvec{f}
         +
-        \boldsymbol{\Lambda}^{-1} \boldsymbol{\mu}
+        {\boldsymbol{\Lambda}_{\azero}}^{-1} \boldsymbol{\mu}_\mathbf{a_0}
     \right)
     \quad,
 \end{align}
@@ -576,13 +645,14 @@ solution for $\alm$ is
 with posterior covariance given by
 %
 \begin{align}
-    \boldsymbol{\Sigma}_\mathbf{\hat{a}} &= 
+    \label{eq:inverse:acov}
+    \boldsymbol{\Sigma}_\mathbf{\hat{a}_0} &= 
     \left(
         \Doppler^\top
         {\boldsymbol{\Sigma}_\mathbf{f}}^{-1}
         \Doppler
         +
-        \boldsymbol{\Lambda}^{-1}
+        {\boldsymbol{\Lambda}_{\azero}}^{-1}
     \right)^{-1}
     \quad,
 \end{align}
@@ -590,36 +660,268 @@ with posterior covariance given by
 where $\boldsymbol{\Sigma}_\mathbf{f}$ is the data covariance
 matrix. These equations require the inversion of a few fairly
 large matrices, but as we will see later, it allows one to obtain
-the map of the star ($\bvec{\hat{a}}$) and its uncertainty
-($\boldsymbol{\Sigma}_\mathbf{\hat{a}}$) in under a second for
+the map of the star ($\bvec{\hat{a}_0}$) and its uncertainty
+($\boldsymbol{\Sigma}_{\mathbf{\hat{a}_0}}$) in under a second for
 a typical dataset.
 
 There is, however, a catch: for most practical purposes, it is 
-difficult to find a good Gaussian prior for $\alm$. Usually
+difficult to find a good Gaussian prior for $\bvec{a_0}$. Usually
 we will have some prior information on what the spectrum of the
 star is, and perhaps some prior information on the distribution
 of surface features such as starspots. The problem is that
 even if these priors are Gaussian, the corresponding prior
-on $\alm$ is \emph{not}. To understand this, consider the
-matrix $\bvec{A}$, constructed by reshaping $\alm$ into
-a matrix of shape $(N \times K')$, whose rows correspond
-to the spectral components associated with each spherical harmonic coefficient.
-By performing singular value decomposition (SVD) on this matrix, we may
-write
+on $\bvec{a_0}$ is \emph{not}. To understand this, consider the
+case where the stellar rest frame spectrum is spatially constant,
+save for an amplitude that is spatially variable. We can then
+describe the rest frame spectrum by the $(K' \times 1)$ vector
+$\bvec{s}$ and the amplitude by the $(N \times 1)$ vector 
+$\bvec{y}$ representing the spherical harmonic expansion of the
+intensity profile of the star. The vector $\azero$ is then
+given by the (flattened) outer product of the two vectors:
 %
 \begin{align}
-    \bvec{A} = \bvec{U} \, \bvec{S} \, \bvec{V}^\top
+    \azero &= \mathrm{vec}\left( \bvec{A_0} \right) \nonumber \\
+         &= \mathrm{vec}\left( \bvec{s} \, \bvec{y}^\top \right) \quad,
 \end{align}
 %
-where $\bvec{U}$ is a matrix of shape $(N \times P)$, $\bvec{V}^\top$ is a 
-matrix of shape $(P \times K')$, and $\bvec{S}$ is a diagonal matrix of 
-shape $(P \times P)$ for some integer $P$.
+where $\mathrm{vec}$ denotes the vectorization operation, which in this case
+transforms the $(K' \times N)$ matrix $\bvec{A_0}$ into the $(N K' \times 1)$
+column vector $\azero$ by vertically stacking all of its columns. In other
+words, the vector $\azero$ consists of the set of $K'$ intensities in
+each wavelength bin repeated $N$ times, each time multiplied by the 
+$n^\mathrm{th}$ spherical harmonic coefficient in the expansion of the 
+surface intensity. Returning to our point about priors, note that all of the
+entries of $\azero$ are the product of two independent random variables. Since
+the product of two random variables is generally non-Gaussian, even
+when the variables themselves are Gaussian%
+\footnote{see, e.g., \url{http://mathworld.wolfram.com/NormalProductDistribution.html}}%
+, so too is the prior on $\azero$. This point makes
+Equation~(\ref{eq:inverse:ahat}) of little practical use, since a 
+multivariate Gaussian will not 
+generally be a suitable prior for $\azero$.
 
-Equation~(\ref{eq:deconv:Ivecfull})
+That said, a Gaussian prior \emph{is} typically suitable for both the spectrum
+$\bvec{s}$ and the intensity $\bvec{y}$ (just not their product). It is
+straightforward to show that because Equation~(\ref{eq:linear:f}) is linear
+in $\azero$, it is also linear in both $\bvec{s}$ and $\bvec{y}$, so
+MAP solutions can be found analytically for $\bvec{s}$ 
+(conditioned on $\bvec{y}$) and $\bvec{y}$ (conditioned on $\bvec{s}$). We
+investigate these solutions below.
 
-\subsection{Continuum normalization}
+\subsection{Solution for the intensity}
+For a fixed, spatially constant rest-frame spectrum $\bvec{s}$, the model
+for the flux vector may be written as
+%
+\begin{align}
+    \label{eq:inverse:fy}
+    \bvec{f}
+    &=
+    \Doppler
+    \,
+    \bvec{S}
+    \,
+    \bvec{y}
+    \quad,
+\end{align}
+%
+where
+%
+\begin{align}
+    \setstackgap{L}{1.25\baselineskip}
+    \bvec{S} =
+        \begin{pmatrix}
+        \quadquad\bvec{s}\quadquad & &            &            &  \\
+        & \quadquad\bvec{s}\quadquad &            &            &  \\
+        &            & \quadquad\bvec{s}\quadquad &            &  \\
+        &            &            & \quadquad\bvec{s}\quadquad &  \\
+        &            &            &               & \ddots
+        \end{pmatrix}
+\end{align}
+%
+is a $(NK' \times N)$ block matrix constructed by repeating the column
+vector $\bvec{s}$ $N$ times in blocks along the main diagonal. Given
+prior mean $\boldsymbol{\mu}_\mathbf{y}$ and covariance
+$\boldsymbol{\Lambda}_\mathbf{y}$ on $\mathbf{y}$, the MAP solution
+is given by
+%
+\begin{align}
+    \label{eq:inverse:yhat}
+    \bvec{\hat{y}} &= 
+    \boldsymbol{\Sigma}_\mathbf{\hat{y}}
+    \left(
+        \bvec{S}^\top\Doppler^\top
+        {\boldsymbol{\Sigma}_\mathbf{f}}^{-1}
+        \bvec{f}
+        +
+        {\boldsymbol{\Lambda}_\mathbf{y}}^{-1} \boldsymbol{\mu}_\mathbf{y}
+    \right)
+    \quad,
+\end{align}
+%
+with covariance
+%
+\begin{align}
+    \label{eq:inverse:ycov}
+    \boldsymbol{\Sigma}_\mathbf{\hat{y}} &= 
+    \left(
+        \bvec{S}^\top\Doppler^\top
+        {\boldsymbol{\Sigma}_\mathbf{f}}^{-1}
+        \Doppler\bvec{S}
+        +
+        {\boldsymbol{\Lambda}_\mathbf{y}}^{-1}
+    \right)^{-1}
+    \quad.
+\end{align}
+%
+If we choose a prior with zero mean ($\boldsymbol{\mu}_\bvec{y} = 0$)
+and a diagonal covariance that is constant for each spherical harmonic 
+order $m$,
+%
+\begin{align}
+    \boldsymbol{\Lambda}_\bvec{y} &=
+    \mathrm{diag} \left(
+        \sigma_0^2
+        \quad\quad\quad\quad
+        \sigma_1^2
+        \quad\quad\quad\quad
+        \sigma_1^2
+        \quad\quad\quad\quad
+        \sigma_1^2
+        \quad\quad\quad\quad
+        \sigma_2^2
+        \quad\quad\quad\quad
+        \sigma_2^2
+        \quad\quad\quad\quad
+        \sigma_2^2
+        \quad\quad\quad\quad
+        \sigma_2^2
+        \quad\quad\quad\quad
+        \sigma_2^2
+        \quad\quad\quad\quad
+        \cdots
+    \right)
+    \quad,
+\end{align}
+%
+we are in fact imposing an isotropic prior with an angular power spectrum
+given by $C_l = \sigma_l^2$
+\citep[e.g.,][]{Baldi2006}. This is especially useful if the typical
+angular scale of features on the surface of the star is known or if
+a Gaussian prior can be placed on it.
 
-\subsection{Limb darkening}
+\subsection{Solution for the spectrum}
+If, on the other hand, the spatial intensity profile is known, the
+model for the flux vector may be written in terms of the spectrum $\bvec{s}$
+as
+%
+\begin{align}
+    \label{eq:inverse:fs}
+    \bvec{f}
+    &=
+    \Doppler
+    \,
+    \bvec{Y}
+    \,
+    \bvec{s}
+    \quad,
+\end{align}
+%
+where
+%
+\begin{align}
+    \setstackgap{L}{1.25\baselineskip}
+    \bvec{Y} =
+        \begin{pmatrix}
+            y_0\, \bvec{I}_{K'} \\
+            y_1\, \bvec{I}_{K'} \\
+            y_2\, \bvec{I}_{K'} \\
+            y_3\, \bvec{I}_{K'} \\
+            \cdots
+        \end{pmatrix}
+\end{align}
+%
+is a $(NK' \times K')$ matrix constructed by vertically stacking
+$N$ $(K' \times K')$ identity matrices, each multiplied by the
+corresponding coefficient of $\bvec{y}$. Given
+prior mean $\boldsymbol{\mu}_\mathbf{s}$ and covariance
+$\boldsymbol{\Lambda}_\mathbf{s}$ on $\mathbf{s}$, the MAP solution
+is given by
+%
+\begin{align}
+    \label{eq:inverse:shat}
+    \bvec{\hat{s}} &= 
+    \boldsymbol{\Sigma}_\mathbf{\hat{s}}
+    \left(
+        \bvec{Y}^\top\Doppler^\top
+        {\boldsymbol{\Sigma}_\mathbf{f}}^{-1}
+        \bvec{f}
+        +
+        {\boldsymbol{\Lambda}_\mathbf{s}}^{-1} \boldsymbol{\mu}_\mathbf{s}
+    \right)
+    \quad,
+\end{align}
+%
+with covariance
+%
+\begin{align}
+    \label{eq:inverse:scov}
+    \boldsymbol{\Sigma}_\mathbf{\hat{s}} &= 
+    \left(
+        \bvec{Y}^\top\Doppler^\top
+        {\boldsymbol{\Sigma}_\mathbf{f}}^{-1}
+        \Doppler\bvec{Y}
+        +
+        {\boldsymbol{\Lambda}_\mathbf{s}}^{-1}
+    \right)^{-1}
+    \quad.
+\end{align}
+
+\subsection{The full solution}
+In the previous two sections we showed how, if the stellar
+rest-frame spectrum is spatially constant and known \emph{a priori} 
+(from, say, a template spectrum), the posterior distribution
+for the surface map $\bvec{y}$ is \emph{analytic} 
+(Equations~\ref{eq:inverse:yhat}
+and \ref{eq:inverse:ycov}). Conversely, if the surface map is known,
+the posterior for the spectrum is also analytic 
+(Equations~\ref{eq:inverse:shat} and \ref{eq:inverse:scov}). Both sets of
+solutions require Gaussian priors on the quantities of interest, but these
+are easily interpretable. A Gaussian prior on
+the spherical harmonic coefficients of the surface map corresponds 
+to the angular power spectrum of the surface features, whereas a Gaussian
+prior on the spectrum can be used to correctly propagate uncertainties in
+the stellar spectrum from observational uncertainties on the stellar
+metallicity, temperature, etc.
+
+Importantly, the framework developed here allows one to analytically
+compute not only the ``optimal'' solution to the Doppler imaging problem,
+but also its uncertainty. The problem of re-constructing surface images
+of stars from spectra and/or light curves is fundamentally ill-posed because
+of intrinsic degeneracies and a large null space
+\citep[e.g.,][]{Luger2019} \xxx{more cites}. Coupled to uncertainties in
+the observations themselves, this makes the process of searching for the
+``optimal'' solution flawed at best, and meaningless at worst. Access to the
+full covariance matrix of the solution is therefore essential to assessing our
+confidence in the various features of the inferred surface maps.
+
+However, as we mentioned above, the Doppler imaging problem can be solved
+analytically for either the surface map or the spectrum, but not both. If
+neither are known exactly \emph{a priori}, which is quite often the case,
+we can still find the MAP solution quickly by guessing at an initial
+spectrum $\bvec{s}$ and iterating between optimizing for $\bvec{y}$ and
+optimizing for $\bvec{s}$. This bi-linear problem is not generally convex,
+but given a good starting point for $\bvec{s}$ and sufficient regularization
+on $\bvec{y}$, we find that it typically converges to the correct solution,
+especially after refinement with a non-linear solver;
+we discuss this in detail below.
+
+Once the MAP solution has been found for both $\bvec{s}$ and $\bvec{y}$,
+the covariance of one conditioned on the other can be computed from the
+formulae above. However, this is necessarily a lower bound on the true
+covariance of the solution, since it neglects any covariance \emph{between}
+$\bvec{s}$ and $\bvec{y}$. To \emph{correctly} account for this, one must
+resort to Monte Carlo methods or other sampling techniques. We discuss
+this further below.
 
 
 
@@ -628,50 +930,10 @@ Equation~(\ref{eq:deconv:Ivecfull})
 \subsection{Differential rotation and convective blueshift}
 
 
-\section{Validation}
-\label{sec:validation}
-
-Words here. Figure~\ref{fig:spot} and Figure~\ref{fig:compare}.
-
-\begin{figure}[p!]
-    \begin{centering}
-    \includegraphics[width=0.6\linewidth]{figures/spot.pdf}
-    \oscaption{spot}{%
-        Time evolution of a Gaussian absorption line on a rigidly rotating, 
-        spotted star computed from the analytic formulae in \S\ref{sec:kT}.
-        The stellar surface is modeled as a spherical harmonic expansion
-        up to $l=20$, and the line shape is assumed to be the same everywhere;
-        the spot simply downweights the local intensity at all wavelengths.
-        As the spot rotates into view (left panel), the line shape changes
-        slightly (center panel). The residuals between the line when the
-        spot is in view (solid) and when it is on the backside of the star
-        (dotted) are shown in the right panel, where
-        a Gaussian-like feature can be seen tracking the spot as it rotates
-        from the blueshifted hemisphere to the redshifted hemisphere of
-        the star.
-        \label{fig:spot}
-    }
-    \end{centering}
-\end{figure}
-
-\begin{figure}[h!]
-    \begin{centering}
-    \includegraphics[width=0.65\linewidth]{figures/compare.pdf}
-    \oscaption{compare}{%
-        The observed spectrum when the spot is in view computed with
-        \starry (blue) and numerically (orange). The problem setup
-        is the same as that in Figure~\ref{fig:spot}. The bottom
-        panel shows the absolute value of the difference between the 
-        two spectra for different grid resolutions in the numerical solution.
-        As the number of grid points increases, the numerical solution
-        approaches the \starry solution.
-        \label{fig:compare}
-    }
-    \end{centering}
-\end{figure}
-
 \section{The VOGTSTAR}
 \label{sec:vogtstar}
+
+\cite{Vogt1987}
 
 \begin{figure}[p!]
     \begin{centering}

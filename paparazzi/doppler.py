@@ -306,7 +306,7 @@ class Doppler(object):
         return x
 
     def rT(self):
-        """
+        r"""
         Return the :math:`\rho^\top` solution vector.
         
         """
@@ -339,7 +339,7 @@ class Doppler(object):
         return s
 
     def kT(self):
-        """
+        r"""
         Return the vectorized convolution kernels :math:`\kappa^\top`.
 
         This is a matrix whose rows are equal to the convolution kernels
