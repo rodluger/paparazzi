@@ -305,9 +305,9 @@ class Doppler(object):
             )
         return x
 
-    def sT(self):
+    def rT(self):
         """
-        Return the `s^T` solution vector.
+        Return the :math:`\rho^\top` solution vector.
         
         """
         x = self.x()
@@ -340,7 +340,7 @@ class Doppler(object):
 
     def kT(self):
         """
-        Return the vectorized convolution kernels `k^T`.
+        Return the vectorized convolution kernels :math:`\kappa^\top`.
 
         This is a matrix whose rows are equal to the convolution kernels
         for each term in the  spherical harmonic decomposition of the 
@@ -348,7 +348,7 @@ class Doppler(object):
         """
         # Allow caching of this matrix.
         if self._kT is None:
-            self._kT = self._A1T.dot(self.sT())
+            self._kT = self._A1T.dot(self.rT())
             norm = np.trapz(self._kT[0])
             self._kT /= norm
         return self._kT
