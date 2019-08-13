@@ -994,7 +994,32 @@ and
 $\boldsymbol{\Sigma}_\mathbf{f} \rightarrow \nicefrac{\boldsymbol{\Sigma}_\mathbf{f}}{\bvec{B}\, \bvec{y}}$ 
 in Equations~(\ref{eq:inverse:shat}) and (\ref{eq:inverse:scov}).
 However, when solving for the spherical harmonic vector given the spectrum
-(\ref{sec:solve_y}), the problem is no longer linear in $\bvec{y}$.
+(\ref{sec:solve_y}), the problem is no longer linear in $\bvec{y}$, as the
+vector of interest appears in both the numerator and the denominator:
+%
+\begin{align}
+    \label{eq:norm:fy}
+    \bvec{f}
+    &=
+    \frac{
+        \Doppler
+        \,
+        \bvec{S}
+        \,
+        \bvec{y}
+    }{
+        \bvec{B}
+        \,
+        \bvec{y}
+    }
+    \quad.
+\end{align}
+%
+While we can solver for $\bvec{y}$ using a non-linear optimizer, it is
+often the case that the denominator in Equation~(\ref{eq:norm:fy}) is close
+to unity; i.e., the total flux from the star typically varies by only a
+few percent. When this is the case, it is straightforward to linearize
+this equation.
 
 \subsection{Limb darkening}
 Hello.
