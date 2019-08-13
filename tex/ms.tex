@@ -741,21 +741,54 @@ where
 \end{align}
 %
 is a $(NK' \times N)$ block matrix constructed by repeating the column
-vector $\bvec{s}$ $N$ times in blocks along the main diagonal. Given
-prior mean $\boldsymbol{\mu}_\mathbf{y}$ and covariance
-$\boldsymbol{\Lambda}_\mathbf{y}$ on $\mathbf{y}$, the MAP solution
+vector $\bvec{s}$ $N$ times in blocks along the main diagonal. 
+%
+Before we solve this equation for $\bvec{y}$, we note that in practice
+it is convenient to fix the coefficient of the $Y_{0,0}$ spherical
+harmonic, $y_0$, to unity. After all, this coefficient is not directly
+constrained by the data, as it merely sets the baseline intensity on the
+surface of the star and is therefore formally degenerate with the stellar 
+luminosity (which also cannot be directly inferred from the data). This
+choice further ensures a mean baseline of unity for the model 
+vector $\mathbf{f}$. We may therefore write
+%
+\begin{align}
+    \label{eq:inverse:fy1}
+    \bvec{f}
+    &=
+    \Doppler
+    \,
+    \bvec{s}_\bvec{0}
+    \,
+    +
+    \,
+    \Doppler
+    \,
+    \bvec{S_1}
+    \,
+    \bvec{y}_\bvec{1}
+    \quad,
+\end{align}
+%
+where the vector $\bvec{s_0}$ denotes the first column of $\bvec{S}$,
+the matrix $\bvec{S_1}$ denotes the remaining columns of $\bvec{S}$, and
+$\bvec{y_1}$ is the quantity we wish to solve for: the vector of spherical 
+harmonic coefficients of degree $l \ge 1$.
+
+Given prior mean $\boldsymbol{\mu}_\bvec{y_1}$ and covariance
+$\boldsymbol{\Lambda}_\bvec{y_1}$ on $\bvec{y_1}$, the MAP solution
 is given by
 %
 \begin{align}
-    \label{eq:inverse:yhat}
-    \bvec{\hat{y}} &= 
-    \boldsymbol{\Sigma}_\mathbf{\hat{y}}
+    \label{eq:inverse:y1hat}
+    \bvec{\hat{y}_1} &= 
+    \boldsymbol{\Sigma}_\mathbf{\hat{y}_1}
     \left(
-        \bvec{S}^\top\Doppler^\top
+        \bvec{S_1}^\top\Doppler^\top
         {\boldsymbol{\Sigma}_\mathbf{f}}^{-1}
-        \bvec{f}
+        \left(\bvec{f} - \Doppler\bvec{s}_\bvec{0}\right)
         +
-        {\boldsymbol{\Lambda}_\mathbf{y}}^{-1} \boldsymbol{\mu}_\mathbf{y}
+        {\boldsymbol{\Lambda}_\bvec{y_1}}^{-1} \boldsymbol{\mu}_\bvec{y_1}
     \right)
     \quad,
 \end{align}
@@ -763,27 +796,25 @@ is given by
 with covariance
 %
 \begin{align}
-    \label{eq:inverse:ycov}
-    \boldsymbol{\Sigma}_\mathbf{\hat{y}} &= 
+    \label{eq:inverse:y1cov}
+    \boldsymbol{\Sigma}_\bvec{\hat{y}_1} &= 
     \left(
-        \bvec{S}^\top\Doppler^\top
-        {\boldsymbol{\Sigma}_\mathbf{f}}^{-1}
-        \Doppler\bvec{S}
+        \bvec{S_1}^\top\Doppler^\top
+        {\boldsymbol{\Sigma}_\bvec{f}}^{-1}
+        \Doppler\bvec{S_1}
         +
-        {\boldsymbol{\Lambda}_\mathbf{y}}^{-1}
+        {\boldsymbol{\Lambda}_\bvec{y_1}}^{-1}
     \right)^{-1}
     \quad.
 \end{align}
 %
-If we choose a prior with zero mean ($\boldsymbol{\mu}_\bvec{y} = 0$)
+If we choose a prior with zero mean ($\boldsymbol{\mu}_\bvec{y_1} = 0$)
 and a diagonal covariance that is constant for each spherical harmonic 
 order $m$,
 %
 \begin{align}
-    \boldsymbol{\Lambda}_\bvec{y} &=
+    \boldsymbol{\Lambda}_\bvec{y_1} &=
     \mathrm{diag} \left(
-        \sigma_0^2
-        \quad\quad\quad\quad
         \sigma_1^2
         \quad\quad\quad\quad
         \sigma_1^2
@@ -884,8 +915,8 @@ In the previous two sections we showed how, if the stellar
 rest-frame spectrum is spatially constant and known \emph{a priori} 
 (from, say, a template spectrum), the posterior distribution
 for the surface map $\bvec{y}$ is \emph{analytic} 
-(Equations~\ref{eq:inverse:yhat}
-and \ref{eq:inverse:ycov}). Conversely, if the surface map is known,
+(Equations~\ref{eq:inverse:y1hat}
+and \ref{eq:inverse:y1cov}). Conversely, if the surface map is known,
 the posterior for the spectrum is also analytic 
 (Equations~\ref{eq:inverse:shat} and \ref{eq:inverse:scov}). Both sets of
 solutions require Gaussian priors on the quantities of interest, but these
@@ -969,23 +1000,36 @@ be amended.
 where $\bvec{b}$ is the baseline and the vector division is
 taken elementwise. When $\azero$ is given by Equation~(\ref{eq:inverse:azero}),
 the baseline $\bvec{b}$ is simply the total (wavelength-integrated) flux
-at each epoch %
-\xxx{need to repeat it for each wavelength bin in each epoch}%
-, which \citet{Luger2019} showed is a linear operation on the
-spherical harmonic vector $\bvec{y}$:
+at each epoch, repeated for every element in each spectrum. 
+Based on \citet{Luger2019}, this can be computed as a purely linear operation 
+on the spherical harmonic vector $\bvec{y}$:
 %
 \begin{align}
     \label{eq:norm:b}
     \bvec{b}
     &=
-    \bvec{r}^\top \bvec{A_1} \bvec{R}(t) \, \bvec{y}
-    \nonumber \\
+    %
+    \begin{pmatrix}
+        \bvec{r}^\top \bvec{A_1} \bvec{R}(t_0) \\
+        \cdots \\
+        \bvec{r}^\top \bvec{A_1} \bvec{R}(t_0) \\
+        \bvec{r}^\top \bvec{A_1} \bvec{R}(t_1) \\
+        \cdots \\
+        \bvec{r}^\top \bvec{A_1} \bvec{R}(t_1) \\
+        \cdots \\
+        \bvec{r}^\top \bvec{A_1} \bvec{R}(t_{M-1}) \\
+        \cdots \\
+        \bvec{r}^\top \bvec{A_1} \bvec{R}(t_{M-1})
+    \end{pmatrix}
+    \bvec{y}
+    %
+    \nonumber \\[0.5em]
     &\equiv
     \bvec{B} \, \bvec{y}
 \end{align}
 %
 where $\bvec{r}$ is given by Equation~(18) in \citet{Luger2019},
-$\bvec{A_1}$ is given in Appendix B of \citet{Luger2019}, and \bvec{R}(t)
+$\bvec{A_1}$ is given in Appendix B of \citet{Luger2019}, and $\bvec{R}(t)$
 is the rotation matrix defined previously.
 
 Given this new equation, we must change how we approach the inverse problem
@@ -1004,7 +1048,7 @@ vector of interest appears in both the numerator and the denominator:
     \bvec{f}
     &=
     \frac{
-        \Doppler
+        \bvec{D}
         \,
         \bvec{S}
         \,
@@ -1017,47 +1061,114 @@ vector of interest appears in both the numerator and the denominator:
     \quad.
 \end{align}
 %
-While we can solver for $\bvec{y}$ using a non-linear optimizer, it is
+While we can solve for $\bvec{y}$ using a non-linear optimizer, it is
 often the case that the denominator in Equation~(\ref{eq:norm:fy}) is close
 to unity; i.e., the total flux from the star typically varies by only a
 few percent. When this is the case, it is straightforward to linearize
-this equation. First, we note that the coefficient of the $Y_{0,0}$ spherical
-harmonic, $y_0$, sets the baseline intensity level on the surface of the 
-star, a quantity that is constant across all observations%
-\footnote{Unless the star's total luminosity is changing with time, 
-but we do not model that here.}%
-and formally degenerate with the luminosity of the star. We are therefore
-free to fix it, so for simplicity we choose $y_0 = 1$. We may 
-therefore write %
-\xxx{this equation needs work}%
+this equation.
+Following the notation from \S\ref{sec:solve_y}, we may therefore write
 %
 \begin{align}
     \bvec{f}
     &=
     \frac{
-        \Doppler
-        \,
-        \bvec{S}
+        \bvec{D} \, \bvec{s_0}
         \,
         + 
         \,
-        \Doppler
+        \bvec{D}\bvec{S_1}
         \,
-        \bvec{S}
-        \,
-        \bvec{y}
+        \bvec{y_1}
     }{
-        1
+        \bvec{B_0}
         \,
         +
-        \bvec{B}
+        \bvec{B_1}
         \,
-        \bvec{y}
+        \bvec{y_1}
     }
-    \quad.
+    \quad,
 \end{align}
 %
-
+where $\bvec{B_0} = \bvec{1}$ is the first column of $\bvec{B}$
+and $\bvec{B}_\bvec{1}$ denotes the
+matrix composed from the remaining $N - 1$ columns of $\bvec{B}$.
+Expanding the expression above about 
+$\bvec{B_1} \bvec{y_1} = \bvec{0}$, we have
+%
+\begin{align}
+    \bvec{f}
+    &\approx
+    \left(
+        \bvec{D} \, \bvec{s_0}
+        \,
+        + 
+        \,
+        \bvec{D}\bvec{S_1}
+        \,
+        \bvec{y_1}
+    \right)
+    \circ
+    \left(
+        \bvec{1}
+        \,
+        -
+        \bvec{B_1}
+        \,
+        \bvec{y_1}
+    \right)
+    \nonumber \\
+    &=
+    \left(
+        \bvec{D}\bvec{S_1}
+        \,
+        -
+        \bvec{C}
+    \right)
+    \bvec{y_1}
+    \,
+    +
+    \,
+    \bvec{D} \, \bvec{s_0}
+    \quad,
+\end{align}
+%
+where $\circ$ denotes an elementwise product and $\bvec{C}$ is a matrix
+constructed by multiplying the $i^\mathrm{th}$ row of $\bvec{B_1}$ by the
+$i^\mathrm{th}$ element of $\bvec{D}\bvec{s_0}$.
+%
+This equation is now
+linear in $\bvec{y}_\bvec{1}$, so we may solve the least-squares problem
+as before:
+%
+\begin{align}
+    \label{eq:norm:yhat}
+    \bvec{\hat{y}_1} &= 
+    \boldsymbol{\Sigma}_\mathbf{\hat{y}_1}
+    \left(
+        \left(\bvec{D}\bvec{S_1} - \bvec{C}\right)^\top
+        {\boldsymbol{\Sigma}_\mathbf{f}}^{-1}
+        (\bvec{f} - \bvec{D}\bvec{s_0})
+        +
+        {\boldsymbol{\Lambda}_{\mathbf{y}_\bvec{1}}}^{-1} \boldsymbol{\mu}_{\mathbf{y}_\bvec{1}}
+    \right)
+    \quad,
+\end{align}
+%
+with covariance
+%
+\begin{align}
+    \label{eq:norm:ycov}
+    \boldsymbol{\Sigma}_\mathbf{\hat{y}_1} &= 
+    \left(
+        \left(\bvec{D}\bvec{S_1} - \bvec{C}\right)^\top
+        {\boldsymbol{\Sigma}_\mathbf{f}}^{-1}
+        \left(\bvec{D}\bvec{S_1} - \bvec{C}\right)
+        +
+        {\boldsymbol{\Lambda}_{\mathbf{y}_1}}^{-1}
+    \right)^{-1}
+    \quad.
+\end{align}
 
 \subsection{Limb darkening}
 Hello.
