@@ -556,8 +556,8 @@ For discrete arrays $\bvec{g}$ and $\bvec{h}$, we have
 where $\bvec{G}$ is a Toeplitz matrix, a matrix whose diagonals
 are constant from top left to bottom right. In this case, the diagonals
 are constructed from the values of $\bvec{g}$. If $\bvec{g}$ has length
-$N$, element $g_n$ is placed everywhere along the $k^\mathrm{th}$ diagonal 
-of $\bvec{G}$ for $k = -N / 2 + n$; all other entries of $\bvec{G}$ are 
+$L$, element $g_n$ is placed everywhere along the $k^\mathrm{th}$ diagonal 
+of $\bvec{G}$ for $k = -L / 2 + n$; all other entries of $\bvec{G}$ are 
 set to zero. Note that the matrix $\bvec{G}$ need not be square; in fact,
 for our purposes, it is a $(K \times K')$ matrix, where $K$ is the 
 size of the observed wavelength grid and $K' = K + W - 1$ is the size of the
@@ -1019,7 +1019,14 @@ While we can solver for $\bvec{y}$ using a non-linear optimizer, it is
 often the case that the denominator in Equation~(\ref{eq:norm:fy}) is close
 to unity; i.e., the total flux from the star typically varies by only a
 few percent. When this is the case, it is straightforward to linearize
-this equation.
+this equation. First, we note that the coefficient of the $Y_{0,0}$ spherical
+harmonic, $y_0$, sets the baseline intensity level on the surface of the 
+star, a quantity that is constant across all observations%
+\footnote{Unless the star's total luminosity is changing with time, 
+but we do not model that here.}%
+and formally degenerate with the luminosity of the star. We are therefore
+free to fix it, so for simplicity we choose $y_0 = 1$.
+
 
 \subsection{Limb darkening}
 Hello.

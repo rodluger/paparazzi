@@ -17,6 +17,7 @@ steps:
     conda activate paparazzi
     pip install -U pip
     pip install -U setuptools
+    pip install -U --force-reinstall numpy
     pip install -U -r requirements.txt
     git clone --single-branch --branch dev https://github.com/rodluger/starry.git
     pushd starry && python setup.py develop && popd
