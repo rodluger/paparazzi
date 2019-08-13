@@ -461,7 +461,7 @@ class Doppler(object):
                 7.5e-6, equivalent to ~0.05A at 6430A.
             nlines (int, optional): Total number of lines to include. 
                 Defaults to 21.
-            ntheta (int, optional): Number of spectra. Defaults to 11.
+            ntheta (int, optional): Number of spectra. Defaults to 16.
             ferr (float, optional): Gaussian error to add to the fluxes. 
                 Defaults to 1.e-3
             u (ndarray, optional): The spherical harmonic vector for the map.
@@ -661,7 +661,7 @@ class Doppler(object):
             # We need to Taylor expand the problem about
             # a baseline of unity.
             B = self._map.X(theta=self.theta).eval()[:, 1:]
-            B = np.repeat(B, 201, axis=0)
+            B = np.repeat(B, self.K, axis=0)
 
             # We are Taylor expanding
             #
