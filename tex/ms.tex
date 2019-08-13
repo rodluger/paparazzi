@@ -969,7 +969,9 @@ be amended.
 where $\bvec{b}$ is the baseline and the vector division is
 taken elementwise. When $\azero$ is given by Equation~(\ref{eq:inverse:azero}),
 the baseline $\bvec{b}$ is simply the total (wavelength-integrated) flux
-at each epoch, which \citet{Luger2019} showed is a linear operation on the
+at each epoch %
+\xxx{need to repeat it for each wavelength bin in each epoch}%
+, which \citet{Luger2019} showed is a linear operation on the
 spherical harmonic vector $\bvec{y}$:
 %
 \begin{align}
@@ -1025,7 +1027,36 @@ star, a quantity that is constant across all observations%
 \footnote{Unless the star's total luminosity is changing with time, 
 but we do not model that here.}%
 and formally degenerate with the luminosity of the star. We are therefore
-free to fix it, so for simplicity we choose $y_0 = 1$.
+free to fix it, so for simplicity we choose $y_0 = 1$. We may 
+therefore write %
+\xxx{this equation needs work}%
+%
+\begin{align}
+    \bvec{f}
+    &=
+    \frac{
+        \Doppler
+        \,
+        \bvec{S}
+        \,
+        + 
+        \,
+        \Doppler
+        \,
+        \bvec{S}
+        \,
+        \bvec{y}
+    }{
+        1
+        \,
+        +
+        \bvec{B}
+        \,
+        \bvec{y}
+    }
+    \quad.
+\end{align}
+%
 
 
 \subsection{Limb darkening}

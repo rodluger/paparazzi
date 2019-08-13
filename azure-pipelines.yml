@@ -9,7 +9,7 @@ steps:
 - script: |
     sudo chown -R $USER $CONDA
     . $CONDA/etc/profile.d/conda.sh
-    conda create --yes --quiet --name paparazzi python=3.7 pip
+    conda create --yes --quiet --name paparazzi python=3.6 pip
   displayName: 'Setup conda'
 
 - script: |
@@ -17,7 +17,6 @@ steps:
     conda activate paparazzi
     pip install -U pip
     pip install -U setuptools
-    pip install -U --force-reinstall numpy
     pip install -U -r requirements.txt
     git clone --single-branch --branch dev https://github.com/rodluger/starry.git
     pushd starry && python setup.py develop && popd
