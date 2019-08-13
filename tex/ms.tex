@@ -680,6 +680,7 @@ intensity profile of the star. The vector $\azero$ is then
 given by the (flattened) outer product of the two vectors:
 %
 \begin{align}
+    \label{eq:inverse:azero}
     \azero &= \mathrm{vec}\left( \bvec{A_0} \right) \nonumber \\
          &= \mathrm{vec}\left( \bvec{s} \, \bvec{y}^\top \right) \quad,
 \end{align}
@@ -709,6 +710,7 @@ MAP solutions can be found analytically for $\bvec{s}$
 investigate these solutions below.
 
 \subsection{Solution for the intensity}
+\label{sec:solve_y}
 For a fixed, spatially constant rest-frame spectrum $\bvec{s}$, the model
 for the flux vector may be written as
 %
@@ -810,6 +812,7 @@ angular scale of features on the surface of the star is known or if
 a Gaussian prior can be placed on it.
 
 \subsection{Solution for the spectrum}
+\label{sec:solve_s}
 If, on the other hand, the spatial intensity profile is known, the
 model for the flux vector may be written in terms of the spectrum $\bvec{s}$
 as
@@ -924,11 +927,80 @@ resort to Monte Carlo methods or other sampling techniques. We discuss
 this further below.
 
 
+\section{Bells and Whistles}
+\label{sec:bells}
 
-\section{Other stuff}
+\subsection{Unknown continuum normalization}
+\label{sec:norm}
+%
+Consider the star depicted in Figure~\ref{fig:spot}. When the spot is in
+view, absorption lines become distorted due to the suppression of either
+blueshifted or redshifted light. However, what is not shown in the figure
+is the fact that overall, the star also gets \emph{dimmer}: the 
+continuum level drops in the presence of the spot. Unfortunately, 
+spectrographs are not usually designed to measure this, since the
+change in the star's overall brightness from one observation to the next
+is often dwarfed by (unknown) changes in the spectrograph sensitivity. 
+For this reason, the spectra are usually normalized to have a
+fixed baseline continuum, and Equation~\ref{eq:linear:f} is no longer
+a good model for the data.
+
+One option is to collect simultaneous photometry on the target in a band
+similar to the wavelength range observed, and use this light curve to
+(un-)normalize the spectral timeseries $\bvec{f}$. However, when this is
+not an option, our model for $\bvec{f}$ (Equation~\ref{eq:linear:f}) must
+be amended.
+
+%
+\begin{align}
+    \label{eq:norm:f}
+    \bvec{f}
+    &=
+    \frac{
+        \Doppler
+        \,
+        \azero
+    } {
+        \bvec{b}
+    }
+    \quad,
+\end{align}
+%
+where $\bvec{b}$ is the baseline and the vector division is
+taken elementwise. When $\azero$ is given by Equation~(\ref{eq:inverse:azero}),
+the baseline $\bvec{b}$ is simply the total (wavelength-integrated) flux
+at each epoch, which \citet{Luger2019} showed is a linear operation on the
+spherical harmonic vector $\bvec{y}$:
+%
+\begin{align}
+    \label{eq:norm:b}
+    \bvec{b}
+    &=
+    \bvec{r}^\top \bvec{A_1} \bvec{R}(t) \, \bvec{y}
+    \nonumber \\
+    &\equiv
+    \bvec{B} \, \bvec{y}
+\end{align}
+%
+where $\bvec{r}$ is given by Equation~(18) in \citet{Luger2019},
+$\bvec{A_1}$ is given in Appendix B of \citet{Luger2019}, and \bvec{R}(t)
+is the rotation matrix defined previously.
+
+Given this new equation, we must change how we approach the inverse problem
+(\S\ref{sec:inverse}). When solving for the spectrum given the spherical 
+harmonic vector (\S\ref{sec:solve_s}), we need only make the replacements
+$\bvec{f} \rightarrow \nicefrac{\bvec{f}}{\bvec{B}\, \bvec{y}}$
+and 
+$\boldsymbol{\Sigma}_\mathbf{f} \rightarrow \nicefrac{\boldsymbol{\Sigma}_\mathbf{f}}{\bvec{B}\, \bvec{y}}$ 
+in Equations~(\ref{eq:inverse:shat}) and (\ref{eq:inverse:scov}).
+However, when solving for the spherical harmonic vector given the spectrum
+(\ref{sec:solve_y}), the problem is no longer linear in $\bvec{y}$.
+
 \subsection{Limb darkening}
-\subsection{Differential rotation and convective blueshift}
+Hello.
 
+\subsection{Multiple spectra}
+Hello.
 
 \section{The VOGTSTAR}
 \label{sec:vogtstar}
@@ -1005,8 +1077,9 @@ approximately as $W K \lmax^2$. Since typically $K \gg \lmax$,
 the latter computation dominates and the entire evaluation 
 takes $\mathcal{O}(W K \lmax^2)$ operations.
 
-
-
+\section{Stuff we're not addressing}
+%
+Differential rotation and convective blueshift.
 
 %
 %
