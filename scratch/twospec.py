@@ -75,6 +75,10 @@ def model(y1, s):
     return M1 + M2
 
 
+# TODO: Better
+s_mu = [0.5, 0.5]
+
+
 def loss(y1, s):
     # Theano or numpy?
     if is_theano(y1, s):
@@ -91,21 +95,21 @@ def loss(y1, s):
         - 0.5 * math.sum((b - dop.baseline_mu) ** 2 / dop.baseline_sig ** 2)
         - 0.5
         * math.dot(
-            math.dot(math.reshape((s[0] - 0.75), (1, -1)), dop._vT_CInv),
-            math.reshape((s[0] - 0.75), (-1, 1)),
+            math.dot(math.reshape((s[0] - s_mu[0]), (1, -1)), dop._vT_CInv),
+            math.reshape((s[0] - s_mu[0]), (-1, 1)),
         )[0, 0]
         - 0.5
         * math.dot(
-            math.dot(math.reshape((s[1] - 0.25), (1, -1)), dop._vT_CInv),
-            math.reshape((s[1] - 0.25), (-1, 1)),
+            math.dot(math.reshape((s[1] - s_mu[1]), (1, -1)), dop._vT_CInv),
+            math.reshape((s[1] - s_mu[1]), (-1, 1)),
         )[0, 0]
     )
     return -(lnlike + lnprior)
 
 
 # HACK: Now let's re-generate it with 2 different spectral
-# components with weights 0.75 and 0.25, respectively.
-l_true = 0.75
+# components with weights 0.6 and 0.4, respectively.
+l_true = 0.6
 
 # Get the Ylm decomposition & the baseline
 map = starry.Map(15, lazy=False)
@@ -156,8 +160,8 @@ offsets = np.arange(dop.W)
 A = diags(diagonals, offsets, (dop.K, dop.Kp), format="csr")
 LInv = dcf ** 2 * dop.ferr ** 2 / dop.vT_sig ** 2 * np.eye(A.shape[1])
 s_guess = 1.0 + np.linalg.solve(A.T.dot(A).toarray() + LInv, A.T.dot(fmean))
-s[0] = 0.8 * s_guess
-s[1] = 0.2 * s_guess
+s[0] = 0.5 * s_guess
+s[1] = 0.5 * s_guess
 
 # Tempering schedule
 T = 50000
