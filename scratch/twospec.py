@@ -16,31 +16,26 @@ ferr = 1.0e-4
 res = 300
 
 # Generate a dataset
-dop = pp.Doppler(ydeg=15)
-dop.generate_data(ferr=ferr, ntheta=32)
+dop = pp.Doppler(ydeg=15, vT_sig=0.01)
+dop.generate_data(ferr=ferr)
 
 # HACK: Now let's re-generate it with 2 different spectral
 # components with weights 0.75 and 0.25, respectively.
-ncomp = 2
-L_true = np.array([0.75, 0.25])
+l_true = 0.75
 
-# Get the Ylm decomposition for each component & the baseline
-y_true = np.empty((ncomp, dop.N - 1))
-b_true = np.empty((ncomp, dop.M * dop.K))
-img_true = [None for n in range(ncomp)]
+# Get the Ylm decomposition & the baseline
 map = starry.Map(15, lazy=False)
 map.inc = 40
 map.load("/Users/rluger/src/paparazzi/paparazzi/vogtstar.jpg")
-y_true[0] = np.array(map[1:, :])
-b_true[0] = np.repeat(map.flux(theta=dop.theta), dop.K)
+y1_true = np.array(map[1:, :])
+b_true = np.repeat(map.flux(theta=dop.theta), dop.K)
+img_true = [None, None]
 img_true[0] = map.render(projection="rect", res=res)[0]
 map[1:, :] *= -1
-y_true[1] = np.array(map[1:, :])
-b_true[1] = np.repeat(map.flux(theta=dop.theta), dop.K)
 img_true[1] = map.render(projection="rect", res=res)[0]
 
 # Generate two different spectra
-s_true = np.empty((ncomp, dop.Kp))
+s_true = np.empty((2, dop.Kp))
 sigma = 7.5e-6
 nlines = 21
 mu1 = -0.00005
@@ -57,20 +52,23 @@ for _ in range(nlines - 1):
     s_true[1] -= amp * np.exp(-0.5 * (dop.lnlam_padded - mu) ** 2 / sigma ** 2)
 
 # Re-generate the dataset
-F = [None for n in range(ncomp)]
-for n in range(ncomp):
-    S = s_true[n].reshape(-1, 1)
-    Y = np.append([1], y_true[n]).reshape(-1, 1)
-    A = L_true[n] * S.dot(Y.T)
-    a = A.T.reshape(-1)
-    F[n] = dop.D().dot(a).reshape(dop.M, -1) / b_true[n].reshape(dop.M, -1)
-F = np.sum(F, axis=0)
+S = s_true[0].reshape(-1, 1)
+Y = np.append([1.0], y1_true).reshape(-1, 1)
+A = l_true * S.dot(Y.T)
+a = A.T.reshape(-1)
+F1 = dop.D().dot(a).reshape(dop.M, -1) / b_true.reshape(dop.M, -1)
+S = s_true[1].reshape(-1, 1)
+Y = np.append([1.0], -y1_true).reshape(-1, 1)
+A = (1 - l_true) * S.dot(Y.T)
+a = A.T.reshape(-1)
+F2 = dop.D().dot(a).reshape(dop.M, -1) / (1 - (b_true - 1)).reshape(dop.M, -1)
+F = F1 + F2
 F += ferr * np.random.randn(*F.shape)
 dop.F = F
 
 # Initialize
-L = np.array([0.5, 0.5])
-y = np.zeros_like(y_true)
+l = 0.5
+y1 = np.zeros_like(y1_true)
 s = np.zeros_like(s_true)
 b = np.zeros_like(b_true)
 
@@ -85,97 +83,114 @@ LInv = dcf ** 2 * dop.ferr ** 2 / dop.vT_sig ** 2 * np.eye(A.shape[1])
 s_guess = 1.0 + np.linalg.solve(A.T.dot(A).toarray() + LInv, A.T.dot(fmean))
 s[:] = s_guess
 
+# Tempering schedule
 T = 50000
 dlogT = -0.1
 T_arr = 10 ** np.arange(np.log10(T), 0, dlogT)
 T_arr = np.append(T_arr, [1.0])
+
+# DEBUG
+s = s_true
+# T_arr = [10000.0]
+
+# Iterate
 for i in tqdm(range(len(T_arr))):
 
     # Set the temperature
     T = T_arr[i]
 
-    # Solve for `y`
-    X = [None for n in range(ncomp)]
-    z = [None for n in range(ncomp)]
-    B = dop._map.X(theta=dop.theta).eval()[:, 1:]
-    B = np.repeat(B, dop.K, axis=0)
-
-    for n in range(ncomp):
-        S = sparse_block_diag([s[n].reshape(-1, 1) for j in range(dop.N)])
-        DS_ = np.array(dop.D().dot(S).todense())
-        Ds0, DS1 = DS_[:, 0], DS_[:, 1:]
-        C = Ds0.reshape(-1, 1) * B
-        X[n] = L[n] * (DS1 - C)
-        z[n] = L[n] * Ds0
-    X = np.hstack(X)
-    z = np.sum(z, axis=0)
-
+    # Solve for `y1`
+    B1 = dop._map.X(theta=dop.theta).eval()[:, 1:]
+    B1 = np.repeat(B1, dop.K, axis=0)
+    S_1 = sparse_block_diag([s[0].reshape(-1, 1) for j in range(dop.N)])
+    tmp = np.array(dop.D().dot(S_1).todense())
+    Ds0_1, DS1_1 = tmp[:, 0], tmp[:, 1:]
+    Ds0_1 = Ds0_1.reshape(-1, 1)
+    S_2 = sparse_block_diag([s[1].reshape(-1, 1) for j in range(dop.N)])
+    tmp = np.array(dop.D().dot(S_2).todense())
+    Ds0_2, DS1_2 = tmp[:, 0], tmp[:, 1:]
+    Ds0_2 = Ds0_2.reshape(-1, 1)
+    X = l * DS1_1 - l * (Ds0_1 * B1) - (1 - l) * DS1_2 + (1 - l) * (Ds0_2 * B1)
+    z = (l * Ds0_1 + (1 - l) * Ds0_2).reshape(-1)
     XTCInv = np.multiply(X.T, (dop._F_CInv / T).reshape(-1))
     XTCInvX = XTCInv.dot(X)
-    cinv = np.ones(ncomp * (dop.N - 1)) / dop.u_sig ** 2
+    cinv = np.ones(dop.N - 1) / dop.u_sig ** 2
     np.fill_diagonal(XTCInvX, XTCInvX.diagonal() + cinv)
     cho_C = cho_factor(XTCInvX)
     XTXInvy = np.dot(XTCInv, dop.F.reshape(-1) - z)
-    mu = np.ones(ncomp * (dop.N - 1)) * dop.u_mu
-    y = cho_solve(cho_C, XTXInvy + cinv * mu).reshape(ncomp, -1)
+    mu = np.ones(dop.N - 1) * dop.u_mu
+    y1 = cho_solve(cho_C, XTXInvy + cinv * mu)
 
     # Solve for `b`
-    b = 1 + B.dot(y.T).T
+    b = 1.0 + B1.dot(y1.T).T
 
     # Solve for `s`
-    DYb = [None for n in range(ncomp)]
-    X = [None for n in range(ncomp)]
     offsets = -np.arange(0, dop.N) * dop.Kp
-    for n in range(ncomp):
-        Y = diags(
-            [np.ones(dop.Kp)]
-            + [np.ones(dop.Kp) * y[n, j] for j in range(dop.N - 1)],
-            offsets,
-            shape=(dop.N * dop.Kp, dop.Kp),
-        )
-        DYb[n] = np.array(dop.D().dot(Y).todense()) / b[n].reshape(-1, 1)
-        X[n] = L[n] * DYb[n]
-    X = np.hstack(X)
+    Y = diags(
+        [np.ones(dop.Kp)]
+        + [np.ones(dop.Kp) * y1[j] for j in range(dop.N - 1)],
+        offsets,
+        shape=(dop.N * dop.Kp, dop.Kp),
+    )
+    DYb1 = np.array(dop.D().dot(Y).todense()) / b.reshape(-1, 1)
+    X1 = l * DYb1
+    Y = diags(
+        [np.ones(dop.Kp)]
+        + [-np.ones(dop.Kp) * y1[j] for j in range(dop.N - 1)],
+        offsets,
+        shape=(dop.N * dop.Kp, dop.Kp),
+    )
+    DYb2 = np.array(dop.D().dot(Y).todense()) / (1 - (b - 1)).reshape(-1, 1)
+    X2 = (1 - l) * DYb2
+    X = np.hstack((X1, X2))
     XTCInv = np.multiply(X.T, (dop._F_CInv / T).reshape(-1))
     XTCInvX = XTCInv.dot(X)
     XTCInvf = np.dot(XTCInv, dop.F.reshape(-1))
     CInv = cho_solve(dop._vT_cho_C, np.eye(dop.Kp))
-    CInv = dense_block_diag(*[CInv for n in range(ncomp)])
+    CInv = dense_block_diag(CInv, CInv)
     CInvmu = cho_solve(dop._vT_cho_C, np.ones(dop.Kp) * dop.vT_mu)
-    CInvmu = np.tile(CInvmu, ncomp)
+    CInvmu = np.tile(CInvmu, 2)
     cho_C = cho_factor(XTCInvX + CInv)
-    s = cho_solve(cho_C, XTCInvf + CInvmu).reshape(ncomp, -1)
+    s = cho_solve(cho_C, XTCInvf + CInvmu).reshape(2, -1)
 
     # Solve for `L`
     l_mu = 0.5
-    l_sig = 0.05
-    alpha = DYb[0].dot(s[0])
-    beta = DYb[1].dot(s[1])
+    l_sig = 0.001
+    alpha = DYb1.dot(s[0])
+    beta = DYb2.dot(s[1])
     f = dop.F.reshape(-1)
     fcinv = dop._F_CInv.reshape(-1)
     num = ((alpha - beta) * fcinv).dot(f - beta) + 2 * l_mu / l_sig ** 2
     den = ((alpha - beta) * fcinv).dot(alpha - beta) + 2 / l_sig ** 2
-    L[0] = num / den
-    L[1] = 1 - L[0]
+    l = num / den
 
-    print(L)
+    # DEBUG
+    print(l)
 
+# Compute the final model
+S = s[0].reshape(-1, 1)
+Y = np.append([1.0], y1).reshape(-1, 1)
+A = l * S.dot(Y.T)
+a = A.T.reshape(-1)
+M1 = dop.D().dot(a).reshape(dop.M, -1) / b.reshape(dop.M, -1)
+S = s[1].reshape(-1, 1)
+Y = np.append([1.0], -y1).reshape(-1, 1)
+A = (1 - l) * S.dot(Y.T)
+a = A.T.reshape(-1)
+M2 = dop.D().dot(a).reshape(dop.M, -1) / (1 - (b - 1)).reshape(dop.M, -1)
+M = M1 + M2
+
+# Plot the model
+fig = plt.figure()
 plt.plot(dop.F.reshape(-1), "k.", alpha=0.3, ms=3)
-model = [None for n in range(ncomp)]
-for n in range(ncomp):
-    S = s[n].reshape(-1, 1)
-    Y = np.append([1], y[n]).reshape(-1, 1)
-    A = L[n] * S.dot(Y.T)
-    a = A.T.reshape(-1)
-    model[n] = dop.D().dot(a).reshape(dop.M, -1) / b[n].reshape(dop.M, -1)
-model = np.sum(model, axis=0)
-plt.plot(model.reshape(-1))
+plt.plot(M.reshape(-1))
 
 # Render the maps
-img = [None for n in range(ncomp)]
-for n in range(ncomp):
-    map[1:, :] = y[n]
-    img[n] = map.render(projection="rect", res=res)[0]
+img = [None, None]
+map[1:, :] = y1
+img[0] = map.render(projection="rect", res=res)[0]
+map[1:, :] = -y1
+img[1] = map.render(projection="rect", res=res)[0]
 
 # Plot the results
 fig = plt.figure(figsize=(15, 4))
