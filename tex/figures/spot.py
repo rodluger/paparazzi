@@ -14,7 +14,7 @@ ydeg = 20
 N = (ydeg + 1) ** 2
 map = starry.Map(ydeg, lazy=False)
 map.add_spot(amp=-0.12, sigma=0.05, lat=30, lon=0)
-ylm = np.array(map.y)
+y1 = np.array(map.y)[1:]
 
 # Check that the specific intensity is positive everywhere
 assert np.nanmin(map.render()) > 0
@@ -25,7 +25,7 @@ nt = 15
 theta = np.append([-180], np.linspace(-90, 90, nt))
 dop = pp.Doppler(ydeg, vsini=vsini, inc=90)
 dop.generate_data(
-    u=ylm, R=3.0e5, nlam=149, sigma=2.0e-5, nlines=1, theta=theta, ferr=0.0
+    y1=y1, R=3.0e5, nlam=149, sigma=2.0e-5, nlines=1, theta=theta, ferr=0.0
 )
 lnlam = dop.lnlam
 F0 = dop.F[0]

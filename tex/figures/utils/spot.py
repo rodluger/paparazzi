@@ -13,8 +13,8 @@ __all__ = ["plot_results"]
 def plot_results(
     doppler,
     loss=[],
-    cho_u=None,
-    cho_vT=None,
+    cho_y1=None,
+    cho_s=None,
     name="vogtstar",
     nframes=None,
     render_movies=False,
@@ -29,12 +29,12 @@ def plot_results(
     # Get the values we'll need for plotting
     ydeg = doppler.ydeg
     theta = doppler.theta
-    u_true = doppler.u_true
-    vT_true = doppler.vT_true
-    vT_deconv = doppler.vT_deconv
+    y1_true = doppler.y1_true
+    s_true = doppler.s_true
+    s_deconv = doppler.s_deconv
     baseline_true = doppler.baseline_true
-    u = np.array(doppler.u)
-    vT = np.array(doppler.vT)
+    y1 = np.array(doppler.y1)
+    s = np.array(doppler.s)
     baseline = doppler.baseline().reshape(-1)
     model = doppler.model()
     F = doppler.F
@@ -55,8 +55,8 @@ def plot_results(
     fig, ax = plt.subplots(1, figsize=(8, 5))
     ax.plot(theta_, baseline_true_, label="true")
     ax.plot(theta_, baseline_, label="inferred")
-    if cho_u is not None:
-        U = np.triu(cho_u[0])
+    if cho_y1 is not None:
+        U = np.triu(cho_y1[0])
         B = doppler._map.X(theta=doppler.theta).eval()[:, 1:]
         A = np.linalg.solve(U.T, B.T)
         baseline_sig = np.sqrt(np.sum(A ** 2, axis=0))
@@ -82,8 +82,8 @@ def plot_results(
     if len(np.atleast_1d(loss).flatten()) > 1:
 
         # Compute the loss @ true value
-        doppler.u = u_true
-        doppler.vT = vT_true
+        doppler.y1 = y1_true
+        doppler.s = s_true
         loss_true = doppler.loss()
 
         # Print for the record
@@ -105,15 +105,15 @@ def plot_results(
     # Plot the Ylm coeffs
     fig, ax = plt.subplots(1, figsize=(12, 5))
     n = np.arange(1, doppler.N)
-    ax.plot(n, u_true, "C0-", label="true")
-    lo = (doppler.u_mu - doppler.u_sig) * np.ones_like(u)
-    hi = (doppler.u_mu + doppler.u_sig) * np.ones_like(u)
+    ax.plot(n, y1_true, "C0-", label="true")
+    lo = (doppler.y1_mu - doppler.y1_sig) * np.ones_like(y1)
+    hi = (doppler.y1_mu + doppler.y1_sig) * np.ones_like(y1)
     ax.fill_between(n, lo, hi, color="C1", lw=0, alpha=0.25, label="prior")
-    ax.plot(n, u, "C1-", label="inferred")
-    if cho_u is not None:
-        cov_u = cho_solve(cho_u, np.eye(doppler.N - 1))
-        sig_u = np.sqrt(np.diag(cov_u))
-        ax.fill_between(n, u - sig_u, u + sig_u, color="C1", alpha=0.5)
+    ax.plot(n, y1, "C1-", label="inferred")
+    if cho_y1 is not None:
+        cov_y1 = cho_solve(cho_y1, np.eye(doppler.N - 1))
+        sig_y1 = np.sqrt(np.diag(cov_y1))
+        ax.fill_between(n, y1 - sig_y1, y1 + sig_y1, color="C1", alpha=0.5)
     ax.set_ylabel("spherical harmonic coefficient")
     ax.set_xlabel("coefficient number")
     ax.legend(loc="lower right", fontsize=14)
@@ -125,7 +125,7 @@ def plot_results(
     # Render the true map
     map = starry.Map(ydeg=ydeg, lazy=False)
     map.inc = inc
-    map[1:, :] = u_true
+    map[1:, :] = y1_true
     if nframes is None:
         nframes = len(theta)
         theta_img = np.array(theta)
@@ -137,7 +137,7 @@ def plot_results(
     img_true_rect = map.render(projection="rect", res=res).reshape(res, res)
 
     # Render the inferred map
-    map[1:, :] = u
+    map[1:, :] = y1
     img = map.render(theta=theta_img)
     if render_movies:
         map.show(
@@ -147,7 +147,7 @@ def plot_results(
     img_rect = map.render(projection="rect", res=res).reshape(res, res)
 
     # Render the pixelwise uncertainties
-    if cho_u is not None:
+    if cho_y1 is not None:
 
         # Compute the polynomial transform matrix
         xyz = map.ops.compute_rect_grid(res)
@@ -166,12 +166,12 @@ def plot_results(
         P = P[:, 1:]
 
         # NOTE: This is the slow way of computing sigma
-        # CPT = cho_solve(cho_u, P.T)
+        # CPT = cho_solve(cho_y1, P.T)
         # cov = np.dot(P, CPT)
         # sig = np.sqrt(np.diag(cov))
 
         # This is the streamlined version
-        U = np.triu(cho_u[0])
+        U = np.triu(cho_y1[0])
         A = np.linalg.solve(U.T, P.T)
         img_sig_rect = np.sqrt(np.sum(A ** 2, axis=0)).reshape(res, res)
 
@@ -181,8 +181,8 @@ def plot_results(
             [
                 np.dot(
                     P[0],
-                    doppler.u_sig * np.random.randn(doppler.N - 1)
-                    + doppler.u_mu,
+                    doppler.y1_sig * np.random.randn(doppler.N - 1)
+                    + doppler.y1_mu,
                 )
                 for i in range(nsamp)
             ]
@@ -193,12 +193,12 @@ def plot_results(
     img /= vmax
     img_rect /= vmax
     img_true_rect /= vmax
-    if cho_u is not None:
+    if cho_y1 is not None:
         img_sig_rect /= vmax
         prior_std /= vmax
 
     # Plot the maps side by side
-    if cho_u is not None:
+    if cho_y1 is not None:
         fig, ax = plt.subplots(3, figsize=(10, 13))
         fig.subplots_adjust(hspace=0.3)
     else:
@@ -249,7 +249,7 @@ def plot_results(
         color="w",
         zorder=101,
     )
-    if cho_u is not None:
+    if cho_y1 is not None:
         im = ax[2].imshow(
             img_sig_rect,
             origin="lower",
@@ -337,22 +337,22 @@ def plot_results(
 
     # Plot the rest frame spectrum
     fig, ax = plt.subplots(1)
-    ax.plot(lnlam_padded, vT_true.reshape(-1), "C0-", label="true")
-    if vT_deconv is not None:
+    ax.plot(lnlam_padded, s_true.reshape(-1), "C0-", label="true")
+    if s_deconv is not None:
         ax.plot(
             lnlam_padded,
-            vT_deconv.reshape(-1),
+            s_deconv.reshape(-1),
             "C1--",
             lw=1,
             alpha=0.5,
             label="guess",
         )
-    ax.plot(lnlam_padded, vT.reshape(-1), "C1-", label="inferred")
-    if cho_vT is not None:
-        cov_vT = cho_solve(cho_vT, np.eye(doppler.Kp))
-        sig_vT = np.sqrt(np.diag(cov_vT))
+    ax.plot(lnlam_padded, s.reshape(-1), "C1-", label="inferred")
+    if cho_s is not None:
+        cov_s = cho_solve(cho_s, np.eye(doppler.Kp))
+        sig_s = np.sqrt(np.diag(cov_s))
         ax.fill_between(
-            lnlam_padded, vT - sig_vT, vT + sig_vT, color="C1", alpha=0.5
+            lnlam_padded, s - sig_s, s + sig_s, color="C1", alpha=0.5
         )
     ax.axvspan(lnlam_padded[0], lnlam[0], color="k", alpha=0.3)
     ax.axvspan(lnlam[-1], lnlam_padded[-1], color="k", alpha=0.3)

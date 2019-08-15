@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 known_baseline = False
 dop = pp.Doppler(ydeg=15)
 
-# Velocity is computed such that v * sin(40) = 40 km / s
+# Velocity is computed such that v * sin(40 deg) = 40 km / s
 # so that we can compare directly to Vogt et al. (1987)
 v = 40.0 / np.sin(40 * np.pi / 180)
 
@@ -34,17 +34,19 @@ for i, inc in enumerate(incs):
 
     # Assume we know the baseline?
     if known_baseline:
-        dop.u = dop.u_true
+        dop.y1 = dop.y1_true
         baseline = dop.baseline()
+        T = 1.0
     else:
         baseline = None
+        T = 100.0
 
     # Reset all coefficients
-    dop.vT = dop.vT_true
-    dop.u = None
+    dop.s = dop.s_true
+    dop.y1 = None
 
     # Solve!
-    dop.solve(vT=dop.vT, niter=50, lr=1e-4, baseline=baseline)
+    dop.solve(s=dop.s, T=T, niter=50, lr=1e-4, baseline=baseline)
 
     # Render the inferred map
     img[i] = dop.render(projection="rect", res=res).reshape(res, res)

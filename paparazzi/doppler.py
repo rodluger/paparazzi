@@ -28,15 +28,15 @@ class Doppler(object):
         vsini (int, optional): Projected equatorial velocity in km/s. 
             Defaults to 40.
         inc (float, optional): Inclination in degrees. Defaults to 40.0.
-        u_mu (float or ndarray, optional): Prior mean on the spherical 
+        y1_mu (float or ndarray, optional): Prior mean on the spherical 
             harmonic coefficients. Defaults to 0.0.
-        u_sig (float or ndarray, optional): Prior standard deviation on 
+        y1_sig (float or ndarray, optional): Prior standard deviation on 
             the spherical harmonic coefficients. Defaults to 0.01.
-        vT_mu (float or ndarray, optional): Prior mean on the spectrum. 
+        s_mu (float or ndarray, optional): Prior mean on the spectrum. 
             Defaults to 1.0.
-        vT_sig (float, optional): Prior standard deviation on
+        s_sig (float, optional): Prior standard deviation on
             the spectrum. Defaults to 0.3.
-        vT_rho (float, optional): Prior lengthscale on the Gaussian Process
+        s_rho (float, optional): Prior lengthscale on the Gaussian Process
             prior on the spectrum. Set to zero to disable the GP.
             Defaults to 3.e-5.
         baseline_mu (float or ndarray, optional): Prior mean on the 
@@ -50,11 +50,11 @@ class Doppler(object):
         ydeg=15,
         vsini=40,
         inc=40.0,
-        u_mu=0.0,
-        u_sig=0.01,
-        vT_mu=1.0,
-        vT_sig=0.3,
-        vT_rho=3.0e-5,
+        y1_mu=0.0,
+        y1_sig=0.01,
+        s_mu=1.0,
+        s_sig=0.3,
+        s_rho=3.0e-5,
         baseline_mu=1.0,
         baseline_sig=0.1,
     ):
@@ -69,25 +69,25 @@ class Doppler(object):
         self._lnlam = None
         self.F = None
         self.ferr = None
-        self.u_true = None
-        self.vT_true = None
+        self.y1_true = None
+        self.s_true = None
         self.baseline_true = None
 
         # Inference params
-        self.u_mu = u_mu
-        self.u_sig = u_sig
-        self.vT_mu = vT_mu
-        self._vT_sig = vT_sig
-        self._vT_rho = vT_rho
+        self.y1_mu = y1_mu
+        self.y1_sig = y1_sig
+        self.s_mu = s_mu
+        self._s_sig = s_sig
+        self._s_rho = s_rho
         self.baseline_mu = baseline_mu
         self.baseline_sig = baseline_sig
-        self._vT_CInv = None
+        self._s_CInv = None
         self._F_CInv = None
-        self.vT_deconv = None
+        self.s_deconv = None
 
         # Initialize
-        self.u = self.u_mu * np.ones(self.N - 1)
-        self.vT = None
+        self.y1 = self.y1_mu * np.ones(self.N - 1)
+        self.s = None
 
     def _reset_cache(self):
         # Reset the cache
@@ -241,49 +241,49 @@ class Doppler(object):
         self._reset_cache()
 
     @property
-    def vT_sig(self):
-        return self._vT_sig
+    def s_sig(self):
+        return self._s_sig
 
-    @vT_sig.setter
-    def vT_sig(self, value):
-        self._vT_sig = value
+    @s_sig.setter
+    def s_sig(self, value):
+        self._s_sig = value
         self._compute_gp()
 
     @property
-    def vT_rho(self):
-        return self._vT_rho
+    def s_rho(self):
+        return self._s_rho
 
-    @vT_rho.setter
-    def vT_rho(self, value):
-        self._vT_rho = value
+    @s_rho.setter
+    def s_rho(self, value):
+        self._s_rho = value
         self._compute_gp()
 
     @property
-    def u(self):
-        return self._u
+    def y1(self):
+        return self._y1
 
-    @u.setter
-    def u(self, value):
-        self._u = value
+    @y1.setter
+    def y1(self, value):
+        self._y1 = value
         if value is None:
             self._map[1:, :] = 0.0
         else:
-            self._map[1:, :] = self._u
+            self._map[1:, :] = self._y1
 
     def _compute_gp(self):
         # Compute the GP prior on the spectrum
         if self._lnlam is None:
             pass
-        if self.vT_rho > 0.0:
+        if self.s_rho > 0.0:
             kernel = celerite.terms.Matern32Term(
-                np.log(self.vT_sig), np.log(self.vT_rho)
+                np.log(self.s_sig), np.log(self.s_rho)
             )
             gp = celerite.GP(kernel)
-            vT_C = gp.get_matrix(self.lnlam_padded)
+            s_C = gp.get_matrix(self.lnlam_padded)
         else:
-            vT_C = np.eye(self.Kp) * self.vT_sig ** 2
-        self._vT_cho_C = cho_factor(vT_C)
-        self._vT_CInv = cho_solve(self._vT_cho_C, np.eye(self.Kp))
+            s_C = np.eye(self.Kp) * self.s_sig ** 2
+        self._s_cho_C = cho_factor(s_C)
+        self._s_CInv = cho_solve(self._s_cho_C, np.eye(self.Kp))
 
     def x(self):
         """
@@ -435,8 +435,8 @@ class Doppler(object):
         self.F = F
         self.ferr = ferr
         self._F_CInv = np.ones_like(self.F) / self.ferr ** 2
-        self.u_true = None
-        self.vT_true = None
+        self.y1_true = None
+        self.s_true = None
         self.baseline_true = None
 
     def generate_data(
@@ -447,7 +447,7 @@ class Doppler(object):
         nlines=21,
         ntheta=16,
         ferr=1.0e-4,
-        u=None,
+        y1=None,
         image=None,
         theta=None,
     ):
@@ -464,10 +464,10 @@ class Doppler(object):
             ntheta (int, optional): Number of spectra. Defaults to 16.
             ferr (float, optional): Gaussian error to add to the fluxes. 
                 Defaults to 1.e-3
-            u (ndarray, optional): The spherical harmonic vector for the map.
+            y1 (ndarray, optional): The spherical harmonic vector for the map.
                 Defaults to ``None``, in which case the ``image`` is loaded.
             image (string, optional): Path to the image to expand in Ylms.
-                Defaults to "vogtstar.jpg"
+                Defaults to "spot.jpg"
             theta (ndarray, optional): The rotational phase in degrees
                 at each epoch. Defaults to ``None``, in which case this is
                 set to vary uniformly between -180 and 180 with ``ntheta``
@@ -492,49 +492,47 @@ class Doppler(object):
         # Now let's generate a synthetic spectrum. We do this on the
         # *padded* wavelength grid to avoid convolution edge effects.
         # A deep line at the center of the wavelength range
-        vT = 1 - 0.5 * np.exp(-0.5 * lnlam_padded ** 2 / sigma ** 2)
+        s = 1 - 0.5 * np.exp(-0.5 * lnlam_padded ** 2 / sigma ** 2)
 
         # Scatter some smaller lines around for good measure
         for _ in range(nlines - 1):
             amp = 0.1 * np.random.random()
             mu = 2.1 * (0.5 - np.random.random()) * lnlam_padded.max()
-            vT -= amp * np.exp(-0.5 * (lnlam_padded - mu) ** 2 / sigma ** 2)
+            s -= amp * np.exp(-0.5 * (lnlam_padded - mu) ** 2 / sigma ** 2)
 
         # Now generate our map
-        if u is None:
+        if y1 is None:
             if image is None:
                 image = os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)), "vogtstar.jpg"
+                    os.path.dirname(os.path.abspath(__file__)), "spot.jpg"
                 )
             self._map.load(image)
         else:
-            if len(u) == self.N - 1:
-                self._map[1:, :] = u
-            elif len(u) == self.N:
-                self._map[1:, :] = u[1:]
+            if len(y1) == self.N - 1:
+                self._map[1:, :] = y1
             else:
-                raise ValueError("The vector `u` has the wrong size.")
-        u = np.array(self._map.y.eval())
+                raise ValueError("The vector `y1` has the wrong size.")
+        y1 = np.array(self._map.y.eval())[1:]
 
         # Compute the model
-        self.u = u[1:]
-        self.vT = vT
+        self.y1 = y1
+        self.s = s
         F = self.model()
 
         # Add some noise
         F += ferr * np.random.randn(*F.shape)
 
         # Store the dataset
-        self.u_true = self.u
-        self.vT_true = self.vT
+        self.y1_true = self.y1
+        self.s_true = self.s
         self.baseline_true = self.baseline().reshape(-1)
         self.F = F
         self.ferr = ferr
         self._F_CInv = np.ones_like(self.F) / self.ferr ** 2
 
         # Reset the coeffs
-        self.u = self.u_mu * np.ones(self.N - 1)
-        self.vT = None
+        self.y1 = self.y1_mu * np.ones(self.N - 1)
+        self.s = None
 
     def show(self, **kwargs):
         """
@@ -563,7 +561,7 @@ class Doppler(object):
         Return the full model for the flux matrix `F`.
 
         """
-        A = np.append([1], self.u).reshape(-1, 1).dot(self.vT.reshape(1, -1))
+        A = np.append([1], self.y1).reshape(-1, 1).dot(self.s.reshape(1, -1))
         # If `D` is available, use it; otherwise, do a convolution.
         if self._D is not None:
 
@@ -610,7 +608,7 @@ class Doppler(object):
             (self.F - self.model()).reshape(-1) ** 2 * self._F_CInv.reshape(-1)
         )
         lnprior = (
-            -0.5 * np.sum((self.u - self.u_mu) ** 2 / self.u_sig ** 2)
+            -0.5 * np.sum((self.y1 - self.y1_mu) ** 2 / self.y1_sig ** 2)
             + -0.5
             * np.sum(
                 (self.baseline() - self.baseline_mu) ** 2
@@ -618,24 +616,24 @@ class Doppler(object):
             )
             + -0.5
             * np.dot(
-                np.dot((self.vT - self.vT_mu).reshape(1, -1), self._vT_CInv),
-                (self.vT - self.vT_mu).reshape(-1, 1),
+                np.dot((self.s - self.s_mu).reshape(1, -1), self._s_CInv),
+                (self.s - self.s_mu).reshape(-1, 1),
             )
         )
         return -(lnlike + lnprior).item()
 
-    def compute_u(self, T=1.0, baseline=None):
+    def compute_y1(self, T=1.0, baseline=None):
         """
-        Linear solve for ``u`` given ``v^T`` and an optional baseline 
+        Linear solve for ``y1`` given ``v^T`` and an optional baseline 
         and temperature. If the baseline is not given, solves the
         approximate linear problem, which assumes the difference 
         between the baseline and ``1.0`` is small.
 
-        Returns the Cholesky decomposition of the covariance of ``u``.
+        Returns the Cholesky decomposition of the covariance of ``y1``.
 
         """
         # Get the design matrix
-        V = sparse_block_diag([self.vT.reshape(-1, 1) for n in range(self.N)])
+        V = sparse_block_diag([self.s.reshape(-1, 1) for n in range(self.N)])
         A_ = np.array(self.D().dot(V).todense())
         A0, A = A_[:, 0], A_[:, 1:]
 
@@ -650,11 +648,11 @@ class Doppler(object):
             )
             ATCInvA = ATCInv.dot(A)
             ATCInvf = np.dot(ATCInv, (self.F * baseline).reshape(-1) - A0)
-            cinv = np.ones(self.N - 1) / self.u_sig ** 2
-            mu = np.ones(self.N - 1) * self.u_mu
+            cinv = np.ones(self.N - 1) / self.y1_sig ** 2
+            mu = np.ones(self.N - 1) * self.y1_mu
             np.fill_diagonal(ATCInvA, ATCInvA.diagonal() + cinv)
             cho_C = cho_factor(ATCInvA)
-            self.u = cho_solve(cho_C, ATCInvf + cinv * mu)
+            self.y1 = cho_solve(cho_C, ATCInvf + cinv * mu)
 
         else:
 
@@ -665,31 +663,31 @@ class Doppler(object):
 
             # We are Taylor expanding
             #
-            #   f = (A0 + A . u) / (1 + B . u)
+            #   f = (A0 + A . y1) / (1 + B . y1)
             #
             #   as
             #
-            #   f = A0 + C . u + O(u^2)
+            #   f = A0 + C . y1 + O(y1^2)
             #
             # where C is
             C = A - A0.reshape(-1, 1) * B
             CTCInv = np.multiply(C.T, (self._F_CInv / T).reshape(-1))
             CTCInvC = CTCInv.dot(C)
-            cinv = np.ones(self.N - 1) / self.u_sig ** 2
+            cinv = np.ones(self.N - 1) / self.y1_sig ** 2
             np.fill_diagonal(CTCInvC, CTCInvC.diagonal() + cinv)
             cho_C = cho_factor(CTCInvC)
             CTCInvy = np.dot(CTCInv, self.F.reshape(-1) - A0)
-            mu = np.ones(self.N - 1) * self.u_mu
-            self.u = cho_solve(cho_C, CTCInvy + cinv * mu)
+            mu = np.ones(self.N - 1) * self.y1_mu
+            self.y1 = cho_solve(cho_C, CTCInvy + cinv * mu)
 
         return cho_C
 
-    def compute_vT(self, T=1.0, baseline=None):
+    def compute_s(self, T=1.0, baseline=None):
         """
-        Linear solve for ``v^T`` given ``u`` and an optional baseline 
+        Linear solve for ``v^T`` given ``y1`` and an optional baseline 
         and temperature.
 
-        Returns the Cholesky decomposition of the covariance of ``vT``.
+        Returns the Cholesky decomposition of the covariance of ``s``.
 
         """
         if baseline is None:
@@ -702,7 +700,7 @@ class Doppler(object):
         offsets = -np.arange(0, self.N) * Kp
         U = diags(
             [np.ones(Kp)]
-            + [np.ones(Kp) * self.u[n] for n in range(self.N - 1)],
+            + [np.ones(Kp) * self.y1[n] for n in range(self.N - 1)],
             offsets,
             shape=(self.N * Kp, Kp),
         )
@@ -712,19 +710,19 @@ class Doppler(object):
         )
         ATCInvA = ATCInv.dot(A)
         ATCInvf = np.dot(ATCInv, (self.F * baseline).reshape(-1))
-        CInv = cho_solve(self._vT_cho_C, np.eye(Kp))
-        CInvmu = cho_solve(self._vT_cho_C, np.ones(Kp) * self.vT_mu)
-        cho_vT = cho_factor(ATCInvA + CInv)
-        self.vT = cho_solve(cho_vT, ATCInvf + CInvmu)
-        return cho_vT
+        CInv = cho_solve(self._s_cho_C, np.eye(Kp))
+        CInvmu = cho_solve(self._s_cho_C, np.ones(Kp) * self.s_mu)
+        cho_s = cho_factor(ATCInvA + CInv)
+        self.s = cho_solve(cho_s, ATCInvf + CInvmu)
+        return cho_s
 
     def solve(
         self,
-        u=None,
-        vT=None,
+        y1=None,
+        s=None,
         baseline=None,
-        u_guess=None,
-        vT_guess=None,
+        y1_guess=None,
+        s_guess=None,
         baseline_guess=None,
         niter=100,
         T=1.0,
@@ -737,9 +735,9 @@ class Doppler(object):
         """Solve the Doppler imaging problem.
         
         Returns:
-            ``(loss, cho_u, cho_vT)``, a tuple containing the array of
+            ``(loss, cho_y1, cho_s)``, a tuple containing the array of
             loss values during the optimization and the Cholesky factorization
-            of the covariance matrices of ``u`` and ``vT``, if available 
+            of the covariance matrices of ``y1`` and ``s``, if available 
             (otherwise the latter two are set to ``None``.)
         """
         # Check the optimizer is valid
@@ -752,50 +750,50 @@ class Doppler(object):
 
         # Figure out what to solve for
         known = []
-        if vT is not None:
-            known += ["vT"]
-        if u is not None:
-            known += ["u"]
+        if s is not None:
+            known += ["s"]
+        if y1 is not None:
+            known += ["y1"]
 
-        if ("u" in known) and ("vT" in known):
+        if ("y1" in known) and ("s" in known):
 
             # Nothing to do here but ingest the values!
-            self.u = u
-            self.vT = vT
+            self.y1 = y1
+            self.s = s
             return self.loss(), None, None
 
-        elif "u" in known:
+        elif "y1" in known:
 
             # Easy: it's a linear problem
-            self.u = u
-            cho_vT = self.compute_vT()
-            return self.loss(), None, cho_vT
+            self.y1 = y1
+            cho_s = self.compute_s()
+            return self.loss(), None, cho_s
 
         else:
 
-            if ("vT" in known) and (baseline is not None):
+            if ("s" in known) and (baseline is not None):
 
                 # Still a linear problem!
-                self.vT = vT
-                cho_u = self.compute_u(baseline=baseline)
-                return self.loss(), cho_u, None
+                self.s = s
+                cho_y1 = self.compute_y1(baseline=baseline)
+                return self.loss(), cho_y1, None
 
             else:
 
                 # Non-linear. Let's use (N)Adam.
 
-                if "vT" in known:
+                if "s" in known:
 
-                    # We know `vT` and need to solve for
-                    # `u` w/o any baseline knowledge.
-                    vT_guess = vT
+                    # We know `s` and need to solve for
+                    # `y1` w/o any baseline knowledge.
+                    s_guess = s
 
                 else:
 
                     # We know *nothing*!
 
                     # Estimate `v^T` from the deconvolved mean spectrum
-                    if vT_guess is None:
+                    if s_guess is None:
 
                         fmean = np.mean(self.F, axis=0)
                         fmean -= np.mean(fmean)
@@ -809,28 +807,28 @@ class Doppler(object):
                         LInv = (
                             dcf ** 2
                             * self.ferr ** 2
-                            / self.vT_sig ** 2
+                            / self.s_sig ** 2
                             * np.eye(A.shape[1])
                         )
-                        vT_guess = 1.0 + np.linalg.solve(
+                        s_guess = 1.0 + np.linalg.solve(
                             A.T.dot(A).toarray() + LInv, A.T.dot(fmean)
                         )
 
                         # Save this for later
-                        self.vT_deconv = vT_guess
+                        self.s_deconv = s_guess
 
-                # Estimate `u` w/o baseline knowledge
+                # Estimate `y1` w/o baseline knowledge
                 # If `baseline_guess` is `None`, this is done via
-                # a Taylor expansion; see ``compute_u()``.
-                if u_guess is None:
+                # a Taylor expansion; see ``compute_y1()``.
+                if y1_guess is None:
 
-                    self.vT = vT_guess
-                    self.compute_u(T=T, baseline=baseline_guess)
-                    u_guess = self.u
+                    self.s = s_guess
+                    self.compute_y1(T=T, baseline=baseline_guess)
+                    y1_guess = self.y1
 
                 # Initialize the variables
-                self.u = u_guess
-                self.vT = vT_guess
+                self.y1 = y1_guess
+                self.s = s_guess
 
                 # Tempering params
                 if T > 1.0:
@@ -851,40 +849,52 @@ class Doppler(object):
                     if not quiet:
                         print("Running bi-linear solver...")
 
+                    best_loss = loss_val[0]
+                    best_y1 = self.y1
+                    best_s = self.s
+
                     for n in tqdm(range(niter_bilin), disable=quiet):
 
-                        # Compute `u` using the previous baseline
-                        self.compute_u(T=T_arr[n], baseline=self.baseline())
+                        # Compute `y1` using the previous baseline
+                        self.compute_y1(T=T_arr[n], baseline=self.baseline())
 
-                        # Compute `vT` using the current `u`
-                        if "vT" not in known:
-                            self.compute_vT(T=T_arr[n])
+                        # Compute `s` using the current `y1`
+                        if "s" not in known:
+                            self.compute_s(T=T_arr[n])
 
                         loss_val[n + 1] = self.loss()
+
+                        if loss_val[n + 1] < best_loss:
+                            best_loss = loss_val[n + 1]
+                            best_y1 = self.y1
+                            best_s = self.s
+
+                    self.y1 = best_y1
+                    self.s = best_s
 
                 # Non-linear solve
                 if niter > 0:
 
                     # Theano nonlienar solve. Variables:
-                    u = theano.shared(self.u)
-                    vT = theano.shared(self.vT)
-                    if "vT" in known:
-                        theano_vars = [u]
+                    y1 = theano.shared(self.y1)
+                    s = theano.shared(self.s)
+                    if "s" in known:
+                        theano_vars = [y1]
                     else:
-                        theano_vars = [u, vT]
+                        theano_vars = [y1, s]
 
                     # Compute the model
                     D = ts.as_sparse_variable(self.D())
                     a = tt.reshape(
                         tt.dot(
-                            tt.reshape(tt.concatenate([[1.0], u]), (-1, 1)),
-                            tt.reshape(vT, (1, -1)),
+                            tt.reshape(tt.concatenate([[1.0], y1]), (-1, 1)),
+                            tt.reshape(s, (1, -1)),
                         ),
                         (-1,),
                     )
                     b = tt.dot(
                         self._map.X(theta=self.theta),
-                        tt.reshape(tt.concatenate([[1.0], u]), (-1, 1)),
+                        tt.reshape(tt.concatenate([[1.0], y1]), (-1, 1)),
                     )
                     B = tt.reshape(b, (-1, 1))
                     M = tt.reshape(ts.dot(D, a), (self.M, -1)) / B
@@ -894,7 +904,8 @@ class Doppler(object):
                     cov = tt.reshape(self._F_CInv, (-1,))
                     lnlike = -0.5 * tt.sum(r ** 2 * cov)
                     lnprior = (
-                        -0.5 * tt.sum((u - self.u_mu) ** 2 / self.u_sig ** 2)
+                        -0.5
+                        * tt.sum((y1 - self.y1_mu) ** 2 / self.y1_sig ** 2)
                         + -0.5
                         * tt.sum(
                             (b - self.baseline_mu) ** 2
@@ -903,49 +914,49 @@ class Doppler(object):
                         + -0.5
                         * tt.dot(
                             tt.dot(
-                                tt.reshape((vT - self.vT_mu), (1, -1)),
-                                self._vT_CInv,
+                                tt.reshape((s - self.s_mu), (1, -1)),
+                                self._s_CInv,
                             ),
-                            tt.reshape((vT - self.vT_mu), (-1, 1)),
+                            tt.reshape((s - self.s_mu), (-1, 1)),
                         )[0, 0]
                     )
                     loss = -(lnlike + lnprior)
                     best_loss = loss.eval()
-                    best_u = u.eval()
-                    best_vT = vT.eval()
+                    best_y1 = y1.eval()
+                    best_s = s.eval()
 
                     if not quiet:
                         print("Running non-linear solver...")
 
                     upd = optimizer(loss, theano_vars, **kwargs)
-                    train = theano.function([], [u, vT, loss], updates=upd)
+                    train = theano.function([], [y1, s, loss], updates=upd)
                     for n in tqdm(
                         1 + niter_bilin + np.arange(niter), disable=quiet
                     ):
-                        u_val, vT_val, loss_val[n] = train()
+                        y1_val, s_val, loss_val[n] = train()
                         if loss_val[n] < best_loss:
                             best_loss = loss_val[n]
-                            best_u = u_val
-                            best_vT = vT_val
+                            best_y1 = y1_val
+                            best_s = s_val
 
                     # We are done!
-                    self.u = best_u
-                    self.vT = best_vT
+                    self.y1 = best_y1
+                    self.s = best_s
 
-                # Estimate the covariance of `u` conditioned on `vT`
-                # and the covariance of `vT` conditioned on `u`.
-                # Note that the covariance of `u` is computed from
+                # Estimate the covariance of `y1` conditioned on `s`
+                # and the covariance of `s` conditioned on `y1`.
+                # Note that the covariance of `y1` is computed from
                 # the linearization that allows us to simultaneously
                 # solve for the baseline.
-                u_curr = np.array(self.u)
-                cho_u = self.compute_u()
-                self.u = u_curr
+                y1_curr = np.array(self.y1)
+                cho_y1 = self.compute_y1()
+                self.y1 = y1_curr
 
-                if "vT" not in known:
-                    vT_curr = np.array(self.vT)
-                    cho_vT = self.compute_vT()
-                    self.vT = vT_curr
+                if "s" not in known:
+                    s_curr = np.array(self.s)
+                    cho_s = self.compute_s()
+                    self.s = s_curr
                 else:
-                    cho_vT = None
+                    cho_s = None
 
-                return loss_val, cho_u, cho_vT
+                return loss_val, cho_y1, cho_s

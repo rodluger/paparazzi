@@ -12,7 +12,7 @@ import paparazzi as pp
 # Get the `g` functions at high res
 ydeg = 10
 dop = pp.Doppler(ydeg=ydeg)
-dop.generate_data(R=1e6, nlam=99, u=np.zeros(dop.N - 1))
+dop.generate_data(R=1e6, nlam=99, y1=np.zeros(dop.N - 1))
 kT = dop.kT()
 
 # Set up the plot

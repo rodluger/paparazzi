@@ -18,7 +18,7 @@ ydeg = 20
 N = (ydeg + 1) ** 2
 map = starry.Map(ydeg, lazy=False)
 map.add_spot(amp=-0.1, sigma=0.05, lat=30, lon=30)
-ylm = np.array(map.y)
+y1 = np.array(map.y)[1:]
 
 # Check that the specific intensity is positive everywhere
 assert np.nanmin(map.render()) > 0
@@ -27,12 +27,12 @@ assert np.nanmin(map.render()) > 0
 vsini = 40.0  # km/s
 dop = pp.Doppler(ydeg, vsini=vsini)
 dop.generate_data(
-    u=ylm, R=3.0e6, nlam=1999, sigma=2.0e-5, nlines=1, theta=[0.0], ferr=0.0
+    y1=y1, R=3.0e6, nlam=1999, sigma=2.0e-5, nlines=1, theta=[0.0], ferr=0.0
 )
 F = dop.F[0] / dop.F[0][0]
 
 # The rest frame spectrum
-vT = dop.vT_true
+s = dop.s_true
 lnlam = dop.lnlam
 lnlam_padded = dop.lnlam_padded
 obs = (lnlam_padded >= lnlam[0]) & (lnlam_padded <= lnlam[-1])
@@ -50,7 +50,7 @@ for i, res in enumerate(res_arr):
     npts[i] = len(x)
     D = 0.5 * np.log((1 + vsini / CLIGHT * x) / (1 - vsini / CLIGHT * x))
     image = map.render(res=res).reshape(-1, 1)[on_disk]
-    spec = np.interp(lnlam_padded - D.reshape(-1, 1), lnlam_padded, vT)
+    spec = np.interp(lnlam_padded - D.reshape(-1, 1), lnlam_padded, s)
     spec = spec[:, obs]
     Fnum[i] = np.nansum(image * spec, axis=0)
     Fnum[i] /= Fnum[i, 0]

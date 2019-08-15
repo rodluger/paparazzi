@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Solve the VOGTSTAR problem.
+Solve the SPOT problem.
 
 In this case, we know the rest frame spectrum, but we don't
 know the map coefficients or the baseline flux. The problem
@@ -10,7 +10,7 @@ refined with the non-linear solver.
 """
 import paparazzi as pp
 import numpy as np
-from utils.vogtstar_plot import plot_results
+from utils.spot import plot_results
 
 np.random.seed(13)
 
@@ -24,23 +24,25 @@ if high_snr:
     ferr = 1e-4
     niter = 80
     lr = 1e-4
+    T = 100.0
 else:
     # At low SNR, a single run of the bi-linear solver
     # gets us to the optimum!
     ferr = 1e-3
     niter = 0
     lr = None
+    T = 1.0
 
 # Generate data
 dop = pp.Doppler(ydeg=15)
 dop.generate_data(ferr=ferr)
 
 # Reset all coefficients
-dop.vT = dop.vT_true
-dop.u = None
+dop.s = dop.s_true
+dop.y1 = None
 
 # Solve!
-loss, cho_u, cho_vT = dop.solve(vT=dop.vT, niter=niter, lr=lr)
+loss, cho_y1, cho_s = dop.solve(s=dop.s, niter=niter, lr=lr, T=T)
 
 # Plot the results
-plot_results(dop, name="vogtstar_ub", loss=loss, cho_u=cho_u, cho_vT=cho_vT)
+plot_results(dop, name="spot_y1b", loss=loss, cho_y1=cho_y1, cho_s=cho_s)

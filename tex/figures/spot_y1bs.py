@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Solve the VOGTSTAR problem.
+Solve the SPOT problem.
 
 In this case, we know nothing: we're going to learn
 both the map and the spectrum. We're not giving the
@@ -12,7 +12,7 @@ problem.
 """
 import paparazzi as pp
 import numpy as np
-from utils.vogtstar_plot import plot_results
+from utils.spot import plot_results
 
 np.random.seed(13)
 
@@ -43,11 +43,11 @@ dop = pp.Doppler(ydeg=15)
 dop.generate_data(ferr=ferr)
 
 # Reset all coefficients
-dop.u = None
-dop.vT = None
+dop.y1 = None
+dop.s = None
 
 # Solve!
-loss, cho_u, cho_vT = dop.solve(niter=niter, lr=lr, T=T)
+loss, cho_y1, cho_s = dop.solve(niter=niter, lr=lr, T=T)
 
 # Plot the results
-plot_results(dop, name="vogtstar_ubvT", loss=loss, cho_u=cho_u, cho_vT=cho_vT)
+plot_results(dop, name="spot_y1bs", loss=loss, cho_y1=cho_y1, cho_s=cho_s)

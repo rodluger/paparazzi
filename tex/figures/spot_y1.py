@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Solve the VOGTSTAR problem.
+Solve the SPOT problem.
 
 In this case, we know the spectrum and the baseline
 perfectly. The problem is linear in the map, so solving
@@ -9,7 +9,7 @@ the Doppler problem is easy!
 """
 import paparazzi as pp
 import numpy as np
-from utils.vogtstar_plot import plot_results
+from utils.spot import plot_results
 
 np.random.seed(13)
 
@@ -27,15 +27,15 @@ dop = pp.Doppler(ydeg=15)
 dop.generate_data(ferr=ferr)
 
 # Compute the true baseline (assumed to be known exactly)
-dop.u = dop.u_true
+dop.y1 = dop.y1_true
 baseline = dop.baseline()
 
 # Reset all coefficients
-dop.vT = dop.vT_true
-dop.u = None
+dop.s = dop.s_true
+dop.y1 = None
 
 # Solve!
-loss, cho_u, cho_vT = dop.solve(vT=dop.vT, baseline=baseline)
+loss, cho_y1, cho_s = dop.solve(s=dop.s, baseline=baseline)
 
 # Plot the results
-plot_results(dop, name="vogtstar_u", loss=loss, cho_u=cho_u, cho_vT=cho_vT)
+plot_results(dop, name="spot_y1", loss=loss, cho_y1=cho_y1, cho_s=cho_s)
