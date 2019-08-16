@@ -189,7 +189,7 @@ def plot_results(
         )
 
     # Normalize to the maximum for plotting
-    vmax = max(np.nanmax(img_rect), np.nanmax(img_true_rect))
+    vmax = np.nanmax(img_true_rect)
     img /= vmax
     img_rect /= vmax
     img_true_rect /= vmax

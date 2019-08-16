@@ -42,6 +42,7 @@ Kp = dop.Kp
 W = dop.W
 N = dop.N
 M = dop.M
+lnlam = dop.lnlam
 lnlam_padded = dop.lnlam_padded
 B1 = dop._map.X(theta=dop.theta).eval()[:, 1:]
 B1 = np.repeat(B1, K, axis=0)
@@ -51,11 +52,7 @@ map = starry.Map(15, lazy=False)
 map.inc = 40
 
 # Add a spot, then subtract the median & reload
-map.add_spot(-1.0, sigma=0.25, lat=30)
-I = map.render(projection="rect", res=res)[0]
-I -= np.nanmedian(I)
-I = np.flipud(I)
-map.load(I)
+map.load("spot")
 y1_true = np.array(map[1:, :])
 b_true = np.repeat(map.flux(theta=theta), K)
 img_true = map.render(projection="rect", res=res)[0]
@@ -79,30 +76,28 @@ for _ in range(nlines - 1):
     s1_true -= amp * np.exp(-0.5 * (lnlam_padded - mu) ** 2 / sigma ** 2)
 
 # This is the amplitude of the perturbation for the 2nd spectrum
-w_true = -0.5
+w_true = -0.25
 
 # Priors
-w_mu = -0.5
-w_sig = 1e-12  # We assume we know this exactly.
-s0_mu = s0_true
-s0_sig = 1e-12  # We assume we know this exactly.
-s0_rho = 0.0
-s1_mu = s1_true
-s1_sig = 1e-12  # We assume we know this exactly.
-s1_rho = 0.0
+w_mu = -0.20
+w_sig = 0.1
+s0_mu = s0_true  # We assume we know the base spectrum exactly.
+s0_sig = 1e-12
+s0_rho = 3.0e-5
+s1_mu = 1.0
+s1_sig = 0.3
+s1_rho = 3.0e-5
 y1_mu = 0.0
-y1_sig = np.array(
-    [l ** -2.5 for l in range(1, map.ydeg + 1) for m in range(-l, l + 1)]
-)
+y1_sig = 0.03
 b_mu = 1.0
 b_sig = 0.1
 dcf = 10.0
 
 # Optimization params
-T = 1.01  # 500000
-dlogT = -0.025
-niter = 0
-lr = 1e-3
+T = 50000
+dlogT = -0.02
+niter = 500
+lr = 1e-4
 
 # Compute the GP on the spectra
 if s0_rho > 0.0:
@@ -136,7 +131,7 @@ def model(y1, s0, s1, w):
 
     # Compute the constant component
     D0 = (D[:, :Kp]).toarray()
-    m1 = math.reshape(math.dot(D0, math.reshape(s0, (-1, 1))), (M, -1))
+    M1 = math.reshape(math.dot(D0, math.reshape(s0, (-1, 1))), (M, -1))
 
     # Compute the variable component
     A2 = math.dot(
@@ -145,15 +140,18 @@ def model(y1, s0, s1, w):
     )
     a2 = math.reshape(math.transpose(A2), (-1,))
     if math == tt:
-        m2 = math.reshape(ts.dot(D, a2), (M, -1))
+        M2 = math.reshape(ts.dot(D, a2), (M, -1))
     else:
-        m2 = math.reshape(D.dot(a2), (M, -1))
+        M2 = math.reshape(D.dot(a2), (M, -1))
+
+    # This is the full model, still w/ the baseline
+    M12 = (1 - w) * M1 + w * M2
 
     # Remove the baseline
-    b = math.reshape(1.0 + math.dot(B1, y1), (M, -1))
-    m2 /= b
+    b = math.reshape(1.0 + w * math.dot(B1, y1), (M, -1))
+    M12 /= b
 
-    return (1 - w) * m1 + w * m2
+    return M12
 
 
 # Define the loss function
@@ -189,23 +187,36 @@ F = model(y1_true, s0_true, s1_true, w_true)
 F += ferr * np.random.randn(*F.shape)
 like_true, prior_true = loss(y1_true, s0_true, s1_true, w_true)
 
-# Estimate `s0` from the prior mean
-s0 = s0_mu
-
-# Estimate `s1` from the deconvolution
-fmean = np.mean(F - (D[:, :Kp] * s0).reshape(M, -1), axis=0)
-fmean -= np.mean(fmean)
-diagonals = np.tile(kT[0].reshape(-1, 1), K)
-offsets = np.arange(W)
-A = diags(diagonals, offsets, (K, Kp), format="csr")
-LInv = dcf ** 2 * ferr ** 2 / s1_sig ** 2 * np.eye(A.shape[1])
-s1 = 1.0 + np.linalg.solve(A.T.dot(A).toarray() + LInv, A.T.dot(fmean))
-
-# DEBUG: The method above isn't great
-s1 = s1_mu
-
 # Initialize `w` at the prior mean
 w = w_mu
+
+# Initialize `s0`
+if s0_sig < 1e-6:
+    # Initialize `s0` at the prior mean
+    s0 = s0_mu
+else:
+    # Estimate `s0` from the deconvolved spectrum
+    fmean = (np.mean(F, axis=0) - w * D[:K, :Kp] * np.ones(Kp)) / (1 - w)
+    fmean -= np.mean(fmean)
+    diagonals = np.tile(kT[0].reshape(-1, 1), K)
+    offsets = np.arange(W)
+    A = diags(diagonals, offsets, (K, Kp), format="csr")
+    LInv = dcf ** 2 * ferr ** 2 / s1_sig ** 2 * np.eye(A.shape[1])
+    s0 = 1.0 + np.linalg.solve(A.T.dot(A).toarray() + LInv, A.T.dot(fmean))
+
+# Initialize `s1`
+if s1_sig < 1e-10:
+    # Initialize `s0` at the prior mean
+    s0 = s0_mu
+else:
+    # Estimate `s1` from the deconvolved spectrum
+    fmean = (np.mean(F, axis=0) - (1 - w) * D[:K, :Kp] * s0) / w
+    fmean -= np.mean(fmean)
+    diagonals = np.tile(kT[0].reshape(-1, 1), K)
+    offsets = np.arange(W)
+    A = diags(diagonals, offsets, (K, Kp), format="csr")
+    LInv = dcf ** 2 * ferr ** 2 / s1_sig ** 2 * np.eye(A.shape[1])
+    s1 = 1.0 + np.linalg.solve(A.T.dot(A).toarray() + LInv, A.T.dot(fmean))
 
 # Tempering schedule
 if T > 1.0:
@@ -225,12 +236,13 @@ for i in tqdm(range(niter_bilin)):
     T = T_arr[i]
 
     # Solve for `y1` w/ linear baseline approximation
-    M1 = D[:, :Kp] * s0
-    S_2 = sparse_block_diag([s1.reshape(-1, 1) for j in range(N)])
-    tmp = np.array(D.dot(S_2).todense())
-    Ds0_2, DS1_2 = tmp[:, 0], tmp[:, 1:]
-    X = w * (Ds0_2.reshape(-1, 1) * B1 + DS1_2)
-    z = F.reshape(-1) - (1 - w) * M1 - w * Ds0_2
+    Ds0_0 = D[:, :Kp] * s0
+    S1 = sparse_block_diag([s1.reshape(-1, 1) for j in range(N)])
+    tmp = np.array(D.dot(S1).todense())
+    Ds1_0, DS1_1 = tmp[:, 0], tmp[:, 1:]
+    v = ((1 - w) * Ds0_0 + w * Ds1_0).reshape(-1)
+    X = w * (DS1_1 - (v.reshape(-1, 1) * B1))
+    z = F.reshape(-1) - v
     XTCInv = X.T / ferr ** 2 / T
     XTCInvX = XTCInv.dot(X)
     cinv = np.ones(N - 1) / y1_sig ** 2
@@ -302,8 +314,12 @@ if niter > 0:
     best_s1 = s1.eval()
     best_w = w.eval()
 
+    # Variables to optimize
+    # NOTE; not optimizing s0
+    theano_vars = [y1, s1, w]
+
     # Optimize
-    upd = pp.utils.NAdam(like + prior, [y1], lr=lr)
+    upd = pp.utils.NAdam(like + prior, theano_vars, lr=lr)
     train = theano.function([], [y1, s0, s1, w, like, prior], updates=upd)
     for i in tqdm(niter_bilin + np.arange(niter)):
         y1_val, s0_val, s1_val, w_val, like_val[i], prior_val[i] = train()
@@ -317,6 +333,9 @@ if niter > 0:
     s0 = best_s0
     s1 = best_s1
     w = best_w
+
+# DEBUG
+print(w)
 
 # Plot the loss
 fig, ax = plt.subplots(1, 3, sharey=True, figsize=(14, 4))

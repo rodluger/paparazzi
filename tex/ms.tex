@@ -63,7 +63,7 @@ Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.
     \toprule
     \multicolumn{1}{c}{\textbf{Symbol}} &
     \multicolumn{1}{c}{\textbf{Description}} &
-    \multicolumn{1}{c}{\textbf{Type}} \\
+    \multicolumn{1}{c}{\textbf{Reference}} \\
     \toprule
     \endhead
     %
@@ -71,12 +71,38 @@ Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.
     %
     \endlastfoot
     %
-    $a$                             & lowercase italic & scalar\\
-    $A$                             & uppercase italic & scalar\\
-    $\alpha$                        & lowercase italic Greek & scalar\\
-    $\bvec{a}$                      & lowercase boldface & column vector\\
-    $\bvec{A}$                      & uppercase boldface & matrix\\
-    $\boldsymbol{\alpha}^\top$      & lowercase boldface Greek & basis row vector
+    $a_{lm}$    & spectral spherical harmonic coefficient               & Equation~(\ref{eq:deconv:Ixi0})\\
+    $\alm$      & vector of spectral spherical harmonic coefficients    & Equation~(\ref{eq:deconv:alm})\\
+    $\bvec{a_0}$& $\alm$ at reference time $t = t_0$                    & Equation~(\ref{eq:deconv:R})\\
+    $c$         & speed of light                                        & Equation~(\ref{eq:kT:beta})\\
+    $\Curve$    & curve of constant radial velocity                     & Equation~(\ref{eq:deconv:kT})\\
+    $\Dargs$    & parameters of the Doppler field                       & \S\ref{sec:the_problem}\\
+    $\D$        & logarithmic Doppler shift                             & Equation~(\ref{eq:the_problem:D})\\
+    $F$         & flux                                                  & Equation~(\ref{eq:the_problem:F})\\
+    $i$         & inclination                                           & Equation~(\ref{eq:kT:beta})\\
+    $I$         & specific intensity                                    & Equation~(\ref{eq:the_problem:Ixi})\\
+    $l$         & spherical harmonic degree                             & \\
+    $m$         & spherical harmonic order                              & \\
+    $\bvec{R}$  & Wigner rotation matrix                                & Equation~(\ref{eq:deconv:R})\\
+    $\Surf$     & projected visible area of the star                    & Equation~(\ref{eq:the_problem:F})\\
+    $t$         & time                                                  & \S\ref{sec:the_problem}\\
+    $\x$        & Cartesian position on the sky                         & \S\ref{sec:the_problem}\\
+    $y_{lm}$    & spherical harmonic coefficient                        & \S\ref{sec:inverse}\\
+    $Y_{lm}$    & spherical harmonic                                    & Equation~(\ref{eq:deconv:Ixi0})\\
+    %
+    %
+    $\beta$     & relativistic parameter                                & Equation~(\ref{eq:the_problem:D})\\
+    $\delta$    & Dirac delta function                                  & Equation~(\ref{eq:deconv:convolution})\\
+    $\kT$       & convolution kernel basis vector                       & Equation~(\ref{eq:deconv:kT})\\
+    $\lambda$   & wavelength (in nm)                                    & \S\ref{sec:the_problem}\\
+    $\lnlam$    & $\ln\lambda$ (observer frame)                         & \S\ref{sec:the_problem}\\
+    $\lnlam_0$  & $\ln\lambda$ (rest frame)                             & \S\ref{sec:the_problem}\\
+    $\ylmbasis$ & spherical harmonic basis vector                       & Equation~(\ref{eq:deconv:ylmbasis})\\
+    $\omega$    & angular velocity                                      & Equation~(\ref{eq:kT:beta})\\
+    %
+    %
+    $*$         & convolution                                           & Equation~(\ref{eq:deconv:convolution_def})\\
+    $\circ$     & element-wise product                                  & Equation~(\ref{eq:norm:fapprox})
 \end{longtable}
 \end{center}
 
@@ -93,7 +119,7 @@ $\Dargs$ is a set of arbitrary parameters of the Doppler field.
 We may express this intensity as
 %
 \begin{align}
-    \label{eq:intro:Ixi}
+    \label{eq:the_problem:Ixi}
     I(\lnlam, \x, t, \Dargs) &= 
         I\Big(\lnlam_0 + \D(\x, \Dargs), \x, t\Big)
 \end{align}
@@ -102,7 +128,7 @@ where $\lnlam_0$ is the log wavelength in the rest frame and $\D$ is
 the Doppler shift in log wavelength space:
 %
 \begin{align}
-    \label{eq:intro:D}
+    \label{eq:the_problem:D}
     \D(\x, \Dargs) 
         &=
         \frac{1}{2}\ln\left( 
@@ -124,7 +150,7 @@ ideal when one is interested in the \emph{integral} over the visible
 surface of the star $\Surf$, which is typically all we can observe:
 %
 \begin{align}
-    \label{eq:intro:F}
+    \label{eq:the_problem:F}
     F(\lnlam, t, \Dargs) 
         &\equiv
         \iint\limits_{\Surf(\x)}
@@ -133,7 +159,7 @@ surface of the star $\Surf$, which is typically all we can observe:
         \quad ,
 \end{align}
 %
-The difficulty in solving Equation~(\ref{eq:intro:F}) stems from the fact
+The difficulty in solving Equation~(\ref{eq:the_problem:F}) stems from the fact
 that $I(\lnlam, \x, t, \Dargs)$ is difficult to write down in 
 closed form, given
 the non-linearity of the Doppler shift.
@@ -152,9 +178,9 @@ this is either numerically inaccurate or computationally inefficient
 The observed spectrum is a complex function
 of spatial, spectral, temporal, and velocity terms. The goal in this
 section is to deconvolve each of these terms to make solving the integral
-in Equation~(\ref{eq:intro:F}) easier.
+in Equation~(\ref{eq:the_problem:F}) easier.
 %
-The first thing we will do is to express Equation~(\ref{eq:intro:Ixi})
+The first thing we will do is to express Equation~(\ref{eq:the_problem:Ixi})
 as a convolution:
 %
 \begin{align}
@@ -172,7 +198,7 @@ two arbitrary functions $g$ and $h$ as the integral
 %
 \begin{align}
     \label{eq:deconv:convolution_def}
-    (g * h)(t) \equiv \int_{-\infty}^\infty f(\tau) h(t - \tau) d\tau
+    (g * h)(t) \equiv \int_{-\infty}^\infty g(\tau) h(t - \tau) d\tau
 \end{align}
 %
 for some independent coordinate $t$ and dummy parameter $\tau$.
@@ -224,6 +250,7 @@ where
 is the vector of spherical harmonic coefficients and
 %
 \begin{align}
+    \label{eq:deconv:ylmbasis}
     \ylmbasis(\x) \equiv 
 \Big( 
     Y_{0,0}(\x) \quad\quad\quad\quad\quad\quad 
@@ -362,6 +389,7 @@ of generality, if we assume the axis of rotation lies along the $y-z$ plane,
 we have
 %
 \begin{align}
+    \label{eq:kT:beta}
     \beta(\x, \Dargs) = \frac{\omega \sin i \, x}{c}
 \end{align}
 %
@@ -998,7 +1026,7 @@ be amended.
 \end{align}
 %
 where $\bvec{b}$ is the baseline and the vector division is
-taken elementwise. When $\azero$ is given by Equation~(\ref{eq:inverse:azero}),
+performed elementwise. When $\azero$ is given by Equation~(\ref{eq:inverse:azero}),
 the baseline $\bvec{b}$ is simply the total (wavelength-integrated) flux
 at each epoch, repeated for every element in each spectrum. 
 Based on \citet{Luger2019}, this can be computed as a purely linear operation 
@@ -1037,7 +1065,7 @@ Given this new equation, we must change how we approach the inverse problem
 harmonic vector (\S\ref{sec:solve_s}), we need only make the replacements
 $\bvec{f} \rightarrow \nicefrac{\bvec{f}}{\bvec{B}\, \bvec{y}}$
 and 
-$\boldsymbol{\Sigma}_\mathbf{f} \rightarrow \nicefrac{\boldsymbol{\Sigma}_\mathbf{f}}{\bvec{B}\, \bvec{y}}$ 
+$\boldsymbol{\Sigma}_\mathbf{f} \rightarrow \nicefrac{\boldsymbol{\Sigma}_\mathbf{f}}{(\bvec{B}\, \bvec{y})^2}$ 
 in Equations~(\ref{eq:inverse:shat}) and (\ref{eq:inverse:scov}).
 However, when solving for the spherical harmonic vector given the spectrum
 (\ref{sec:solve_y}), the problem is no longer linear in $\bvec{y}$, as the
@@ -1097,6 +1125,7 @@ Expanding the expression above about
 $\bvec{B_1} \bvec{y_1} = \bvec{0}$, we have
 %
 \begin{align}
+    \label{eq:norm:fapprox}
     \bvec{f}
     &\approx
     \left(
