@@ -77,8 +77,8 @@ s0_true = s_spot
 s1_true = s_bkg - s_spot + 1
 
 # Priors
-s0_mu = s0_true  # We assume we know this exactly.
-s0_sig = 1e-12
+s0_mu = 1.0  # s0_true  # We assume we know this exactly.
+s0_sig = 0.1  # 1e-12
 s0_rho = 3.0e-5
 s1_mu = 1.0
 s1_sig = 0.1
@@ -89,9 +89,9 @@ b_sig = 0.1
 dcf = 10.0
 
 # Optimization params
-T = 10.0
+T = 5000.0
 dlogT = -0.025
-niter = 100
+niter = 0
 lr = 1e-4
 
 # Compute the GP on the spectra
@@ -214,6 +214,13 @@ else:
     LInv = dcf ** 2 * ferr ** 2 / s1_sig ** 2 * np.eye(A.shape[1])
     s1 = 1.0 + np.linalg.solve(A.T.dot(A).toarray() + LInv, A.T.dot(fmean))
 
+
+plt.plot(s0_true)
+plt.plot(s0)
+plt.plot(s1_true)
+plt.plot(s1)
+plt.show()
+
 # Tempering schedule
 if T > 1.0:
     T_arr = 10 ** np.arange(np.log10(T), 0, dlogT)
@@ -245,8 +252,8 @@ for i in tqdm(range(niter_bilin)):
     cho_C = cho_factor(XTCInvX)
     XTXInvy = np.dot(XTCInv, 2 * F.reshape(-1) - (Ds0 + Ds1).reshape(-1))
     mu = np.ones(N - 1) * y1_mu
-    y1 = cho_solve(cho_C, XTXInvy + cinv * mu)
-    b = np.reshape(2.0 + np.dot(B1, y1), (M, -1))
+    y1_new = cho_solve(cho_C, XTXInvy + cinv * mu)
+    b = np.reshape(2.0 + np.dot(B1, y1_new), (M, -1))
 
     # Solve for `s0` and `s1`
     offsets = -np.arange(0, N) * Kp
@@ -257,7 +264,7 @@ for i in tqdm(range(niter_bilin)):
     )
     X0 = np.array(D.dot(Y0).todense())
     Y1 = diags(
-        [np.ones(Kp)] + [np.ones(Kp) * y1[j] for j in range(N - 1)],
+        [np.ones(Kp)] + [np.ones(Kp) * y1_new[j] for j in range(N - 1)],
         offsets,
         shape=(N * Kp, Kp),
     )
@@ -267,10 +274,22 @@ for i in tqdm(range(niter_bilin)):
     XTCInvX = XTCInv.dot(X)
     XTCInvf = np.dot(XTCInv, F.reshape(-1))
     cho_C = cho_factor(XTCInvX + s_CInv)
-    s0, s1 = cho_solve(cho_C, XTCInvf + s_CInvmu).reshape(2, -1)
+    s0_new, s1_new = cho_solve(cho_C, XTCInvf + s_CInvmu).reshape(2, -1)
 
     # Compute the loss
-    like_val[i], prior_val[i] = loss(y1, s0, s1)
+    like_val[i], prior_val[i] = loss(y1_new, s0_new, s1_new)
+    if (i == 0) or (
+        like_val[i] + prior_val[i] < like_val[i - 1] + prior_val[i - 1]
+    ):
+        # Loss improved
+        y1 = y1_new
+        s0 = s0_new
+        s1 = s1_new
+    else:
+        # Loss got worse
+        like_val[i:niter_bilin] = like_val[i - 1]
+        prior_val[i:niter_bilin] = prior_val[i - 1]
+        break
 
 if niter > 0:
 
