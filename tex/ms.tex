@@ -55,58 +55,6 @@
 Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.
 
 %
-\begin{center}
-    \begin{longtable}{cll}
-    \caption{Notation used in this paper} 
-    \label{tab:notation} \\
-    %
-    \toprule
-    \multicolumn{1}{c}{\textbf{Symbol}} &
-    \multicolumn{1}{c}{\textbf{Description}} &
-    \multicolumn{1}{c}{\textbf{Reference}} \\
-    \toprule
-    \endhead
-    %
-    \endfoot
-    %
-    \endlastfoot
-    %
-    $a_{lm}$    & spectral spherical harmonic coefficient               & Equation~(\ref{eq:deconv:Ixi0})\\
-    $\alm$      & vector of spectral spherical harmonic coefficients    & Equation~(\ref{eq:deconv:alm})\\
-    $\bvec{a_0}$& $\alm$ at reference time $t = t_0$                    & Equation~(\ref{eq:deconv:R})\\
-    $c$         & speed of light                                        & Equation~(\ref{eq:kT:beta})\\
-    $\Curve$    & curve of constant radial velocity                     & Equation~(\ref{eq:deconv:kT})\\
-    $\Dargs$    & parameters of the Doppler field                       & \S\ref{sec:the_problem}\\
-    $\D$        & logarithmic Doppler shift                             & Equation~(\ref{eq:the_problem:D})\\
-    $F$         & flux                                                  & Equation~(\ref{eq:the_problem:F})\\
-    $i$         & inclination                                           & Equation~(\ref{eq:kT:beta})\\
-    $I$         & specific intensity                                    & Equation~(\ref{eq:the_problem:Ixi})\\
-    $l$         & spherical harmonic degree                             & \\
-    $m$         & spherical harmonic order                              & \\
-    $\bvec{R}$  & Wigner rotation matrix                                & Equation~(\ref{eq:deconv:R})\\
-    $\Surf$     & projected visible area of the star                    & Equation~(\ref{eq:the_problem:F})\\
-    $t$         & time                                                  & \S\ref{sec:the_problem}\\
-    $\x$        & Cartesian position on the sky                         & \S\ref{sec:the_problem}\\
-    $y_{lm}$    & spherical harmonic coefficient                        & \S\ref{sec:inverse}\\
-    $Y_{lm}$    & spherical harmonic                                    & Equation~(\ref{eq:deconv:Ixi0})\\
-    %
-    %
-    $\beta$     & relativistic parameter                                & Equation~(\ref{eq:the_problem:D})\\
-    $\delta$    & Dirac delta function                                  & Equation~(\ref{eq:deconv:convolution})\\
-    $\kT$       & convolution kernel basis vector                       & Equation~(\ref{eq:deconv:kT})\\
-    $\lambda$   & wavelength (in nm)                                    & \S\ref{sec:the_problem}\\
-    $\lnlam$    & $\ln\lambda$ (observer frame)                         & \S\ref{sec:the_problem}\\
-    $\lnlam_0$  & $\ln\lambda$ (rest frame)                             & \S\ref{sec:the_problem}\\
-    $\ylmbasis$ & spherical harmonic basis vector                       & Equation~(\ref{eq:deconv:ylmbasis})\\
-    $\omega$    & angular velocity                                      & Equation~(\ref{eq:kT:beta})\\
-    %
-    %
-    $*$         & convolution                                           & Equation~(\ref{eq:deconv:convolution_def})\\
-    $\circ$     & element-wise product                                  & Equation~(\ref{eq:norm:fapprox})
-\end{longtable}
-\end{center}
-
-%
 \section{The problem}
 \label{sec:the_problem}
 %
@@ -1122,7 +1070,8 @@ where $\bvec{B_0} = \bvec{1}$ is the first column of $\bvec{B}$
 and $\bvec{B}_\bvec{1}$ denotes the
 matrix composed from the remaining $N - 1$ columns of $\bvec{B}$.
 Expanding the expression above about 
-$\bvec{B_1} \bvec{y_1} = \bvec{0}$, we have
+$\bvec{B_1} \bvec{y_1} = \bvec{0}$ and keeping only terms up to
+first order, we have
 %
 \begin{align}
     \label{eq:norm:fapprox}
@@ -1147,7 +1096,7 @@ $\bvec{B_1} \bvec{y_1} = \bvec{0}$, we have
         \bvec{y_1}
     \right)
     \nonumber \\
-    &=
+    &\approx
     \left(
         \bvec{D}\bvec{S_1}
         \,
@@ -1163,8 +1112,8 @@ $\bvec{B_1} \bvec{y_1} = \bvec{0}$, we have
 \end{align}
 %
 where $\circ$ denotes an elementwise product and $\bvec{C}$ is a matrix
-constructed by multiplying the $i^\mathrm{th}$ row of $\bvec{B_1}$ by the
-$i^\mathrm{th}$ element of $\bvec{D}\bvec{s_0}$.
+constructed by multiplying each row of $\bvec{B_1}$ by the
+corresponding element of $\bvec{D}\bvec{s_0}$.
 %
 This equation is now
 linear in $\bvec{y}_\bvec{1}$, so we may solve the least-squares problem
@@ -1500,7 +1449,68 @@ we may compute any term in $\rhoT$ via the expressions
 The terms of the convolution kernel $\kT$ are then obtained by dotting
 this vector into the change of basis matrix $\AOne$, as discussed above.
 
+% Table
+\clearpage
+\begin{center}
+    \begin{longtable}{cll}
+    \caption{Notation used in this paper \xxx{mostly complete up to sec 5}} 
+    \label{tab:notation} \\
+    %
+    \toprule
+    \multicolumn{1}{c}{\textbf{Symbol}} &
+    \multicolumn{1}{c}{\textbf{Description}} &
+    \multicolumn{1}{c}{\textbf{Reference}} \\
+    \toprule
+    \endhead
+    %
+    \endfoot
+    %
+    \endlastfoot
+    %
+    $a_{lm}$                 & spectral spherical harmonic coefficient               & Equation~(\ref{eq:deconv:Ixi0})\\
+    $\alm$                   & vector of spectral spherical harmonic coefficients    & Equation~(\ref{eq:deconv:alm})\\
+    $\bvec{a_0}$             & $\alm$ at reference time $t = t_0$                    & Equation~(\ref{eq:deconv:R})\\
+    $\bvec{A_0}$             & matrix form of $\bvec{a_0}$                           & Equation~(\ref{eq:inverse:azero})\\
+    $c$                      & speed of light                                        & Equation~(\ref{eq:kT:beta})\\
+    $\Curve$                 & curve of constant radial velocity                     & Equation~(\ref{eq:deconv:kT})\\
+    $\Dargs$                 & parameters of the Doppler field                       & \S\ref{sec:the_problem}\\
+    $\D$                     & logarithmic Doppler shift                             & Equation~(\ref{eq:the_problem:D})\\
+    $\Doppler$               & Doppler design matrix                                 & Equation~(\ref{eq:linear:f})\\
+    $\bvec{f}$               & vector of observed flux values                        & Equation~(\ref{eq:linear:f})\\
+    $F$                      & flux                                                  & Equation~(\ref{eq:the_problem:F})\\
+    $i$                      & inclination                                           & Equation~(\ref{eq:kT:beta})\\
+    $I$                      & specific intensity                                    & Equation~(\ref{eq:the_problem:Ixi})\\
+    $l$                      & spherical harmonic degree                             & \\
+    $m$                      & spherical harmonic order                              & \\
+    $\bvec{R}$               & Wigner rotation matrix                                & Equation~(\ref{eq:deconv:R})\\
+    $\bvec{s}$               & vector representation of the spectrum                 & Equation~(\ref{eq:inverse:azero})\\
+    $\Surf$                  & projected visible area of the star                    & Equation~(\ref{eq:the_problem:F})\\
+    $t$                      & time                                                  & \S\ref{sec:the_problem}\\
+    $\x$                     & Cartesian position on the sky                         & \S\ref{sec:the_problem}\\
+    $y_{lm}$                 & spherical harmonic coefficient                        & \S\ref{sec:inverse}\\
+    $\bvec{s}$               & vector of spherical harmonic coefficients             & Equation~(\ref{eq:inverse:azero})\\
+    $Y_{lm}$                 & spherical harmonic                                    & Equation~(\ref{eq:deconv:Ixi0})\\
+    %
+    %
+    $\beta$                  & relativistic parameter                                & Equation~(\ref{eq:the_problem:D})\\
+    $\delta$                 & Dirac delta function                                  & Equation~(\ref{eq:deconv:convolution})\\
+    $\kT$                    & convolution kernel basis vector                       & Equation~(\ref{eq:deconv:kT})\\
+    $\lambda$                & wavelength (in nm)                                    & \S\ref{sec:the_problem}\\
+    $\lnlam$                 & $\ln\lambda$ (observer frame)                         & \S\ref{sec:the_problem}\\
+    $\lnlam_0$               & $\ln\lambda$ (rest frame)                             & \S\ref{sec:the_problem}\\
+    $\boldsymbol{\Lambda}$   & prior covariance matrix                               & \\
+    $\ylmbasis$              & spherical harmonic basis vector                       & Equation~(\ref{eq:deconv:ylmbasis})\\
+    $\boldsymbol{\Sigma}$    & covariance matrix                                     & \\
+    $\omega$                 & angular velocity                                      & Equation~(\ref{eq:kT:beta})\\
+    %
+    %
+    $*$         & convolution                                           & Equation~(\ref{eq:deconv:convolution_def})\\
+    $\circ$     & element-wise product                                  & Equation~(\ref{eq:norm:fapprox})
+\end{longtable}
+\end{center}
+
 % Bibliography
+\clearpage
 \bibliography{bib}
 
 \end{document}
