@@ -80,8 +80,8 @@ for _ in range(nlines - 1):
 s0_mu = s0_true  # 1.0
 s0_sig = 1e-12  # 0.3
 s0_rho = 3.0e-5
-s1_mu = s1_true  # 1.0
-s1_sig = 1e-12  # 0.3
+s1_mu = 1.0
+s1_sig = 0.1
 s1_rho = 3.0e-5
 y_mu = np.zeros(map.N)
 y_sig = np.ones(map.N) * 0.01
