@@ -1165,11 +1165,22 @@ should account for the temperature and composition gradients in the
 stellar atmosphere. However, in the spirit of data-driven inference, we 
 can approximate the effect of limb darkening by weighting the spatial
 component of our map by the limb darkening profile of the star, which can 
-either be imposed or learned from the data.
+either be imposed or learned from the data. \citet{Luger2019} showed
+how limb darkening can be expressed as a linear operation
 
 
 \subsection{Multiple spectra}
-Hello.
+Hello, Figure~\ref{fig:twospec}
+
+\begin{figure}[p!]
+    \begin{centering}
+    \includegraphics[width=0.8\linewidth]{figures/twospec.pdf}
+    \oscaption{twospec}{%
+        Learning two spectra simultaneously.
+        \label{fig:twospec}
+    }
+    \end{centering}
+\end{figure}
 
 \section{The SPOT star}
 \label{sec:spotstar}
