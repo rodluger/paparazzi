@@ -14,6 +14,7 @@ import theano.sparse as ts
 from tqdm import tqdm
 from inspect import getmro
 import celerite
+from matplotlib.patches import Rectangle
 
 
 def is_theano(*objs):
@@ -44,56 +45,52 @@ N = dop.N
 M = dop.M
 lnlam = dop.lnlam
 lnlam_padded = dop.lnlam_padded
-B = dop._map.X(theta=dop.theta).eval()
-B = np.repeat(B, K, axis=0)
+B1 = dop._map.X(theta=dop.theta).eval()[:, 1:]
+B1 = np.repeat(B1, K, axis=0)
 
 # Get the Ylm decomposition & the baseline
 map = starry.Map(15, lazy=False)
 map.inc = 40
 
-# Generate a map, 10% level
+# Generate a spot map
 map.load("spot")
-y_true = np.array(map[:, :])
-y_true *= 0.10
+y1_true = np.array(map[1:, :])
 b_true = np.repeat(map.flux(theta=theta), K)
 img_true = map.render(projection="rect", res=res)[0]
 
 # Generate two different spectra
-s0_true = np.empty(Kp)
-s1_true = np.empty(Kp)
 sigma = 7.5e-6
-nlines = 21
-mu1 = -0.00005
-mu2 = 0.00005
-s0_true = 1 - 0.5 * np.exp(-0.5 * (lnlam_padded - mu1) ** 2 / sigma ** 2)
+nlines = 0
+mu1 = -0.00015
+mu2 = 0.00015
+s_bkg = 1 - 0.5 * np.exp(-0.5 * (lnlam_padded - mu1) ** 2 / sigma ** 2)
 for _ in range(nlines - 1):
     amp = 0.1 * np.random.random()
     mu = 2.1 * (0.5 - np.random.random()) * lnlam_padded.max()
-    s0_true -= amp * np.exp(-0.5 * (lnlam_padded - mu) ** 2 / sigma ** 2)
-s1_true = 1 - 0.5 * np.exp(-0.5 * (lnlam_padded - mu2) ** 2 / sigma ** 2)
+    s_bkg -= amp * np.exp(-0.5 * (lnlam_padded - mu) ** 2 / sigma ** 2)
+s_spot = 1 - 0.5 * np.exp(-0.5 * (lnlam_padded - mu2) ** 2 / sigma ** 2)
 for _ in range(nlines - 1):
     amp = 0.1 * np.random.random()
     mu = 2.1 * (0.5 - np.random.random()) * lnlam_padded.max()
-    s1_true -= amp * np.exp(-0.5 * (lnlam_padded - mu) ** 2 / sigma ** 2)
+    s_spot -= amp * np.exp(-0.5 * (lnlam_padded - mu) ** 2 / sigma ** 2)
+s0_true = s_spot
+s1_true = s_bkg - s_spot + 1
 
 # Priors
-s0_mu = s0_true  # 1.0
-s0_sig = 1e-12  # 0.3
+s0_mu = s0_true  # We assume we know this exactly.
+s0_sig = 1e-12
 s0_rho = 3.0e-5
 s1_mu = 1.0
 s1_sig = 0.1
 s1_rho = 3.0e-5
-y_mu = np.zeros(map.N)
-y_sig = np.ones(map.N) * 0.01
-y_mu[0] = 0.0
-y_sig[0] = 0.25
-b_mu = 1.0
+y1_mu = 0
+y1_sig = 0.01
 b_sig = 0.1
 dcf = 10.0
 
 # Optimization params
-T = 1
-dlogT = -0.02
+T = 10.0
+dlogT = -0.025
 niter = 100
 lr = 1e-4
 
@@ -121,25 +118,31 @@ s_CInvmu = np.append(s0_CInvmu, s1_CInvmu)
 
 
 # Define the model
-def model(y, s0, s1):
-    if is_theano(y, s0, s1):
+def model(y1, s0, s1):
+    if is_theano(y1, s0, s1):
         math = tt
     else:
         math = np
 
     # Compute the background component
-    # TODO: Speed this up
-    y0 = np.zeros(map.N)
-    y0[0] = 1.0
-    A = math.dot(math.reshape(s0, (-1, 1)), math.reshape(y0, (1, -1)))
+    # TODO: Speed this up!
+    A = math.dot(
+        math.reshape(s0, (-1, 1)),
+        math.reshape(
+            math.concatenate(([1.0], math.zeros_like(y1)), axis=0), (1, -1)
+        ),
+    )
     a = math.reshape(math.transpose(A), (-1,))
     if math == tt:
         M0 = math.reshape(ts.dot(D, a), (M, -1))
     else:
         M0 = math.reshape(D.dot(a), (M, -1))
 
-    # Compute the variable component
-    A = math.dot(math.reshape(s1, (-1, 1)), math.reshape(y, (1, -1)))
+    # Compute the spot component
+    A = math.dot(
+        math.reshape(s1, (-1, 1)),
+        math.reshape(math.concatenate(([1.0], y1), axis=0), (1, -1)),
+    )
     a = math.reshape(math.transpose(A), (-1,))
     if math == tt:
         M1 = math.reshape(ts.dot(D, a), (M, -1))
@@ -147,23 +150,23 @@ def model(y, s0, s1):
         M1 = math.reshape(D.dot(a), (M, -1))
 
     # Remove the baseline
-    b = math.reshape(1.0 + math.dot(B, y), (M, -1))
+    b = math.reshape(2.0 + math.dot(B1, y1), (M, -1))
 
     return (M0 + M1) / b
 
 
 # Define the loss function
-def loss(y, s0, s1):
-    if is_theano(y, s0, s1):
+def loss(y1, s0, s1):
+    if is_theano(y1, s0, s1):
         math = tt
     else:
         math = np
-    b = 1.0 + math.dot(B[::K], y)
-    r = math.reshape(F - model(y, s0, s1), (-1,))
+    b_rel = math.dot(B1[::K], y1)
+    r = math.reshape(F - model(y1, s0, s1), (-1,))
     lnlike = -0.5 * math.sum(r ** 2 / ferr ** 2)
     lnprior = (
-        -0.5 * math.sum((y - y_mu) ** 2 / y_sig ** 2)
-        - 0.5 * math.sum((b - b_mu) ** 2 / b_sig ** 2)
+        -0.5 * math.sum((y1 - y1_mu) ** 2 / y1_sig ** 2)
+        - 0.5 * math.sum(b_rel ** 2 / b_sig ** 2)
         - 0.5
         * math.dot(
             math.dot(math.reshape((s0 - s0_mu), (1, -1)), s0_CInv),
@@ -178,10 +181,10 @@ def loss(y, s0, s1):
     return -lnlike, -lnprior
 
 
-# Re-generate the dataset
-F = model(y_true, s0_true, s1_true)
+# Generate the dataset
+F = model(y1_true, s0_true, s1_true)
 F += ferr * np.random.randn(*F.shape)
-like_true, prior_true = loss(y_true, s0_true, s1_true)
+like_true, prior_true = loss(y1_true, s0_true, s1_true)
 
 # Initialize `s0`
 if s0_sig < 1e-10:
@@ -228,20 +231,22 @@ for i in tqdm(range(niter_bilin)):
     # Set the temperature
     T = T_arr[i]
 
-    # Solve for `y` w/ linear baseline approximation
+    # Solve for `y1` w/ linear baseline approximation
     S0 = sparse_block_diag([s0.reshape(-1, 1) for j in range(N)])
     Ds0 = np.array(D.dot(S0).todense())[:, 0]
     S1 = sparse_block_diag([s1.reshape(-1, 1) for j in range(N)])
-    DS1 = np.array(D.dot(S1).todense())
-    X = DS1 - (Ds0.reshape(-1, 1) * B)
-    XTCInv = X.T / ferr ** 2 / T
+    tmp = np.array(D.dot(S1).todense())
+    Ds1, DS1 = tmp[:, 0], tmp[:, 1:]
+    X = DS1 - ((Ds0 + Ds1).reshape(-1, 1) * B1 * 0.5)
+    XTCInv = X.T / (2 * ferr) ** 2 / T
     XTCInvX = XTCInv.dot(X)
-    cinv = np.ones(N) / y_sig ** 2
+    cinv = np.ones(N - 1) / y1_sig ** 2
     np.fill_diagonal(XTCInvX, XTCInvX.diagonal() + cinv)
     cho_C = cho_factor(XTCInvX)
-    XTXInvy = np.dot(XTCInv, F.reshape(-1) - Ds0.reshape(-1))
-    mu = np.ones(N) * y_mu
-    y = cho_solve(cho_C, XTXInvy + cinv * mu)
+    XTXInvy = np.dot(XTCInv, 2 * F.reshape(-1) - (Ds0 + Ds1).reshape(-1))
+    mu = np.ones(N - 1) * y1_mu
+    y1 = cho_solve(cho_C, XTXInvy + cinv * mu)
+    b = np.reshape(2.0 + np.dot(B1, y1), (M, -1))
 
     # Solve for `s0` and `s1`
     offsets = -np.arange(0, N) * Kp
@@ -252,10 +257,11 @@ for i in tqdm(range(niter_bilin)):
     )
     X0 = np.array(D.dot(Y0).todense())
     Y1 = diags(
-        [np.ones(Kp) * y[j] for j in range(N)], offsets, shape=(N * Kp, Kp)
+        [np.ones(Kp)] + [np.ones(Kp) * y1[j] for j in range(N - 1)],
+        offsets,
+        shape=(N * Kp, Kp),
     )
     X1 = np.array(D.dot(Y1).todense())
-    b = np.reshape(1.0 + np.dot(B, y), (M, -1))
     X = np.hstack((X0, X1)) / b.reshape(-1, 1)
     XTCInv = X.T / ferr ** 2 / T
     XTCInvX = XTCInv.dot(X)
@@ -264,7 +270,7 @@ for i in tqdm(range(niter_bilin)):
     s0, s1 = cho_solve(cho_C, XTCInvf + s_CInvmu).reshape(2, -1)
 
     # Compute the loss
-    like_val[i], prior_val[i] = loss(y, s0, s1)
+    like_val[i], prior_val[i] = loss(y1, s0, s1)
 
 if niter > 0:
 
@@ -272,17 +278,17 @@ if niter > 0:
     print("Running non-linear solver...")
 
     # Theano nonlinear solve: setup
-    y = theano.shared(y)
+    y1 = theano.shared(y1)
     s0 = theano.shared(s0)
     s1 = theano.shared(s1)
-    like, prior = loss(y, s0, s1)
+    like, prior = loss(y1, s0, s1)
     best_loss = (like + prior).eval()
-    best_y = y.eval()
+    best_y1 = y1.eval()
     best_s0 = s0.eval()
     best_s1 = s1.eval()
 
     # Variables to optimize
-    theano_vars = [y]
+    theano_vars = [y1]
     if s0_sig > 1e-10:
         theano_vars += [s0]
     if s1_sig > 1e-10:
@@ -290,15 +296,15 @@ if niter > 0:
 
     # Optimize
     upd = pp.utils.NAdam(like + prior, theano_vars, lr=lr)
-    train = theano.function([], [y, s0, s1, like, prior], updates=upd)
+    train = theano.function([], [y1, s0, s1, like, prior], updates=upd)
     for i in tqdm(niter_bilin + np.arange(niter)):
-        y_val, s0_val, s1_val, like_val[i], prior_val[i] = train()
+        y1_val, s0_val, s1_val, like_val[i], prior_val[i] = train()
         if like_val[i] + prior_val[i] < best_loss:
             best_loss = like_val[i] + prior_val[i]
-            best_y = y_val
+            best_y1 = y1_val
             best_s0 = s0_val
             best_s1 = s1_val
-    y = best_y
+    y1 = best_y1
     s0 = best_s0
     s1 = best_s1
 
@@ -315,10 +321,10 @@ ax[0].set_yscale("log")
 # Plot the model
 fig = plt.figure()
 plt.plot(F.reshape(-1), "k.", alpha=0.3, ms=3)
-plt.plot(model(y, s0, s1).reshape(-1))
+plt.plot(model(y1, s0, s1).reshape(-1))
 
 # Render the map
-map[1:, :] = y[1:] / y[0]
+map[1:, :] = y1
 img = map.render(projection="rect", res=res)[0]
 
 # Plot the results
@@ -344,3 +350,89 @@ ax[2].plot(lnlam_padded, s0)
 ax[3].plot(lnlam_padded, s1_true)
 ax[3].plot(lnlam_padded, s1)
 plt.show()
+
+# TODO
+if False:
+
+    # Get the full map matrix, `A`
+    A0 = np.dot(
+        np.reshape(s0_true, (-1, 1)),
+        np.reshape(np.append([1.0], np.zeros(map.N - 1)), (1, -1)),
+    ).T
+    A1 = np.dot(
+        np.reshape(s1_true, (-1, 1)),
+        np.reshape(np.append([1.0], y1_true), (1, -1)),
+    ).T
+    A = A0 + A1
+
+    # Points where we'll evaluate the spectrum
+    lats = np.array([42.0, 25.0])
+    lons = np.array([-110.0, -62.0])
+
+    # Get the change of basis matrix from Ylm to intensity, `P`
+    xyz = map.ops.latlon_to_xyz(
+        map.axis, lats * np.pi / 180.0, lons * np.pi / 180.0
+    )
+    P = map.ops.pT(xyz[0], xyz[1], xyz[2])
+    P = ts.dot(P, map.ops.A1).eval()
+
+    # The local spectrum is just
+    I = P.dot(A)
+
+    # Set up the plot
+    fig = plt.figure(figsize=(12, 3))
+    ax = [
+        plt.subplot2grid((2, 2), (0, 0), rowspan=2, colspan=1),
+        plt.subplot2grid((2, 2), (0, 1), rowspan=2, colspan=1),
+    ]
+
+    # Show the image
+    vmax = np.nanmax(img_true)
+    ax[0].imshow(
+        img_true,
+        origin="lower",
+        extent=(-180, 180, -90, 90),
+        cmap="plasma",
+        vmin=0,
+        vmax=vmax,
+    )
+
+    # Show the spectra
+    sz = 5
+    n = 0
+    intensities = map.intensity(x=xyz[0], y=xyz[1])
+    intensities /= vmax
+    c = [plt.get_cmap("plasma")(i) for i in intensities]
+    for lat, lon in zip(lats, lons):
+        ax[0].plot([lon - sz, lon - sz], [lat - sz, lat + sz], "-", color="w")
+        ax[0].plot([lon + sz, lon + sz], [lat - sz, lat + sz], "-", color="w")
+        ax[0].plot([lon - sz, lon + sz], [lat - sz, lat - sz], "-", color="w")
+        ax[0].plot([lon - sz, lon + sz], [lat + sz, lat + sz], "-", color="w")
+        ax[0].annotate(
+            "%d" % (n + 1),
+            xy=(lon + sz, lat + sz),
+            xycoords="data",
+            xytext=(2, -2),
+            textcoords="offset points",
+            ha="left",
+            va="bottom",
+            fontsize=10,
+            color="w",
+        )
+        ax[1].plot(lnlam_padded, I[n] / I[0, 0], "-", color=c[n])
+        ax[1].annotate(
+            "%d" % (n + 1),
+            xy=(lnlam_padded[0], I[n, 0] / I[0, 0]),
+            xycoords="data",
+            xytext=(4, -4),
+            textcoords="offset points",
+            ha="left",
+            va="top",
+            fontsize=10,
+            color=c[n],
+        )
+        n += 1
+
+    ax[1].margins(0, None)
+
+    plt.show()

@@ -705,6 +705,7 @@ for the flux vector may be written as
 where
 %
 \begin{align}
+    \label{eq:inverse:S}
     \setstackgap{L}{1.25\baselineskip}
     \bvec{S} =
         \begin{pmatrix}
@@ -839,6 +840,7 @@ as
 where
 %
 \begin{align}
+    \label{eq:inverse:Y}
     \setstackgap{L}{1.25\baselineskip}
     \bvec{Y} =
         \begin{pmatrix}
@@ -934,8 +936,8 @@ resort to Monte Carlo methods or other sampling techniques. We discuss
 this further below.
 
 
-\section{Bells and Whistles}
-\label{sec:bells}
+\section{Further considerations}
+\label{sec:bellswhistles}
 
 \subsection{Unknown continuum normalization}
 \label{sec:norm}
@@ -1155,7 +1157,15 @@ starting point for a non-linear optimization, which we revisit in more
 detail below.
 
 \subsection{Limb darkening}
-Hello.
+\label{sec:ld}
+Thus far we have avoided mention of limb darkening, whose effect
+on the observed spectrum can often be significant. A proper treatment of
+limb darkening requires solution of radiative transfer equations and
+should account for the temperature and composition gradients in the
+stellar atmosphere. However, in the spirit of data-driven inference, we 
+may simply weight the spatial component of our map by the limb darkening
+profile of the star, which can either be imposed or learned from the data.
+
 
 \subsection{Multiple spectra}
 Hello.
@@ -1453,7 +1463,7 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
 \clearpage
 \begin{center}
     \begin{longtable}{cll}
-    \caption{Notation used in this paper \xxx{mostly complete up to sec 5}} 
+    \caption{Notation used in this paper} 
     \label{tab:notation} \\
     %
     \toprule
@@ -1471,6 +1481,8 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
     $\alm$                   & vector of spectral spherical harmonic coefficients    & Equation~(\ref{eq:deconv:alm})\\
     $\bvec{a_0}$             & $\alm$ at reference time $t = t_0$                    & Equation~(\ref{eq:deconv:R})\\
     $\bvec{A_0}$             & matrix form of $\bvec{a_0}$                           & Equation~(\ref{eq:inverse:azero})\\
+    $\bvec{b}$               & flux baseline vector                                  & Equation~(\ref{eq:norm:b})\\
+    $\bvec{B}$               & block matrix representation of $\bvec{b}$             & Equation~(\ref{eq:norm:b})\\
     $c$                      & speed of light                                        & Equation~(\ref{eq:kT:beta})\\
     $\Curve$                 & curve of constant radial velocity                     & Equation~(\ref{eq:deconv:kT})\\
     $\Dargs$                 & parameters of the Doppler field                       & \S\ref{sec:the_problem}\\
@@ -1484,12 +1496,14 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
     $m$                      & spherical harmonic order                              & \\
     $\bvec{R}$               & Wigner rotation matrix                                & Equation~(\ref{eq:deconv:R})\\
     $\bvec{s}$               & vector representation of the spectrum                 & Equation~(\ref{eq:inverse:azero})\\
+    $\bvec{S}$               & block matrix representation of $\bvec{s}$             & Equation~(\ref{eq:inverse:S})\\
     $\Surf$                  & projected visible area of the star                    & Equation~(\ref{eq:the_problem:F})\\
     $t$                      & time                                                  & \S\ref{sec:the_problem}\\
     $\x$                     & Cartesian position on the sky                         & \S\ref{sec:the_problem}\\
     $y_{lm}$                 & spherical harmonic coefficient                        & \S\ref{sec:inverse}\\
-    $\bvec{s}$               & vector of spherical harmonic coefficients             & Equation~(\ref{eq:inverse:azero})\\
+    $\bvec{y}$               & vector of spherical harmonic coefficients             & Equation~(\ref{eq:inverse:azero})\\
     $Y_{lm}$                 & spherical harmonic                                    & Equation~(\ref{eq:deconv:Ixi0})\\
+    $\bvec{Y}$               & block matrix representation of $\bvec{y}$             & Equation~(\ref{eq:inverse:Y})\\
     %
     %
     $\beta$                  & relativistic parameter                                & Equation~(\ref{eq:the_problem:D})\\
@@ -1499,6 +1513,7 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
     $\lnlam$                 & $\ln\lambda$ (observer frame)                         & \S\ref{sec:the_problem}\\
     $\lnlam_0$               & $\ln\lambda$ (rest frame)                             & \S\ref{sec:the_problem}\\
     $\boldsymbol{\Lambda}$   & prior covariance matrix                               & \\
+    $\boldsymbol{\mu}$       & prior mean vector                                     & \\
     $\ylmbasis$              & spherical harmonic basis vector                       & Equation~(\ref{eq:deconv:ylmbasis})\\
     $\boldsymbol{\Sigma}$    & covariance matrix                                     & \\
     $\omega$                 & angular velocity                                      & Equation~(\ref{eq:kT:beta})\\

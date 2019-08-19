@@ -25,6 +25,7 @@ if high_snr:
     niter = 80
     lr = 1e-4
     T = 100.0
+    dlogT = -0.25
 else:
     # At low SNR, a single run of the bi-linear solver
     # gets us to the optimum!
@@ -32,6 +33,7 @@ else:
     niter = 0
     lr = None
     T = 1.0
+    dlogT = -0.25
 
 # Generate data
 dop = pp.Doppler(ydeg=15)
@@ -42,7 +44,7 @@ dop.s = dop.s_true
 dop.y1 = None
 
 # Solve!
-loss, cho_y1, cho_s = dop.solve(s=dop.s, niter=niter, lr=lr, T=T)
+loss, cho_y1, cho_s = dop.solve(s=dop.s, niter=niter, lr=lr, T=T, dlogT=dlogT)
 
 # Plot the results
 plot_results(dop, name="spot_y1b", loss=loss, cho_y1=cho_y1, cho_s=cho_s)

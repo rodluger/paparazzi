@@ -624,7 +624,7 @@ class Doppler(object):
 
     def compute_y1(self, T=1.0, baseline=None):
         """
-        Linear solve for ``y1`` given ``v^T`` and an optional baseline 
+        Linear solve for ``y1`` given ``s`` and an optional baseline 
         and temperature. If the baseline is not given, solves the
         approximate linear problem, which assumes the difference 
         between the baseline and ``1.0`` is small.
@@ -684,7 +684,7 @@ class Doppler(object):
 
     def compute_s(self, T=1.0, baseline=None):
         """
-        Linear solve for ``v^T`` given ``y1`` and an optional baseline 
+        Linear solve for ``s`` given ``y1`` and an optional baseline 
         and temperature.
 
         Returns the Cholesky decomposition of the covariance of ``s``.
