@@ -120,11 +120,15 @@ class Doppler(object):
             # Force the re-instantiation of the internal map
             self.ydeg = self._ydeg
 
-        # Compute the limb darkening operator
         if self._udeg > 0:
-            map_ld = starry.Map(ydeg=self._ydeg, udeg=self._udeg)
-            F = map_ld.ops.F(np.append([-1.0], self._u), [np.pi])
-            self._L = ts.dot(ts.dot(map_ld.ops.A1Inv, F), map_ld.ops.A1).eval()
+
+            # Set the coeffs
+            self._map[1:] = self._u
+
+            # Compute the limb darkening operator
+            F = self._map.ops.F(np.append([-1.0], self._u), [np.pi])
+            self._L = ts.dot(ts.dot(self._map.ops.A1Inv, F), self._map.ops.A1).eval()
+            self._L = csr_matrix(self._L)
 
     @property
     def ydeg(self):
@@ -140,7 +144,7 @@ class Doppler(object):
         self._ydeg = value
 
         # Instantiate the internal map
-        self._map = starry.Map(self._ydeg)
+        self._map = starry.Map(ydeg=self._ydeg, udeg=self._udeg)
 
         # Compute the `A1` matrix
         if self._udeg > 0:
@@ -452,18 +456,22 @@ class Doppler(object):
             # Loop through each epoch
             for m in range(self.M):
 
-                # Rotate the kernels
-                # Note that we are computing R^T(theta) = R(-theta) here
-                RT = self._R(axis, -self.theta[m] * np.pi / 180.0)
-                kT = np.empty_like(kT0)
-                for l in range(self.ydeg + 1):
-                    idx = slice(l ** 2, (l + 1) ** 2)
-                    kT[idx] = RT[l].dot(kT0[idx])
-
-                # Apply limb darkening
                 if self._udeg > 0:
-                    breakpoint()
-                    pass  # TODO
+
+                    # Apply the LD transform & rotate the kernels
+                    R = self._R(axis, self.theta[m] * np.pi / 180.0)
+                    R = sparse_block_diag(R)
+                    LRT = self._L.dot(R).T
+                    kT = LRT.dot(kT0)
+
+                else:
+
+                    # Rotate the kernels (note that R^T(theta) = R(-theta))
+                    RT = self._R(axis, -self.theta[m] * np.pi / 180.0)
+                    kT = np.empty_like(kT0)
+                    for l in range(self.ydeg + 1):
+                        idx = slice(l ** 2, (l + 1) ** 2)
+                        kT[idx] = RT[l].dot(kT0[idx])
 
                 # Populate the Doppler matrix
                 D[m].data = np.tile(kT.reshape(-1), K)
@@ -639,17 +647,22 @@ class Doppler(object):
             model = np.empty((self.M, self.K))
             for m in range(self.M):
 
-                # Rotate the kernels (note that R^T(theta) = R(-theta))
-                RT = self._R(axis, -self.theta[m] * np.pi / 180.0)
-                kT = np.empty_like(kT0)
-                for l in range(self.ydeg + 1):
-                    idx = slice(l ** 2, (l + 1) ** 2)
-                    kT[idx] = RT[l].dot(kT0[idx])
-
-                # Apply limb darkening
                 if self._udeg > 0:
-                    breakpoint()
-                    pass  # TODO
+
+                    # Apply the LD transform & rotate the kernels
+                    R = self._R(axis, self.theta[m] * np.pi / 180.0)
+                    R = sparse_block_diag(R)
+                    LRT = self._L.dot(R).T
+                    kT = LRT.dot(kT0)
+
+                else:
+
+                    # Rotate the kernels (note that R^T(theta) = R(-theta))
+                    RT = self._R(axis, -self.theta[m] * np.pi / 180.0)
+                    kT = np.empty_like(kT0)
+                    for l in range(self.ydeg + 1):
+                        idx = slice(l ** 2, (l + 1) ** 2)
+                        kT[idx] = RT[l].dot(kT0[idx])
 
                 # Compute the model for this epoch
                 model[m] = np.sum(

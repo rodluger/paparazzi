@@ -23,11 +23,13 @@ def plot_results(
     res=300,
 ):
     """
-    Plot the results of the Doppler imaging problem for the Vogtstar.
+    Plot the results of the Doppler imaging problem for the SPOT star.
 
     """
     # Get the values we'll need for plotting
     ydeg = doppler.ydeg
+    udeg = doppler._udeg
+    u = doppler.u
     theta = doppler.theta
     y1_true = doppler.y1_true
     s_true = doppler.s_true
@@ -123,9 +125,11 @@ def plot_results(
     plt.close()
 
     # Render the true map
-    map = starry.Map(ydeg=ydeg, lazy=False)
+    map = starry.Map(ydeg=ydeg, udeg=udeg, lazy=False)
     map.inc = inc
     map[1:, :] = y1_true
+    if udeg > 0:
+        map[1:] = u
     if nframes is None:
         nframes = len(theta)
         theta_img = np.array(theta)
@@ -151,7 +155,7 @@ def plot_results(
 
         # Compute the polynomial transform matrix
         xyz = map.ops.compute_rect_grid(res)
-        P = map.ops.pT(xyz[0], xyz[1], xyz[2])
+        P = map.ops.pT(xyz[0], xyz[1], xyz[2])[:, : doppler.N]
 
         # Transform it to Ylm & evaluate it
         P = ts.dot(P, map.ops.A1).eval()

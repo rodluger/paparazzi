@@ -20,17 +20,10 @@ steps:
     pip install -U -r requirements.txt
     git clone --single-branch --branch dev https://github.com/rodluger/starry.git
     pushd starry && python setup.py develop && popd
-    conda install -y -q -c conda-forge tectonic
+    conda install -y -q -c conda-forge tectonic openblas
     theano-cache purge
     python setup.py install
   displayName: 'Install dependencies'
-
-# https://github.com/Theano/Theano/issues/6573
-# https://github.com/Theano/Theano/issues/6533
-# https://github.com/Theano/Theano/issues/6532
-- script: |
-    conda install blas
-  displayName: 'Install openblas'
 
 - script: |
     . $CONDA/etc/profile.d/conda.sh
