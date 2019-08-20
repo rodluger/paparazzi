@@ -1,9 +1,20 @@
+"""
+Show that we can solve the Doppler imaging problem
+when the stellar spectrum is a linear combination
+of two different "eigenspectra".
+
+Specifically, there is one spectral component (s0) that
+is present everywhere at the same intensity, and one
+component (s1) whose weight varies spatially with the
+spot. This has the effect of causing the spot to have
+one spectrum and the rest of the star to have a
+different one.
+
+"""
 import paparazzi as pp
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 import starry
-import subprocess
 from scipy.linalg import cho_factor, cho_solve
 from scipy.linalg import block_diag as dense_block_diag
 from scipy.sparse import block_diag as sparse_block_diag
@@ -29,7 +40,11 @@ def is_theano(*objs):
     return False
 
 
-# Initialize some stuff
+# Initialize some stuff. We'll instantiate a ``Doppler``
+# object so we can use its properties (mostly the convolution
+# kernels & Doppler design matrix) later on. We're going
+# to re-generate the data below, but we call ``generate_data``
+# to force computation of the various things we'll need.
 np.random.seed(13)
 ferr = 1.0e-4
 res = 300
@@ -48,31 +63,31 @@ lnlam_padded = dop.lnlam_padded
 B1 = dop._map.X(theta=dop.theta).eval()[:, 1:]
 B1 = np.repeat(B1, K, axis=0)
 
-# Get the Ylm decomposition & the baseline
+# Generate a spot map, get the baseline, and render the image
 map = starry.Map(15, lazy=False)
 map.inc = 40
-
-# Generate a spot map
 map.load("spot")
 y1_true = np.array(map[1:, :])
 b_true = np.repeat(map.flux(theta=theta), K)
 img_true = map.render(projection="rect", res=res)[0]
 
-# Generate two spectra with lines of different depths & at different wavs
+# Generate two spectra with lines of different depths
+# and cenetered at different wavelengths
 sigma = 7.5e-6
 mu1 = -0.00015
 line1 = -0.25 * np.exp(-0.5 * (lnlam_padded - mu1) ** 2 / sigma ** 2)
 mu2 = 0.00015
 line2 = -0.5 * np.exp(-0.5 * (lnlam_padded - mu2) ** 2 / sigma ** 2)
 
-# Construct the two "eigenspectra"
+# Construct the two "eigenspectra".
 # There's no particular logic here; I simply found a linear combination of the
 # two vectors above that gives me plausible-looking spectra in the spot and in
 # the background. In the end it doesn't really matter how I construct this.
 s0_true = 1 + line1 + line2
 s1_true = 1 + line1 - 0.5 * line2
 
-# Priors: assuming we know NOTHING!
+# Priors: assuming we know NOTHING, and placing generous
+# Gaussian priors on things.
 s0_mu = 1.0
 s0_sig = 0.1
 s0_rho = 3.0e-5
@@ -92,7 +107,7 @@ dlogT = -0.025
 niter = 100
 lr = 1e-4
 
-# Compute the GP on the spectra
+# Pre-compute the GP on the spectral components
 if s0_rho > 0.0:
     kernel = celerite.terms.Matern32Term(np.log(s0_sig), np.log(s0_rho))
     gp = celerite.GP(kernel)
@@ -123,7 +138,6 @@ def model(y1, s0, s1):
         math = np
 
     # Compute the background component
-    # TODO: This step can be sped up...
     A = math.dot(
         math.reshape(s0, (-1, 1)),
         math.reshape(
@@ -179,7 +193,7 @@ def loss(y1, s0, s1):
     return -lnlike, -lnprior
 
 
-# Generate the dataset
+# Now, actually generate the dataset
 F = model(y1_true, s0_true, s1_true)
 F += ferr * np.random.randn(*F.shape)
 like_true, prior_true = loss(y1_true, s0_true, s1_true)
@@ -360,7 +374,8 @@ A1 = np.dot(
 ).T
 A = A0 + A1
 
-# Points where we'll evaluate the spectrum
+# Points where we'll evaluate the spectrum. One corresponds to
+# a place within the spot; the other is outside the spot.
 lats = np.array([10.0, 25.0])
 lons = np.array([-15.0, -62.0])
 
@@ -479,13 +494,13 @@ for lat, lon in zip(lats, lons):
             color=c[n],
         )
     n += 1
-ax[2].set_title("local spectra", fontsize=22)
+ax[2].set_title("local spectra", fontsize=22, y=1.1)
 
 # Plot the "eigenspectra"
-ax[4].plot(lnlam_padded, s0_true)
-ax[4].plot(lnlam_padded, s1_true)
-ax[5].plot(lnlam_padded, s0)
-ax[5].plot(lnlam_padded, s1)
+ax[4].plot(lnlam_padded, s0_true, "C0")
+ax[4].plot(lnlam_padded, s1_true, "C2")
+ax[5].plot(lnlam_padded, s0, "C0")
+ax[5].plot(lnlam_padded, s1, "C2")
 for n, dy in zip([0, 1], [4, -14]):
     for i in [4, 5]:
         ax[i].annotate(
@@ -497,9 +512,9 @@ for n, dy in zip([0, 1], [4, -14]):
             ha="left",
             va="bottom",
             fontsize=10,
-            color="C%d" % n,
+            color="C%d" % (n * 2),
         )
-ax[4].set_title("eigen spectra", fontsize=22)
+ax[4].set_title("eigen spectra", fontsize=22, y=1.1)
 
 for i in [2, 3, 4, 5]:
     ax[i].margins(0, None)

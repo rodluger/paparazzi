@@ -1,10 +1,6 @@
 """
 Investigate how our recovered map varies with the
-stellar inclination (assumed to be known exactly).
-
-NOTE: I get the same results (qualitatively) whether
-or not the baseline is assumed to be known, which
-is great!
+signal to noise ratio of the data.
 
 """
 import paparazzi as pp
@@ -17,28 +13,35 @@ res = 300
 known_baseline = False
 dop = pp.Doppler(ydeg=15)
 
-# Velocity is computed such that v * sin(40 deg) = 40 km / s
-# so that we can compare directly to Vogt et al. (1987)
-v = 40.0 / np.sin(40 * np.pi / 180)
+# Compute model at infinite SNR to get the "signal"
+# This is the standard deviation in each wavelength
+# bin across all epochs.
+dop.generate_data(ferr=0)
+F_true = np.array(dop.F)
+signal = np.mean(np.std(F_true, axis=0))
 
-# Inclinations
-incs = [10, 20, 30, 40, 50, 60, 70, 80, 90]
+# Compute the pointwise uncertainty for a given SNR
+# NOTE: Vogt et al. (1987) have ~35 resolution elements
+# on the Fe line, and they compute the SNR per pixel,
+# where each pixel is half a resolution element. We
+# have 201 pixels in our model, so we need to *increase*
+# the uncertainty on our data by a factor of sqrt(201 / 70)
+# to get comparable results. This is a pretty tiny effect.
+snrs = [1.0, 2.0, 5.0, 10.0, 50.0, 100.0, 200.0, 500.0, 1000.0]
+ferrs = signal / snrs
+ferrs *= np.sqrt(F_true.shape[1] / 70.0)
 
 # Compute the normalization for the image
-dop.generate_data(ferr=0)
 dop.y1 = dop.y1_true
 img_true = dop.render(projection="rect", res=res).reshape(res, res)
 vmax = np.max(img_true)
-img = [None for inc in incs]
+img = [None for ferr in ferrs]
 
-# Loop
-for i, inc in enumerate(incs):
+for i, ferr in enumerate(ferrs):
 
     # Generate data
-    dop.inc = inc
-    dop.vsini = v * np.sin(inc * np.pi / 180.0)
     np.random.seed(13)
-    dop.generate_data(ferr=1e-4)
+    dop.generate_data(ferr=ferr)
 
     # Assume we know the baseline?
     if known_baseline:
@@ -72,7 +75,7 @@ for i in range(len(img)):
         extent=(-180, 180, -90, 90),
         cmap="plasma",
         vmin=0,
-        vmax=1,
+        vmax=1.0,
     )
     for lat in latlines:
         axis.axhline(lat, color="k", lw=0.5, alpha=0.5, zorder=100)
@@ -83,15 +86,15 @@ for i in range(len(img)):
     for tick in axis.xaxis.get_major_ticks() + axis.yaxis.get_major_ticks():
         tick.label.set_fontsize(8)
     axis.annotate(
-        r"$%2d^\circ$" % incs[i],
-        xy=(0, 1),
-        xytext=(7, -7),
+        r"$\mathrm{SNR} = %.0f$" % snrs[i],
+        xy=(0, 0),
+        xytext=(7, 7),
         xycoords="axes fraction",
         textcoords="offset points",
         ha="left",
-        va="top",
+        va="bottom",
         fontsize=18,
         color="w",
         zorder=101,
     )
-fig.savefig("inclinations.pdf", bbox_inches="tight")
+fig.savefig("snr.pdf", bbox_inches="tight")

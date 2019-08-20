@@ -28,6 +28,7 @@ class Doppler(object):
         vsini (int, optional): Projected equatorial velocity in km/s. 
             Defaults to 40.
         inc (float, optional): Inclination in degrees. Defaults to 40.0.
+        u (ndarray, optional): Limb darkening coefficients. Defaults to ``[]``.
         y1_mu (float or ndarray, optional): Prior mean on the spherical 
             harmonic coefficients. Defaults to 0.0.
         y1_sig (float or ndarray, optional): Prior standard deviation on 
@@ -50,6 +51,7 @@ class Doppler(object):
         ydeg=15,
         vsini=40,
         inc=40.0,
+        u=[],
         y1_mu=0.0,
         y1_sig=0.01,
         s_mu=1.0,
@@ -62,6 +64,8 @@ class Doppler(object):
         self.ydeg = ydeg
         self.inc = inc
         self.vsini = vsini
+        self._udeg = len(u)
+        self.u = u
 
         # Reset!
         self._reset_cache()
@@ -93,6 +97,29 @@ class Doppler(object):
         # Reset the cache
         self._D = None
         self._kT = None
+
+    @property
+    def u(self):
+        """
+        Limb darkening coefficients.
+
+        """
+        return self._u
+
+    @u.setter
+    def u(self, value):
+        value = np.atleast_1d(value)
+        assert (
+            len(value.shape) == 1
+        ), "Wavelength-dependent limb darkening not yet supported."
+        assert len(value) == self._udeg, (
+            "Incorrect vector length. To change the limb darkening degree, "
+            "you'll have to re-instantiate the class."
+        )
+        self._u = value
+        # Compute the limb darkening operator
+        F = self._map.ops.F(self._u, [np.pi])
+        self._L = ts.dot(ts.dot(self._map.ops.A1Inv, F), self._map.ops.A1)
 
     @property
     def ydeg(self):
@@ -405,6 +432,10 @@ class Doppler(object):
                 for l in range(self.ydeg + 1):
                     idx = slice(l ** 2, (l + 1) ** 2)
                     kT[idx] = RT[l].dot(kT0[idx])
+
+                # Apply limb darkening
+                if self._udeg > 0:
+                    pass # TODO
 
                 # Populate the Doppler matrix
                 D[m].data = np.tile(kT.reshape(-1), K)

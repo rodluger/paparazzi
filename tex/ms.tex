@@ -1387,6 +1387,7 @@ where $\mathrm{diag}(\bvec{v})$ denotes the $(K' \times K')$ diagonal matrix
 constructed by placing the vector $\bvec{v}$ along the main diagonal.
 
 \subsection{Multiple spectral components}
+\label{sec:eigen}
 %
 In our discussion so far we have focused on the particular case where the
 spectral/spatial decomposition of the stellar surface can be expressed as 
@@ -1396,14 +1397,35 @@ constant across the surface of the star except for a spatially-variable
 amplitude: i.e., spots have the same spectrum as the rest of the star, but
 emit less flux overall. However, most of the formalism developed here also
 applies to the more general case where the spectrum at a particular point
-on the surface of the star is a linear combination of $P$
-
+on the surface of the star is a linear combination of several different
+spectral components. In this case, the map vector $\azero$
+may be written as the sum over $J$ spectra $\bvec{s}_j$, each of which is dotted into
+a different vector of spherical harmonic coefficients $\bvec{y}_j^\top$:
+%
 \begin{align}
-    \azero &= \mathrm{vec}\left( \bvec{A_0} \right) \nonumber \\
-           &= \mathrm{vec}\left( \bvec{S} \, \bvec{Y}^\top \right) \quad,
+    \label{eq:eigen:azero}
+    \azero 
+        &= 
+        \sum_{j=0}^{J-1}\mathrm{vec}\left( \bvec{s}_j \, \bvec{y}_j^\top \right) \\
+        &=
+        \mathrm{vec}\left( \boldsymbol{\mathbb{S}} \, \boldsymbol{\mathbb{Y}}^\top \right) \quad,
 \end{align}
+%
+where $\boldsymbol{\mathbb{S}}$ is the $(K' \times J)$ matrix whose columns are
+the $J$ spectral components and $\boldsymbol{\mathbb{Y}}^\top$ is the
+$(J \times N)$ matrix whose rows are the corresponding $J$ spherical harmonic
+coefficient vectors.
 
-
+The model remains linear in both the spherical harmonic coefficients and the
+spectral components, and the procedures outlined in \S\ref{sec:inverse} may
+still be followed to solve the inverse problem, provided we unroll these
+matrices into vectors, letting
+$\mathbf{s} = \mathrm{vec}(\boldsymbol{\mathbb{S}})$
+and
+$\mathbf{y} = \mathrm{vec}(\boldsymbol{\mathbb{Y}})$.
+A detailed discussion of this general case is deferred to future work,
+but we present an example of a two-component stellar spectrum in the
+examples section below.
 
 \section{The SPOT star}
 \label{sec:spotstar}
@@ -1465,6 +1487,16 @@ on the surface of the star is a linear combination of $P$
     \end{centering}
 \end{figure}
 
+\begin{figure}[h!]
+    \begin{centering}
+    \includegraphics[width=0.98\linewidth]{figures/snr.pdf}
+    \oscaption{snr}{%
+        Recovered \spot map as a function of SNR per resolution element.
+        \label{fig:snr}
+    }
+    \end{centering}
+\end{figure}
+
 \begin{figure}[t!]
     \begin{centering}
     \includegraphics[width=\linewidth]{figures/twospec.pdf}
@@ -1477,7 +1509,8 @@ on the surface of the star is a linear combination of $P$
 
 \section{Performance}
 \label{sec:performance}
-
+%
+\xxx{In progress...}
 Evaluation of the model via Equation~(\ref{eq:deconv:F}) requires 
 first the rotation of the $(\lmax + 1)^2$
 $\kT$ kernels (each of length $W$) to the correct stellar 
@@ -1492,6 +1525,7 @@ takes $\mathcal{O}(W K \lmax^2)$ operations.
 
 \section{Stuff we're not addressing}
 %
+\xxx{In progress...}
 Differential rotation and convective blueshift.
 
 %
@@ -1736,6 +1770,7 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
     \multicolumn{3}{c}{\emph{Dimensions}}\\
     \midrule
     %
+    $J$                      & \# of spectral components                             & \\
     $K$                      & \# of wavelength bins in the observed spectrum        & \\
     $K'$                     & \# of wavelength bins in the latent spectrum          & \\
     $M$                      & \# of epochs observed                                 & \\

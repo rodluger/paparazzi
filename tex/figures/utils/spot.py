@@ -227,24 +227,24 @@ def plot_results(
     plt.colorbar(im, cax=cax, format="%.2f")
     ax[0].annotate(
         "true",
-        xy=(0, 1),
-        xytext=(7, -7),
+        xy=(0, 0),
+        xytext=(7, 7),
         xycoords="axes fraction",
         textcoords="offset points",
         ha="left",
-        va="top",
+        va="bottom",
         fontsize=22,
         color="w",
         zorder=101,
     )
     ax[1].annotate(
         "inferred",
-        xy=(0, 1),
-        xytext=(7, -7),
+        xy=(0, 0),
+        xytext=(7, 7),
         xycoords="axes fraction",
         textcoords="offset points",
         ha="left",
-        va="top",
+        va="bottom",
         fontsize=22,
         color="w",
         zorder=101,
@@ -267,14 +267,14 @@ def plot_results(
         cb.ax.set_yticklabels(ticklabels)
         ax[2].annotate(
             "uncertainty",
-            xy=(0, 1),
-            xytext=(7, -7),
+            xy=(0, 0),
+            xytext=(7, 7),
             xycoords="axes fraction",
             textcoords="offset points",
             ha="left",
-            va="top",
+            va="bottom",
             fontsize=22,
-            color="w",
+            color="k",
             zorder=101,
         )
     for axis in ax:
