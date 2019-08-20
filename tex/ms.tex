@@ -164,7 +164,7 @@ in terms of spherical harmonics on the unit disk:
     \label{eq:deconv:Ixi0}
     I(\lnlam_0, \x, t) 
         &=
-        \sum_{l=0}^\infty\sum_{m=-l}^{l} a_{lm}(\lnlam_0, t) Y_{lm}(\x)
+        \sum_{l=0}^{l_\mathrm{max}}\sum_{m=-l}^{l} a_{lm}(\lnlam_0, t) Y_{lm}(\x)
     \quad ,
 \end{align}
 %
@@ -195,7 +195,7 @@ where
 \Big)^\top
 \end{align}
 %
-is the vector of spherical harmonic coefficients and
+is the vector of $N = (l_\mathrm{max} + 1)^2$ spherical harmonic coefficients and
 %
 \begin{align}
     \label{eq:deconv:ylmbasis}
@@ -209,7 +209,7 @@ is the vector of spherical harmonic coefficients and
 \Big)
 \end{align}
 %
-is the corresponding vector of spherical harmonics. We may further
+is the corresponding vector of $N$ spherical harmonics. We may further
 decompose our expression by linearizing the time dependence of the
 spherical harmonic coefficients:
 %
@@ -221,7 +221,7 @@ spherical harmonic coefficients:
 %
 where $\azero(\lnlam_0) = \bvec{a}(\lnlam_0, t=t_0)$ 
 for some reference time $t_0$.
-For rigid body rotation, the result is exact and $\R(t)$ is the Wigner 
+For rigid body rotation, the result is exact and $\R(t)$ is the $(N \times N)$ Wigner 
 rotation matrix for real spherical harmonics 
 \citep[e.g.][]{AlvarezCollado1989}, which is implicitly a 
 function of the inclination, obliquity, and rotation period of the star.
@@ -364,7 +364,7 @@ respect to $\hat{y}$, $i$.
         The Doppler $\kT$ basis for a rigidly rotating star
         computed from Equation~(\ref{eq:kT:kT}) and
         Equation~(\ref{eq:kT:sTrecurrence}) up to spherical 
-        harmonic degree $l=10$. Rows correspond to the degree $l$ and
+        harmonic degree $l_\mathrm{max}=10$. Rows correspond to the degree $l$ and
         columns correspond to the order $m$. These functions encode
         the contribution of each spherical harmonic to the rotational
         broadening of features in the stellar spectrum. Because the
@@ -414,7 +414,7 @@ how to recursively solve it for all terms in the spherical harmonic basis.
 %
 Figure~\ref{fig:kT} shows the $\kT$ basis computed from
 the formulae above and Equation~(\ref{eq:kT:kT}) up to spherical 
-harmonic degree $l=10$.
+harmonic degree $l_\mathrm{max}=10$.
 
 This completes our derivation of the analytic expression for the
 observed spectrum (Equation~\ref{eq:deconv:F}). 
@@ -447,7 +447,7 @@ imaging technique \citep[compare to, e.g., Figures 1 and 4 in][]{Vogt1983}.
         Time evolution of a Gaussian absorption line on a rigidly rotating, 
         spotted star computed from the analytic formulae in \S\ref{sec:kT}.
         The stellar surface is modeled as a spherical harmonic expansion
-        up to $l=20$, and the line shape is assumed to be the same everywhere;
+        up to $l_\mathrm{max}=20$, and the line shape is assumed to be the same everywhere;
         the spot simply downweights the local intensity at all wavelengths.
         As the spot rotates into view (left panel), the line shape changes
         slightly (center panel). The residuals between the line when the
@@ -526,15 +526,15 @@ For discrete arrays $\bvec{g}$ and $\bvec{h}$, we have
 %
 \begin{align}
     \label{eq:linear:convolution_def}
-    \bvec{g} * \bvec{h} = \bvec{G} \, \bvec{h}
+    \bvec{g} * \bvec{h} = \bvec{T(g)} \, \bvec{h}
 \end{align}
 %
-where $\bvec{G}$ is a Toeplitz matrix, a matrix whose diagonals
+where $\bvec{T}$ is a Toeplitz matrix, a matrix whose diagonals
 are constant from top left to bottom right. In this case, the diagonals
 are constructed from the values of $\bvec{g}$. If $\bvec{g}$ has length
 $L$, element $g_n$ is placed everywhere along the $k^\mathrm{th}$ diagonal 
-of $\bvec{G}$ for $k = -L / 2 + n$; all other entries of $\bvec{G}$ are 
-set to zero. Note that the matrix $\bvec{G}$ need not be square; in fact,
+of $\bvec{T}$ for $k = -L / 2 + n$; all other entries of $\bvec{T}$ are 
+set to zero. Note that the matrix $\bvec{T}$ need not be square; in fact,
 for our purposes, it is a $(K \times K')$ matrix, where $K$ is the 
 size of the observed wavelength grid and $K' = K + W - 1$ is the size of the
 wavelength grid in the rest frame, where $W$ is the width of the convolution
@@ -545,21 +545,48 @@ purely linear operation on $\azero(\lnlam_0)$:
 %
 \begin{align}
     \label{eq:linear:ft}
-    \bvec{f}_t
+    \bvec{f}_m
     &=
-    \Doppler_t
+    \Doppler_m
     \,
     \azero
     \quad,
 \end{align}
 %
-where $\Doppler_t$ is a $(K \times N K')$ matrix constructed
+where $\Doppler_m$ is a $(K \times N K')$ matrix constructed
 by horizontally concatenating the Toeplitz matrices for each of the $N$ 
-components of the convolution kernel $\kT(\lnlam, \Dargs)$ after rotating 
-them (via $\R(t)$) to the stellar phase at time $t$. 
+components of the convolution kernel $\kT(\lnlam, \Dargs)$ 
+transformed by the rotation matrix $\bvec{R}(t)$ evaluated at time $t = t_m$:
 %
-The $(K \times 1)$ vector $\mathbf{f}$ is the model for 
-the flux observed at each wavelength at a particular time, and the 
+\begin{align}
+    \label{eq:linear:Dm}
+    \Doppler_m = 
+    \begin{pmatrix}
+        \quad
+        \bvec{T}(\kT_0)
+        \quad
+        &
+        \quad
+        \bvec{T}(\kT_1)
+        \quad
+        &
+        \quad
+        \cdots
+        \quad
+        &
+        \quad
+        \bvec{T}(\kT_N)
+        \quad
+    \end{pmatrix}
+    (\bvec{R}(t_m) \otimes \bvec{I}_{K'})
+    \quad.
+\end{align}
+%
+where $\bvec{I}_{K'}$ is the $(K' \times K')$ identity matrix and
+$\otimes$ denotes the Kronecker product.
+%
+The $(K \times 1)$ vector $\mathbf{f}_m$ is the model for 
+the flux observed at each wavelength at time $t = t_m$, and the 
 $(N K' \times 1)$ vector $\azero$ is the vector representation of the
 spatially-dependent spectrum of the star. The latter is constructed
 by flattening the spherical harmonic expansion of the star
@@ -569,7 +596,7 @@ followed by the values of $(a_0)_{1,-1}$ at each wavelength, and so forth.
 
 In general, our data will consist of observations made at several
 epochs, corresponding to different rotational phases of the star. 
-If we concatenate all $M$ spectra $\bvec{f}_t$ into the $(MK \times 1)$ 
+If we concatenate all $M$ spectra $\bvec{f}_m$ into the $(MK \times 1)$ 
 vector $\bvec{f}$, we may write
 %
 \begin{align}
@@ -583,8 +610,27 @@ vector $\bvec{f}$, we may write
 \end{align}
 %
 where $\Doppler$ is the full $(MK \times N K')$ Doppler design matrix, 
-constructed by vertically concatenating the individual matrices $\Doppler_t$.
-This equation represents the full linearization of the problem, where we
+constructed by vertically concatenating the individual matrices $\Doppler_m$:
+%
+%
+\begin{align}
+    \label{eq:linear:D}
+    \Doppler =
+    \begin{pmatrix}
+        \Doppler_0
+        \\
+        \Doppler_1
+        \\
+        \cdots 
+        \\
+        \Doppler_m
+    \end{pmatrix}
+    \quad.
+\end{align}
+%
+%
+Equation~(\ref{eq:linear:f}) represents the full linearization of the problem, 
+where we
 have expressed the quantity we can observe, $\bvec{f}$, as a linear
 operation on the quantity of interest, the spectral/spatial decomposition
 of the stellar surface, $\azero$. Figure~\ref{fig:linalg} shows an
@@ -1165,22 +1211,199 @@ should account for the temperature and composition gradients in the
 stellar atmosphere. However, in the spirit of data-driven inference, we 
 can approximate the effect of limb darkening by weighting the spatial
 component of our map by the limb darkening profile of the star, which can 
-either be imposed or learned from the data. \citet{Luger2019} showed
-how limb darkening can be expressed as a linear operation
-
-
-\subsection{Multiple spectra}
-Hello, Figure~\ref{fig:twospec}
-
-\begin{figure}[p!]
+either be imposed or learned from the data. For a polynomial limb darkening
+law of the form
+%
+\begin{align}
+    \label{eq:ld:I}
+    \frac{I(\mu)}{I(\mu = 1)} = 1 - \sum_{n=1}^{n_\mathrm{max}} u_n(1 - \mu)^n
+    \quad,
+\end{align}
+%
+where $\mu = z = \sqrt{1 - x^2 - y^2}$ is the radial coordinate on the 
+projected disk and $u_n$ is a limb darkening coefficient, the effect of 
+limb darkening on the stellar map can be expressed exactly as a linear 
+operation on the spherical harmonic coefficient vector 
+\citep{Luger2019,Agol2019}. This can be understood by noting that all terms
+in Equation~(\ref{eq:ld:I}) are strictly polynomials in $x$, $y$, and $z$,
+all of which can be expressed exactly as sums of spherical harmonics
+\citep{Luger2019}. When weighting the surface intensity by the limb darkening
+profile, the resulting intensity is simply a product of spherical harmonics,
+which is itself a sum of spherical harmonics. Given a limb darkening law
+of degree $n_\mathrm{max}$, we can always construct a matrix $\bvec{L}$
+that transforms a spherical harmonic vector $\bvec{y}$ of degree
+$l_\mathrm{max}$ to a limb-darkened spherical harmonic vector $\bvec{y'}$
+of degree $l_\mathrm{max} + n_\mathrm{max}$. As an example, consider 
+a map of degree $l_\mathrm{max} = 1$ and the linear limb darkening law
+($n_\mathrm{max} = 1$).
+The transformation matrix from $\bvec{y}$ to $\bvec{y'}$ is
+%
+\begin{align}
+    \label{eq:ld:L}
+    \setstackgap{L}{1.5\baselineskip}
+    \bvec{L} =
+        \frac{1}{1 - \frac{u_1}{3}}
+        \begin{pmatrix}
+        \quadquad1-u_1\quadquad & 0                         & \frac{u_1}{\sqrt{3}}      & 0                         \\
+        0                       & \quadquad1-u_1\quadquad   & 0                         & 0                         \\
+        \frac{u_1}{\sqrt{3}}    & 0                         & \quadquad1-u_1\quadquad   & 0                         \\
+        0                       & 0                         & 0                         & \quadquad1-u_1\quadquad   \\
+        0                       & 0                         & 0                         & 0                         \\
+        0                       & \frac{u_1}{\sqrt{5}}      & 0                         & 0                         \\
+        0                       & 0                         & \frac{2u_1}{\sqrt{15}}    & 0                         \\
+        0                       & 0                         & 0                         & \frac{u_1}{\sqrt{5}}      \\
+        0                       & 0                         & 0                         & 0          
+        \end{pmatrix}
+        \quad.
+\end{align}
+%
+The columns of $\bvec{L}$ are constructed from the coefficient vectors of
+each transformed spherical harmonic, which are in turn computed by 
+multiplying each spherical harmonic by the spherical harmonic decomposition 
+of the particular limb darkening law.
+Figure~\ref{fig:ld} shows this transformation with $u_1 = 1$ applied to each
+of the first four spherical harmonics.
+%
+\begin{figure}[t!]
     \begin{centering}
-    \includegraphics[width=0.8\linewidth]{figures/twospec.pdf}
-    \oscaption{twospec}{%
-        Learning two spectra simultaneously.
-        \label{fig:twospec}
+    \includegraphics[width=0.6\linewidth]{figures/ld.pdf}
+    \oscaption{ld}{%
+        Illustration of the limb darkening transformation given by
+        Equation~(\ref{eq:ld:L}) for a linear limb darkening law with
+        $u_1 = 1$. Each row shows a spherical harmonic before
+        (left) and after (right) transformation by $\bvec{L}$.
+        \label{fig:ld}
     }
     \end{centering}
 \end{figure}
+%
+
+Now, to incorporate limb darkening into our model, we must modify how we
+compute the Doppler design matrix $\Doppler$
+(Equation~\ref{eq:linear:D} and Figure~\ref{fig:linalg}). Recall that
+this matrix is constructed by vertically stacking the submatrices 
+$\Doppler_m$ given by Equation~(\ref{eq:linear:Dm}), which we now compute
+as
+%
+\begin{align}
+    \label{eq:ld:Dm}
+    \Doppler_m =
+    \begin{pmatrix}
+        \quad
+        \bvec{T}(\kT_0)
+        \quad
+        &
+        \quad
+        \bvec{T}(\kT_1)
+        \quad
+        &
+        \quad
+        \cdots
+        \quad
+        &
+        \quad
+        \bvec{T}(\kT_{N'})
+        \quad
+    \end{pmatrix}
+    (\bvec{L} \, \bvec{R}(t_m) \otimes \bvec{I}_{K'})
+    \quad,
+\end{align}
+%
+where we have replaced the rotation matrix $\bvec{R}(t_m)$ with
+the linear transformation $\bvec{L}\,\bvec{R}(t_m)$, which first rotates the
+input spherical harmonic coefficient vector to the correct phase then
+limb darkens it. Note also that the terms in the convolution kernel $\kT$
+are now indexed from 0 to $N' = (l_\mathrm{max} + n_\mathrm{max} + 1)^2$,
+where $n_\mathrm{max}$ is the degree of the limb darkening operator.
+
+Note that it is also possible to model wavelength-dependent limb darkening
+in this fashion. The procedure is similar, except that the limb darkening
+coefficients $u_n$ are now functions of $\lnlam$, and each element of the
+matrix $\bvec{L}$ is now a vector of length $K'$. The submatrices
+$\Doppler_m$ may be written as
+%
+\begin{align}
+    \label{eq:ld:Dmwav}
+    \resizebox{0.91\textwidth}{!}{
+    $
+    \Doppler_m =
+    \begin{pmatrix}
+        \quad
+        \bvec{T}(\kT_0)
+        \quad
+        &
+        \quad
+        \bvec{T}(\kT_1)
+        \quad
+        &
+        \quad
+        \cdots
+        \quad
+        &
+        \quad
+        \bvec{T}(\kT_{N'})
+        \quad
+    \end{pmatrix}
+    \begin{pmatrix}
+        \mathrm{diag}(\bvec{L}_{0,0})
+        &
+        \mathrm{diag}(\bvec{L}_{0,1})
+        &
+        \cdots
+        &
+        \mathrm{diag}(\bvec{L}_{0,N})
+        \\
+        \mathrm{diag}(\bvec{L}_{1,0})
+        &
+        \mathrm{diag}(\bvec{L}_{1,1})
+        &
+        \cdots
+        &
+        \mathrm{diag}(\bvec{L}_{1,N})
+        \\
+        \cdots
+        &
+        \cdots
+        &
+        \ddots
+        &
+        \cdots
+        \\
+        \mathrm{diag}(\bvec{L}_{N',0})
+        &
+        \mathrm{diag}(\bvec{L}_{N',1})
+        &
+        \cdots
+        &
+        \mathrm{diag}(\bvec{L}_{N',N})
+    \end{pmatrix}
+    (\bvec{R}(t_m) \otimes \bvec{I}_{K'})
+    $
+    }
+    \quad,
+\end{align}
+%
+where $\mathrm{diag}(\bvec{v})$ denotes the $(K' \times K')$ diagonal matrix
+constructed by placing the vector $\bvec{v}$ along the main diagonal.
+
+\subsection{Multiple spectral components}
+%
+In our discussion so far we have focused on the particular case where the
+spectral/spatial decomposition of the stellar surface can be expressed as 
+the outer product of two vectors (Equation~\ref{eq:inverse:azero}). As we
+mentioned previously, this corresponds to the case where the spectrum is
+constant across the surface of the star except for a spatially-variable 
+amplitude: i.e., spots have the same spectrum as the rest of the star, but
+emit less flux overall. However, most of the formalism developed here also
+applies to the more general case where the spectrum at a particular point
+on the surface of the star is a linear combination of $P$
+
+\begin{align}
+    \azero &= \mathrm{vec}\left( \bvec{A_0} \right) \nonumber \\
+           &= \mathrm{vec}\left( \bvec{S} \, \bvec{Y}^\top \right) \quad,
+\end{align}
+
+
 
 \section{The SPOT star}
 \label{sec:spotstar}
@@ -1238,6 +1461,16 @@ Hello, Figure~\ref{fig:twospec}
     \oscaption{inclinations}{%
         Recovered \spot map as a function of inclination.
         \label{fig:inclinations}
+    }
+    \end{centering}
+\end{figure}
+
+\begin{figure}[t!]
+    \begin{centering}
+    \includegraphics[width=\linewidth]{figures/twospec.pdf}
+    \oscaption{twospec}{%
+        Learning two spectra simultaneously.
+        \label{fig:twospec}
     }
     \end{centering}
 \end{figure}
@@ -1475,19 +1708,44 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
 \clearpage
 \begin{center}
     \begin{longtable}{cll}
-    \caption{Notation used in this paper} 
+    \caption{Common notation used in this paper} 
     \label{tab:notation} \\
     %
     \toprule
     \multicolumn{1}{c}{\textbf{Symbol}} &
     \multicolumn{1}{c}{\textbf{Description}} &
     \multicolumn{1}{c}{\textbf{Reference}} \\
+    \midrule
+    \endfirsthead
+    %
+    \multicolumn{3}{c}%
+    {{\bfseries \tablename\ \thetable{}}. (continued from previous page)} \\[0.5em]
     \toprule
+    \multicolumn{1}{c}{\textbf{Symbol}} &
+    \multicolumn{1}{c}{\textbf{Definition}} &
+    \multicolumn{1}{c}{\textbf{Reference}} \\
+    \midrule
     \endhead
+    \bottomrule
     %
     \endfoot
     %
     \endlastfoot
+    %
+    \midrule
+    \multicolumn{3}{c}{\emph{Dimensions}}\\
+    \midrule
+    %
+    $K$                      & \# of wavelength bins in the observed spectrum        & \\
+    $K'$                     & \# of wavelength bins in the latent spectrum          & \\
+    $M$                      & \# of epochs observed                                 & \\
+    $N$                      & \# of spherical harmonic coefficients                 & \\
+    $N'$                     & \# of spherical harmonic coefficients after limb darkening            & \\
+    $W$                      & \# of wavelength bins in the convolution kernel       & \\
+    %
+    \midrule
+    \multicolumn{3}{c}{\emph{Variables}}\\
+    \midrule
     %
     $a_{lm}$                 & spectral spherical harmonic coefficient               & Equation~(\ref{eq:deconv:Ixi0})\\
     $\alm$                   & vector of spectral spherical harmonic coefficients    & Equation~(\ref{eq:deconv:alm})\\
@@ -1504,19 +1762,26 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
     $F$                      & flux                                                  & Equation~(\ref{eq:the_problem:F})\\
     $i$                      & inclination                                           & Equation~(\ref{eq:kT:beta})\\
     $I$                      & specific intensity                                    & Equation~(\ref{eq:the_problem:Ixi})\\
+    $\bvec{I}$               & identity matrix                                       & \\
     $l$                      & spherical harmonic degree                             & \\
+    $\bvec{L}$               & limb darkening operator                               & Equation~(\ref{eq:ld:L})\\
     $m$                      & spherical harmonic order                              & \\
     $\bvec{R}$               & Wigner rotation matrix                                & Equation~(\ref{eq:deconv:R})\\
     $\bvec{s}$               & vector representation of the spectrum                 & Equation~(\ref{eq:inverse:azero})\\
     $\bvec{S}$               & block matrix representation of $\bvec{s}$             & Equation~(\ref{eq:inverse:S})\\
     $\Surf$                  & projected visible area of the star                    & Equation~(\ref{eq:the_problem:F})\\
     $t$                      & time                                                  & \S\ref{sec:the_problem}\\
+    $u$                      & limb darkening coefficient                            & \S\ref{sec:ld}\\
     $\x$                     & Cartesian position on the sky                         & \S\ref{sec:the_problem}\\
     $y_{lm}$                 & spherical harmonic coefficient                        & \S\ref{sec:inverse}\\
     $\bvec{y}$               & vector of spherical harmonic coefficients             & Equation~(\ref{eq:inverse:azero})\\
     $Y_{lm}$                 & spherical harmonic                                    & Equation~(\ref{eq:deconv:Ixi0})\\
     $\bvec{Y}$               & block matrix representation of $\bvec{y}$             & Equation~(\ref{eq:inverse:Y})\\
     %
+    \pagebreak
+    \midrule
+    \multicolumn{3}{c}{\emph{Variables (Greek)}}\\
+    \midrule
     %
     $\beta$                  & relativistic parameter                                & Equation~(\ref{eq:the_problem:D})\\
     $\delta$                 & Dirac delta function                                  & Equation~(\ref{eq:deconv:convolution})\\
@@ -1530,9 +1795,17 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
     $\boldsymbol{\Sigma}$    & covariance matrix                                     & \\
     $\omega$                 & angular velocity                                      & Equation~(\ref{eq:kT:beta})\\
     %
+    \midrule
+    \multicolumn{3}{c}{\emph{Operators}}\\
+    \midrule
     %
-    $*$         & convolution                                           & Equation~(\ref{eq:deconv:convolution_def})\\
-    $\circ$     & element-wise product                                  & Equation~(\ref{eq:norm:fapprox})
+    $\mathrm{diag}$          & diagonal matricization                                & Equation~(\ref{eq:ld:Dmwav})\\
+    $\mathrm{vec}$           & vectorization                                         & Equation~(\ref{eq:inverse:azero})\\
+    $*$                      & convolution                                           & Equation~(\ref{eq:deconv:convolution_def})\\
+    $\circ$                  & element-wise product                                  & Equation~(\ref{eq:norm:fapprox})\\
+    $\otimes$                & Kronecker product                                     & Equation~(\ref{eq:linear:Dm})\\
+    $\ceil*{\,}$             & ceiling                                               & Equation~(\ref{eq:kT:lm})\\
+    $\floor*{\,}$            & floor                                                 & Equation~(\ref{eq:kT:lm})
 \end{longtable}
 \end{center}
 
