@@ -25,6 +25,13 @@ steps:
     python setup.py install
   displayName: 'Install dependencies'
 
+# https://github.com/Theano/Theano/issues/6573
+# https://github.com/Theano/Theano/issues/6533
+# https://github.com/Theano/Theano/issues/6532
+- script: |
+    conda install blas
+  displayName: 'Install openblas'
+
 - script: |
     . $CONDA/etc/profile.d/conda.sh
     conda activate paparazzi

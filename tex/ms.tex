@@ -1434,6 +1434,15 @@ examples section below.
 
 \begin{figure}[p!]
     \begin{centering}
+    \oscaption{spotstar}{%
+        \xxx{Figure here with the problem setup.}
+        \label{fig:spotstar}
+    }
+    \end{centering}
+\end{figure}
+
+\begin{figure}[p!]
+    \begin{centering}
     \includegraphics[width=0.49\linewidth]{figures/spot_y1_timeseries.pdf}
     \includegraphics[width=0.49\linewidth]{figures/spot_y1_rect.pdf}
     \oscaption{spot_y1}{%
@@ -1770,13 +1779,13 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
     \multicolumn{3}{c}{\emph{Dimensions}}\\
     \midrule
     %
-    $J$                      & \# of spectral components                             & \\
-    $K$                      & \# of wavelength bins in the observed spectrum        & \\
-    $K'$                     & \# of wavelength bins in the latent spectrum          & \\
-    $M$                      & \# of epochs observed                                 & \\
-    $N$                      & \# of spherical harmonic coefficients                 & \\
-    $N'$                     & \# of spherical harmonic coefficients after limb darkening            & \\
-    $W$                      & \# of wavelength bins in the convolution kernel       & \\
+    $J$                      & \# of spectral components                             & \S\ref{sec:eigen} \\
+    $K$                      & \# of wavelength bins in the observed spectrum        & \S\ref{sec:linear} \\
+    $K'$                     & \# of wavelength bins in the latent spectrum          & \S\ref{sec:linear}\\
+    $M$                      & \# of epochs observed                                 & \S\ref{sec:linear}\\
+    $N$                      & \# of spherical harmonic coefficients                 & \S\ref{sec:linear}\\
+    $N'$                     & \# of spherical harmonic coefficients after limb darkening & \S\ref{sec:ld}\\
+    $W$                      & \# of wavelength bins in the convolution kernel       & \S\ref{sec:linear}\\
     %
     \midrule
     \multicolumn{3}{c}{\emph{Variables}}\\
@@ -1804,6 +1813,7 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
     $\bvec{R}$               & Wigner rotation matrix                                & Equation~(\ref{eq:deconv:R})\\
     $\bvec{s}$               & vector representation of the spectrum                 & Equation~(\ref{eq:inverse:azero})\\
     $\bvec{S}$               & block matrix representation of $\bvec{s}$             & Equation~(\ref{eq:inverse:S})\\
+    $\boldsymbol{\mathbb{S}}$& matrix of $J$ spectral components                     & Equation~(\ref{eq:eigen:azero})\\
     $\Surf$                  & projected visible area of the star                    & Equation~(\ref{eq:the_problem:F})\\
     $t$                      & time                                                  & \S\ref{sec:the_problem}\\
     $u$                      & limb darkening coefficient                            & \S\ref{sec:ld}\\
@@ -1812,6 +1822,7 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
     $\bvec{y}$               & vector of spherical harmonic coefficients             & Equation~(\ref{eq:inverse:azero})\\
     $Y_{lm}$                 & spherical harmonic                                    & Equation~(\ref{eq:deconv:Ixi0})\\
     $\bvec{Y}$               & block matrix representation of $\bvec{y}$             & Equation~(\ref{eq:inverse:Y})\\
+    $\boldsymbol{\mathbb{Y}}$& matrix of $J$ spherical harmonic components           & Equation~(\ref{eq:eigen:azero})\\
     %
     \pagebreak
     \midrule

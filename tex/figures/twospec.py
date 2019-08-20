@@ -439,6 +439,7 @@ n = 0
 intensities = map.intensity(x=xyz[0], y=xyz[1])
 intensities /= vmax
 c = [plt.get_cmap("plasma")(i) for i in intensities]
+letters = ["A", "B"]
 for lat, lon in zip(lats, lons):
     for i in [0, 1]:
         ax[i].plot(
@@ -470,7 +471,7 @@ for lat, lon in zip(lats, lons):
             zorder=101,
         )
         ax[i].annotate(
-            "%d" % (n + 1),
+            "%s" % letters[n],
             xy=(lon + sz, lat + sz),
             xycoords="data",
             xytext=(2, -2),
@@ -483,7 +484,7 @@ for lat, lon in zip(lats, lons):
     for i, intens in zip([2, 3], [I_true, I]):
         ax[i].plot(lnlam_padded, intens[n] / intens[0, 0], "-", color=c[n])
         ax[i].annotate(
-            "%d" % (n + 1),
+            "%s" % letters[n],
             xy=(lnlam_padded[0], intens[n, 0] / intens[0, 0]),
             xycoords="data",
             xytext=(4, -4),

@@ -61,10 +61,10 @@ class Doppler(object):
         baseline_sig=0.1,
     ):
         # Stellar params
+        self._udeg = len(u)
         self.ydeg = ydeg
         self.inc = inc
         self.vsini = vsini
-        self._udeg = len(u)
         self.u = u
 
         # Reset!
@@ -112,14 +112,19 @@ class Doppler(object):
         assert (
             len(value.shape) == 1
         ), "Wavelength-dependent limb darkening not yet supported."
-        assert len(value) == self._udeg, (
-            "Incorrect vector length. To change the limb darkening degree, "
-            "you'll have to re-instantiate the class."
-        )
         self._u = value
+
+        # Did the degree of limb darkening change?
+        if len(self._u) != self._udeg:
+            self._udeg = len(self._u)
+            # Force the re-instantiation of the internal map
+            self.ydeg = self._ydeg
+
         # Compute the limb darkening operator
-        F = self._map.ops.F(self._u, [np.pi])
-        self._L = ts.dot(ts.dot(self._map.ops.A1Inv, F), self._map.ops.A1)
+        if self._udeg > 0:
+            map_ld = starry.Map(ydeg=self._ydeg, udeg=self._udeg)
+            F = map_ld.ops.F(np.append([-1.0], self._u), [np.pi])
+            self._L = ts.dot(ts.dot(map_ld.ops.A1Inv, F), map_ld.ops.A1).eval()
 
     @property
     def ydeg(self):
@@ -134,9 +139,16 @@ class Doppler(object):
         # Degree of the Ylm expansion
         self._ydeg = value
 
-        # Grab the `A1` matrix from `starry`
-        self._map = starry.Map(value)
-        self._A1T = self._map.ops.A1.eval().T
+        # Instantiate the internal map
+        self._map = starry.Map(self._ydeg)
+
+        # Compute the `A1` matrix
+        if self._udeg > 0:
+            # We need an augmented version if there's LD!
+            map_ld = starry.Map(self._ydeg + self._udeg)
+            self._A1T = map_ld.ops.A1.eval().T
+        else:
+            self._A1T = self._map.ops.A1.eval().T
 
         # Grab the rotation matrix op
         self._R = self._map.ops.R
@@ -250,7 +262,15 @@ class Doppler(object):
         The number of spherical harmonic coefficients.
 
         """
-        return (self.ydeg + 1) ** 2
+        return (self._ydeg + 1) ** 2
+
+    @property
+    def Np(self):
+        """
+        The number of limb-darkened spherical harmonic coefficients.
+
+        """
+        return (self._ydeg + self._udeg + 1) ** 2
 
     @property
     def theta(self):
@@ -338,7 +358,14 @@ class Doppler(object):
         
         """
         x = self.x()
-        sijk = np.zeros((self.ydeg + 1, self.ydeg + 1, 2, len(x)))
+        sijk = np.zeros(
+            (
+                self._ydeg + self._udeg + 1,
+                self._ydeg + self._udeg + 1,
+                2,
+                len(x),
+            )
+        )
 
         # Initial conditions
         r2 = 1 - x ** 2
@@ -346,17 +373,17 @@ class Doppler(object):
         sijk[0, 0, 1] = 0.5 * np.pi * r2
 
         # Upward recursion in j
-        for j in range(2, self.ydeg + 1, 2):
+        for j in range(2, self._ydeg + self._udeg + 1, 2):
             sijk[0, j, 0] = ((j - 1.0) / (j + 1.0)) * r2 * sijk[0, j - 2, 0]
             sijk[0, j, 1] = ((j - 1.0) / (j + 2.0)) * r2 * sijk[0, j - 2, 1]
 
         # Upward recursion in i
-        for i in range(1, self.ydeg + 1):
+        for i in range(1, self._ydeg + self._udeg + 1):
             sijk[i] = sijk[i - 1] * x
 
         # Full vector
-        s = np.empty((self.N, len(x)))
-        n = np.arange(self.N)
+        s = np.empty((self.Np, len(x)))
+        n = np.arange(self.Np)
         LAM = np.floor(np.sqrt(n))
         DEL = 0.5 * (n - LAM ** 2)
         i = np.array(np.floor(LAM - DEL), dtype=int)
@@ -435,13 +462,14 @@ class Doppler(object):
 
                 # Apply limb darkening
                 if self._udeg > 0:
-                    pass # TODO
+                    breakpoint()
+                    pass  # TODO
 
                 # Populate the Doppler matrix
                 D[m].data = np.tile(kT.reshape(-1), K)
 
             # Stack the rows and we are done!
-            # TODO: This can probably be sped up.
+            # TODO: This step can probably be sped up.
             self._D = vstack(D).tocsr()
 
             if not quiet:
@@ -617,6 +645,11 @@ class Doppler(object):
                 for l in range(self.ydeg + 1):
                     idx = slice(l ** 2, (l + 1) ** 2)
                     kT[idx] = RT[l].dot(kT0[idx])
+
+                # Apply limb darkening
+                if self._udeg > 0:
+                    breakpoint()
+                    pass  # TODO
 
                 # Compute the model for this epoch
                 model[m] = np.sum(
