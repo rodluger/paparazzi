@@ -237,7 +237,7 @@ def plot_results(
         ha="left",
         va="bottom",
         fontsize=22,
-        color="w",
+        color="k",
         zorder=101,
     )
     ax[1].annotate(
@@ -249,7 +249,7 @@ def plot_results(
         ha="left",
         va="bottom",
         fontsize=22,
-        color="w",
+        color="k",
         zorder=101,
     )
     if cho_y1 is not None:

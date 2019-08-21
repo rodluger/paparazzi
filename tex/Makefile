@@ -8,7 +8,7 @@ RM_TMP      = $(foreach d, ${TEX_FILES}, rm -rf $(foreach suff, ${TMP_SUFFS}, ${
 CHECK_RERUN = grep Rerun ms.log
 FIGURES     = $(patsubst %.py,%.pdf,$(wildcard figures/*.py))
 TECTONIC    = $(shell command -v tectonic >/dev/null && echo true || echo false )
-PYTHON      = python figtime.py
+PYTHON      = python figtime
 
 default: ms.pdf
 
