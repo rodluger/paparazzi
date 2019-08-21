@@ -15,7 +15,9 @@ steps:
 - script: |
     . $CONDA/etc/profile.d/conda.sh
     conda activate paparazzi2
-    conda install -y -q numpy scipy mkl openblas theano
+    conda install -y -q numpy scipy mkl openblas
+    conda install -y -q -c conda-forge blas
+    conda install -y -q theano
     pip install -U pip
     pip install -U setuptools
     pip install -U -r requirements.txt
