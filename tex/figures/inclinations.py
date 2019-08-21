@@ -74,14 +74,14 @@ for i in range(len(img)):
         tick.label.set_fontsize(8)
     axis.annotate(
         r"$%2d^\circ$" % incs[i],
-        xy=(0, 1),
-        xytext=(7, -7),
+        xy=(0, 0),
+        xytext=(7, 7),
         xycoords="axes fraction",
         textcoords="offset points",
         ha="left",
-        va="top",
+        va="bottom",
         fontsize=18,
-        color="w",
+        color="k",
         zorder=101,
     )
 fig.savefig("inclinations.pdf", bbox_inches="tight")

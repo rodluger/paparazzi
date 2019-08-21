@@ -50,7 +50,18 @@
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 
 \begin{abstract}
-This is the abstract.
+We derive a closed form, analytic solution to the problem of Doppler imaging
+of stellar surfaces in the limit of negligible differential rotation and
+convective blueshift. The model for the observed spectrum is linear in 
+both the unbroadened spectrum and the surface map of the star, provided the
+latter is expressed as a sum of spherical harmonics. As a result, the 
+posterior distributions of both the unbroadened spectrum and the stellar map
+conditioned on each other have a closed form, analytic solution that is 
+computationally trivial to evaluate. When neither the unbroadened spectrum
+nor the stellar map is known a priori, the global optimum can usually be
+found via a fast iterative approach that also yields a lower bound on the
+uncertainties.
+%
 \href{https://github.com/rodluger/paparazzi}{\color{linkcolor}\faGithub}
 \figtime{allfigures}
 \end{abstract}
@@ -59,6 +70,15 @@ This is the abstract.
 \section{Introduction}
 %
 Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.
+%
+All figures in this paper include links {\color{linkcolor}\faFileCodeO}
+to the \Python scripts that generated them. These figures were auto-generated
+using the 
+\href{https://dev.azure.com/rodluger/paparazzi/_build}{Azure Pipelines}
+continuous integration (CI) service, and
+icons next to each caption \figtimebox{XXmYYs} indicate the runtime
+for each figure. The total runtime for the generation of this paper is
+displayed above, at the end of the abstract.
 
 %
 \section{The problem}
@@ -366,7 +386,7 @@ respect to $\hat{y}$, $i$.
 \begin{figure}[t!]
     \begin{centering}
     \includegraphics[width=\linewidth]{figures/kT.pdf}
-    \oscaption{g}{%
+    \oscaption{kT}{%
         The Doppler $\kT$ basis for a rigidly rotating star
         computed from Equation~(\ref{eq:kT:kT}) and
         Equation~(\ref{eq:kT:sTrecurrence}) up to spherical 
@@ -475,11 +495,13 @@ to a uniform wavelength grid, and summing over the spatial dimension
 (dotted orange line). We show the residuals in the lower panel, where it
 is clear that as the number of grid cells increases from 2,000 (light grey)
 to 71,000 (dark grey), the numerical solution approaches the solution
-obtained using our approach. \xxx{Understand---and comment on---the fundamental
-differences between a discrete linear convolution and traditional linear 
-interpolation. Should we expect the numerical solution to actually \emph{converge}
-to the \starry solution, or is the way the two are interpolating fundamentally
-different?}
+obtained using our approach. 
+
+%Understand---and comment on---the fundamental
+%differences between a discrete linear convolution and traditional linear 
+%interpolation. Should we expect the numerical solution to actually \emph{converge}
+%to the \starry solution, or is the way the two are interpolating fundamentally
+%different?
 
 \begin{figure}[t!]
     \begin{centering}
@@ -1440,9 +1462,10 @@ examples section below.
 
 \begin{figure}[p!]
     \begin{centering}
-    \oscaption{spotstar}{%
-        \xxx{Figure here with the problem setup.}
-        \label{fig:spotstar}
+    \includegraphics[width=0.85\linewidth]{figures/spot_setup.pdf}
+    \oscaption{spot_setup}{%
+        Setup for the \spot problem.
+        \label{fig:spot_setup}
     }
     \end{centering}
 \end{figure}

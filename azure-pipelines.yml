@@ -7,6 +7,11 @@ pool:
 steps:
 
 - script: |
+    nproc
+    lscpu
+  displayName: 'Machine info'
+
+- script: |
     sudo chown -R $USER $CONDA
     . $CONDA/etc/profile.d/conda.sh
     conda create --yes --quiet --name paparazzi python=3.7.3 pip
@@ -26,12 +31,15 @@ steps:
     python setup.py install
   displayName: 'Install dependencies'
 
+# TODO: Run tests
+
 - script: |
     . $CONDA/etc/profile.d/conda.sh
     conda activate paparazzi
     cd $(Build.SourcesDirectory)/tex
     make
   displayName: 'Build the paper'
+  condition: contains(variables['Build.SourceVersionMessage'], '[build paper]')
 
 - script: |
     cd $(Build.SourcesDirectory)
@@ -42,4 +50,4 @@ steps:
     git -c user.name='azure' -c user.email='azure' commit -m "building the paper"
     git push -q -f https://$(GITHUB_USER):$(GITHUB_API_KEY)@github.com/rodluger/paparazzi $(Build.SourceBranchName)-pdf >/dev/null 2>&1
   displayName: 'Upload the paper'
-  condition: always()
+  condition: contains(variables['Build.SourceVersionMessage'], '[build paper]')

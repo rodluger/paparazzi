@@ -7,6 +7,7 @@ SUFF        = pdf
 RM_TMP      = $(foreach d, ${TEX_FILES}, rm -rf $(foreach suff, ${TMP_SUFFS}, ${d}.${suff})) msNotes.bib
 CHECK_RERUN = grep Rerun ms.log
 FIGURES     = $(patsubst %.py,%.pdf,$(wildcard figures/*.py))
+FIGTIMES    = $(patsubst %.py,%.pdf,$(wildcard figures/*.figtime))
 TECTONIC    = $(shell command -v tectonic >/dev/null && echo true || echo false )
 PYTHON      = python figtime
 
@@ -29,6 +30,7 @@ clean:
 	# Remove temporaries and output
 	$(RM_TMP)
 	rm -rf $(FIGURES)
+	rm -rf $(FIGTIMES)
 
 figures/%.pdf: figures/%.py
 	# Generate all figures

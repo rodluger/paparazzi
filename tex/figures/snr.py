@@ -88,7 +88,7 @@ for i in range(len(img)):
         ha="left",
         va="bottom",
         fontsize=18,
-        color="w",
+        color="k",
         zorder=101,
     )
 fig.savefig("snr.pdf", bbox_inches="tight")
