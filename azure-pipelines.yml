@@ -9,36 +9,44 @@ steps:
 - script: |
     sudo chown -R $USER $CONDA
     . $CONDA/etc/profile.d/conda.sh
-    conda create --yes --quiet --name paparazzi python=3.7.3 pip
+    conda create --yes --quiet --name paparazzi2 python=3.7.3 pip
   displayName: 'Setup conda'
 
 - script: |
     . $CONDA/etc/profile.d/conda.sh
-    conda activate paparazzi
+    conda activate paparazzi2
+    conda install -y -q numpy scipy mkl openblas theano
     pip install -U pip
     pip install -U setuptools
     pip install -U -r requirements.txt
+    conda install -y -q -c conda-forge tectonic
     git clone --single-branch --branch dev https://github.com/rodluger/starry.git
     pushd starry && python setup.py develop && popd
-    conda install -y -q -c conda-forge tectonic openblas
     theano-cache purge
     python setup.py install
   displayName: 'Install dependencies'
 
 - script: |
     . $CONDA/etc/profile.d/conda.sh
-    conda activate paparazzi
-    cd $(Build.SourcesDirectory)/tex
-    make
-  displayName: 'Build the paper'
+    conda activate paparazzi2
+    cd $(Build.SourcesDirectory)/tex/figures
+    python ld.py
+  displayName: 'Debugging'
 
-- script: |
-    cd $(Build.SourcesDirectory)
-    git checkout --orphan $(Build.SourceBranchName)-pdf
-    git rm -rf --cached .
-    git add -f tex/ms.pdf
-    git add -f tex/figures/*.pdf
-    git -c user.name='azure' -c user.email='azure' commit -m "building the paper"
-    git push -q -f https://$(GITHUB_USER):$(GITHUB_API_KEY)@github.com/rodluger/paparazzi $(Build.SourceBranchName)-pdf >/dev/null 2>&1
-  displayName: 'Upload the paper'
-  condition: always()
+#- script: |
+#    . $CONDA/etc/profile.d/conda.sh
+#    conda activate paparazzi
+#    cd $(Build.SourcesDirectory)/tex
+#    make
+#  displayName: 'Build the paper'
+
+#- script: |
+#    cd $(Build.SourcesDirectory)
+#    git checkout --orphan $(Build.SourceBranchName)-pdf
+#    git rm -rf --cached .
+#    git add -f tex/ms.pdf
+#   git add -f tex/figures/*.pdf
+#    git -c user.name='azure' -c user.email='azure' commit -m "building the paper"
+#    git push -q -f https://$(GITHUB_USER):$(GITHUB_API_KEY)@github.com/rodluger/paparazzi $(Build.SourceBranchName)-pdf >/dev/null 2>&1
+#  displayName: 'Upload the paper'
+#  condition: always()
