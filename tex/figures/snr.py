@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 
 # Instantiate
 res = 300
-known_baseline = False
-dop = pp.Doppler(ydeg=15)
+dop = pp.Doppler(ydeg=15, u=[0.5, 0.25])
 
 # Compute model at infinite SNR to get the "signal"
 # This is the standard deviation in each wavelength
@@ -43,14 +42,9 @@ for i, ferr in enumerate(ferrs):
     np.random.seed(13)
     dop.generate_data(ferr=ferr)
 
-    # Assume we know the baseline?
-    if known_baseline:
-        dop.y1 = dop.y1_true
-        baseline = dop.baseline()
-        T = 1.0
-    else:
-        baseline = None
-        T = 100.0
+    # Assume we don't know the baseline
+    baseline = None
+    T = 100.0
 
     # Reset all coefficients
     dop.s = dop.s_true

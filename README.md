@@ -1,7 +1,7 @@
 <p align="center">
   <img width = "450" src="paparazzi.png"/>
   <br/>
-  <a href="https://dev.azure.com/rodluger/paparazzi/">
+  <a href="https://dev.azure.com/rodluger/paparazzi/_build">
     <img src="https://dev.azure.com/rodluger/paparazzi/_apis/build/status/rodluger.paparazzi?branchName=master"/>
   </a>
   <a href="https://github.com/rodluger/paparazzi/raw/master-pdf/tex/ms.pdf">

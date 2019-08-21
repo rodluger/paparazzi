@@ -2,10 +2,6 @@
 Investigate how our recovered map varies with the
 stellar inclination (assumed to be known exactly).
 
-NOTE: I get the same results (qualitatively) whether
-or not the baseline is assumed to be known, which
-is great!
-
 """
 import paparazzi as pp
 import numpy as np
@@ -14,8 +10,7 @@ import matplotlib.pyplot as plt
 
 # Instantiate
 res = 300
-known_baseline = False
-dop = pp.Doppler(ydeg=15)
+dop = pp.Doppler(ydeg=15, u=[0.5, 0.25])
 
 # Velocity is computed such that v * sin(40 deg) = 40 km / s
 # so that we can compare directly to Vogt et al. (1987)
@@ -40,14 +35,9 @@ for i, inc in enumerate(incs):
     np.random.seed(13)
     dop.generate_data(ferr=1e-4)
 
-    # Assume we know the baseline?
-    if known_baseline:
-        dop.y1 = dop.y1_true
-        baseline = dop.baseline()
-        T = 1.0
-    else:
-        baseline = None
-        T = 100.0
+    # Assume we don't know the baseline
+    baseline = None
+    T = 100.0
 
     # Reset all coefficients
     dop.s = dop.s_true

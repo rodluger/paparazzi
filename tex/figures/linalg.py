@@ -168,6 +168,7 @@ ntheta = 11
 inc = 40.0
 vsini = 80.0
 nlam = 121
+u = []
 
 #
 # Compute stuff!
@@ -175,7 +176,7 @@ nlam = 121
 
 # Compute the g-functions and the corresponding Toeplitz matrices
 lnlam = np.linspace(-6e-4, 6e-4, nlam)
-doppler = pp.Doppler(ydeg=ydeg, vsini=vsini, inc=inc)
+doppler = pp.Doppler(ydeg=ydeg, vsini=vsini, inc=inc, u=u)
 doppler._set_lnlam(lnlam)
 kT = doppler.kT()
 T = [None for n in range(doppler.N)]

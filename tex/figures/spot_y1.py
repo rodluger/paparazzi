@@ -23,7 +23,7 @@ else:
     ferr = 1e-3
 
 # Generate data at high SNR
-dop = pp.Doppler(ydeg=15)
+dop = pp.Doppler(ydeg=15, u=[0.5, 0.25])
 dop.generate_data(ferr=ferr)
 
 # Compute the true baseline (assumed to be known exactly)

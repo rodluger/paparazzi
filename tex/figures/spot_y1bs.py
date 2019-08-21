@@ -39,7 +39,7 @@ else:
     lr = 2e-3
 
 # Generate data
-dop = pp.Doppler(ydeg=15)
+dop = pp.Doppler(ydeg=15, u=[0.5, 0.25])
 dop.generate_data(ferr=ferr)
 
 # Reset all coefficients

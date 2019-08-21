@@ -194,7 +194,6 @@ def plot_results(
 
     # Normalize to the maximum for plotting
     vmax = np.nanmax(img_true_rect)
-    img /= vmax
     img_rect /= vmax
     img_true_rect /= vmax
     if cho_y1 is not None:
@@ -320,12 +319,7 @@ def plot_results(
     ]
     for n in range(nframes):
         ax_img[n].imshow(
-            img[n],
-            extent=(-1, 1, -1, 1),
-            origin="lower",
-            cmap="plasma",
-            vmin=0,
-            vmax=1,
+            img[n], extent=(-1, 1, -1, 1), origin="lower", cmap="plasma"
         )
         ax_img[n].axis("off")
         m = int(np.round(np.linspace(0, M - 1, nframes)[n]))

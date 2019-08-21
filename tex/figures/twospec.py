@@ -381,7 +381,7 @@ lons = np.array([-15.0, -62.0])
 
 # Get the change of basis matrix from Ylm to intensity, `P`
 xyz = map.ops.latlon_to_xyz(
-    map.axis, lats * np.pi / 180.0, lons * np.pi / 180.0
+    map.axis, lats * np.pi / 180.0, lons * np.pi / 180.0, no_compile=True
 )
 P = map.ops.pT(xyz[0], xyz[1], xyz[2])
 P = ts.dot(P, map.ops.A1).eval()
@@ -436,7 +436,7 @@ for axis in [ax[0], ax[1]]:
 # Plot the spectra @ the evaluation points
 sz = 5
 n = 0
-intensities = map.intensity(x=xyz[0], y=xyz[1])
+intensities = map.intensity(x=xyz[0].eval(), y=xyz[1].eval())
 intensities /= vmax
 c = [plt.get_cmap("plasma")(i) for i in intensities]
 letters = ["A", "B"]

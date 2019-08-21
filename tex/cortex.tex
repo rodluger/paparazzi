@@ -68,8 +68,26 @@
 \message{<<<\currentlabel: \theequation>>>}%
 }
 
+% Display the runtime on Azure
+\usepackage[skins]{tcolorbox}
+\newtcbox{\figtimebox}{enhanced,nobeforeafter,tcbox raise=-0.8mm,boxrule=0.6pt,
+  top=0.5mm,bottom=0mm,right=0mm,left=4mm,arc=1pt,boxsep=2pt,
+  before upper={\vphantom{dlg}},colframe=linkcolor,coltext=linkcolor,
+  fontupper=\sffamily\bfseries\tiny,colback=white,overlay={\begin{tcbclipinterior}
+  \fill[linkcolor] (frame.south west)
+  rectangle node[text=white,font=\sffamily\bfseries\tiny,rotate=0]{CI} 
+  ([xshift=4mm]frame.north west);\end{tcbclipinterior}}}
+\robustify{\figtimebox}
+\pdfstringdefDisableCommands{%
+  \def\figtimebox#1{'#1'}%
+}
+\newcommand{\figtime}[1]{\IfFileExists{figures/#1.figtime}%
+{%
+\cilink{\figtimebox{\input{figures/#1.figtime}}}
+}{}}
+
 % Define the `oscaption` command for open source figure captions
-\newcommand{\oscaption}[2]{\caption{#2 \codelink{#1}}}
+\newcommand{\oscaption}[2]{\caption{#2 \codelink{#1} \figtime{#1}}}
 
 % Code examples
 \definecolor{codegreen}{rgb}{0,0.6,0}
