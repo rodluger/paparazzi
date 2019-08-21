@@ -32,4 +32,4 @@ clean:
 
 figures/%.pdf: figures/%.py
 	# Generate all figures
-	cd $(<D);PYTHON $(<F)
+	cd $(<D);${PYTHON} $(<F)
