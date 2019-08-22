@@ -20,15 +20,8 @@ F_true = np.array(dop.F)
 signal = np.mean(np.std(F_true, axis=0))
 
 # Compute the pointwise uncertainty for a given SNR
-# NOTE: Vogt et al. (1987) have ~35 resolution elements
-# on the Fe line, and they compute the SNR per pixel,
-# where each pixel is half a resolution element. We
-# have 201 pixels in our model, so we need to *increase*
-# the uncertainty on our data by a factor of sqrt(201 / 70)
-# to get comparable results. This is a pretty tiny effect.
 snrs = [1.0, 2.0, 5.0, 10.0, 50.0, 100.0, 200.0, 500.0, 1000.0]
 ferrs = signal / snrs
-ferrs *= np.sqrt(F_true.shape[1] / 70.0)
 
 # Compute the normalization for the image
 dop.y1 = dop.y1_true

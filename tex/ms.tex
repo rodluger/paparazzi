@@ -1,11 +1,8 @@
+% !TeX root = ./ms.tex
 \documentclass[modern]{aastex62}
 
 % Load the corTeX style definitions
 \input{cortex}
-
-
-
-
 
 % Bibliography stuff
 \bibliographystyle{aasjournal}
@@ -30,7 +27,7 @@
 \author{David W. Hogg}
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 
-\begin{abstract}
+\begin{abstract} 
 We derive a closed form, analytic solution to the problem of Doppler imaging
 of stellar surfaces in the limit of negligible differential rotation and
 convective blueshift. The model for the observed spectrum is linear in 
@@ -1490,39 +1487,6 @@ The spectra were computed at 16 equally spaced rotational phases and
 downsampled to 32 wavelength bins per epoch, for a total of 512 data
 points. 
 
-
-We generated our spectrum at high resolution 
-($R \equiv \frac{\lambda}{\Delta\lambda} = 300,000$)
-centered at a reference wavelength $\lambda_\mathrm{r} = 6430$ nm.
-The spectrum consists of a Gaussian absorption line in log-wavelength
-($\lnlam$) space with amplitude $0.5$ and standard deviation 
-$\sigma_{\lnlam} = 1.4\times 10^{-5}$. This corresponds to a FWHM of about
-$2.355~\sigma_{\lnlam}~\lambda_\mathrm{r}~\approx~0.2$ nm or, in velocity space,
-$2.355~\sigma_{\lnlam}~c~\approx~10$ km/s, equal to the value used in
-\citet{Vogt1987}. Unlike \citet{Vogt1987}, we add 20 additional small
-absorption lines at random positions throughout the spectrum, all of 
-the same FWHM but of varying depths, including some line blends. In total,
-our spectrum consists of $K = 201$ log-wavelength bins in the range
-$-3.3\times 10^{-4} < \lnlam < 3.3\times 10^{-4}$ plus an additional
-%
-\begin{align}
-    W - 1 &= \frac{40~\mathrm{km/s}}{c} \frac{201}{3.3 \times 10^{-4}} - 1 \nonumber \\
-          &= 80
-\end{align}
-%
-log-wavelength bins of padding (40 on either side) to eliminate edge
-effects due to the convolution. As in \citet{Vogt1987},
-we assume a projected velocity of $v\sin i = 40$ km/s and an inclination
-$i = 40^\circ$.
-
-
-
-% Our default SNR is about 75.
-
-
-
-Recover images with an effective resolution of $12^\circ$.
-
 \begin{figure}[t!]
     \begin{centering} 
     \includegraphics[width=0.85\linewidth]{figures/spot_setup.pdf}
@@ -1532,21 +1496,87 @@ Recover images with an effective resolution of $12^\circ$.
         a map where the word ``SPOT'' has been placed across the northern 
         hemisphere (top left). Each point on the surface is
         given the same spectrum, composed of a sum of synthetic 
-        Gaussian absorption lines (top right). The specific intensity
+        Gaussian absorption lines (blue curve in the bottom panel). 
+        The specific intensity
         at each point on the surface is equal to this spectrum weighted
         by the intensity of the map, which is close to zero within the
         spot (point labeled \texttt{B}) and close ot unity 
         outside the spot (point labeled \texttt{A}).
         %
-        To generate the synthetic dataset, the star is inclined at
+        To generate the synthetic dataset (orange curves in the bottom
+        panel), the star is inclined at
         $40^\circ$ with respect to the line of sight and the disk-integrated
         spectrum is computed at 16 equally-spaced phases between
-        $-180^\circ$ and $180^\circ$ (lower panel).
+        $-180^\circ$ and $180^\circ$ (middle panel).
         %
         \label{fig:spot_setup}
     }
     \end{centering}
 \end{figure}
+
+We repeat the same experiment here using our new formalism, except we
+instead generate a stellar surface with the word ``SPOT'' written across
+the northern hemisphere (top left panel of Figure~\ref{fig:spot_setup}).
+We do this by computing the $l_\mathrm{max} = 15$ spherical harmonic
+decomposition of an image of the word, generating a set of 
+$N = (l_\mathrm{max} + 1)^2 = 256$ spherical harmonic coefficients 
+$\bvec{y} = (1 \quadquad \bvec{y_1})$.
+
+Our input spectrum $\bvec{s}$ was generated at high resolution 
+($R \equiv \frac{\lambda}{\Delta\lambda} = 300,000$)
+centered at a reference wavelength $\lambda_\mathrm{r} = 6430$ nm
+(blue curve in the bottom panel of Figure~\ref{fig:spot_setup}).
+The spectrum consists of a Gaussian absorption line in log-wavelength
+($\lnlam$) space with amplitude $0.5$ and standard deviation 
+$\sigma_{\lnlam} = 1.4\times 10^{-5}$. This corresponds to a FWHM of about
+$2.355~\sigma_{\lnlam}~\lambda_\mathrm{r}~\approx~0.2$ nm or, in velocity space,
+$2.355~\sigma_{\lnlam}~c~\approx~10$~km/s, equal to the value used in
+\citet{Vogt1987}. Unlike \citet{Vogt1987}, we add 20 additional small
+absorption lines at random positions throughout the spectrum, all of 
+the same FWHM but of varying depths, including some line blends. In total,
+the rest frame spectrum $\bvec{s}$ consists of $K = 201$ log-wavelength bins in the range
+$-\Delta\lnlam < \lnlam < \Delta\lnlam$ for $\Delta\lnlam = 3.3\times 10^{-4}$ plus an additional 
+%
+\begin{align}
+    W - 1 &= \frac{v\sin i}{c} \frac{K}{\Delta\lnlam} - 1 \nonumber \\
+          &= \left(\frac{40~\mathrm{km/s}}{3\times 10^5~\mathrm{km/s}}\right)
+          \left(\frac{201}{3.3 \times 10^{-4}}\right)  - 1 \nonumber \\ 
+          &= 80
+\end{align}
+%
+log-wavelength bins of padding (40 on either side) to eliminate edge
+effects due to the convolution, for a total of 
+$K' = 281$ wavelength bins. As in \citet{Vogt1987},
+we assume a projected velocity of $v\sin i = 40$ km/s and an inclination
+$i = 40^\circ$.
+
+\xxx{note on the intensities at A and B.}
+
+Given $\bvec{y_1}$ and $\bvec{s}$, we compute the data vector $\bvec{f}$
+at $M = 16$ equally spaced rotational phases; these phases are shown in orthographic
+projection (as an observer would see the star) in the center
+panel of Figure~\ref{fig:spot_setup}. The synthetic spectra for each phase
+are shown as the orange curves in the bottom panel of the figure (note the
+different scaling, as all spectral lines become shallower due to the
+broadening). We assume a wavelength-independent,
+quadratic limb darkening law with $u_1 = 0.5$ and $u_2 = 0.25$. Finally,
+we add random Gaussian noise with amplitude $\sigma_\bvec{f} = 10^{-4}$ to
+simulate a very high signal-to-noise ratio (SNR) spectrum. The mean
+standard deviation in each wavelength bin across all 16 epochs in the
+noiseless data vector is about $10^{-2}$, so our choice of $\sigma_\bvec{f}$
+corresponds to SNR $\sim$ 100 in each of the 201 wavelength bins of $\bvec{f}$.
+%
+%For reference, \citet{Vogt1987} report SNRs per 60 m\AA\, pixel, while our
+%resolution elements are approximately $\lambda_r\Delta\lnlam/K \approx 100$ m\AA\,
+%across, so our SNR in the same units as \citet{Vogt1987} is about 80.
+%
+% TODO: Perhaps Vogt computes the "signal" as the line depth, rather than
+% as the amplitude of the perturbations? Check this.
+
+% We Recover images with an effective resolution of $12^\circ$.
+
+\subsection{Known baseline and spectrum}
+In our first experiment, we attempt to infer the stellar map...
 
 \begin{figure}[p!]
     \begin{centering}

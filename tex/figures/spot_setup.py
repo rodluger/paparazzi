@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 # Generate the data
 np.random.seed(13)
 dop = pp.Doppler(ydeg=15, u=[0.5, 0.25])
-dop.generate_data(ferr=1e-4)
+dop.generate_data(ferr=0)
 
 # Render the map
 dop.s = dop.s_true
@@ -21,18 +21,19 @@ img = map.render(projection="rect", res=res).eval()[0]
 img_ortho = map.render(theta=dop.theta, projection="ortho", res=res).eval()
 
 # Set up the plot
-fig = plt.figure(figsize=(11, 6))
+fig = plt.figure(figsize=(11, 9))
 fig.subplots_adjust(hspace=0.75)
 ax = [
-    plt.subplot2grid((11, 8), (0, 0), rowspan=6, colspan=5),
-    plt.subplot2grid((11, 8), (0, 5), rowspan=6, colspan=3),
+    plt.subplot2grid((33, 8), (0, 0), rowspan=12, colspan=5),
+    plt.subplot2grid((33, 8), (0, 5), rowspan=12, colspan=3),
 ]
 ax_ortho = [
-    plt.subplot2grid((11, 8), (7, n), rowspan=2, colspan=1) for n in range(8)
+    plt.subplot2grid((33, 8), (14, n), rowspan=4, colspan=1) for n in range(8)
 ]
 ax_ortho += [
-    plt.subplot2grid((11, 8), (9, n), rowspan=2, colspan=1) for n in range(8)
+    plt.subplot2grid((33, 8), (18, n), rowspan=4, colspan=1) for n in range(8)
 ]
+ax_data = plt.subplot2grid((33, 8), (23, 0), rowspan=10, colspan=8)
 
 # Show the rect image
 ax[0].imshow(img, origin="lower", extent=(-180, 180, -90, 90), cmap="plasma")
@@ -118,12 +119,42 @@ for lat, lon in zip(lats, lons):
     )
     n += 1
 
-# Tweak & save
+# Tweak
 ax[1].set_ylabel(r"intensity", fontsize=10)
-ax[1].set_xlabel(r"$\ln\left(\lambda/\ln_0\right)$", fontsize=10)
+ax[1].set_xlabel(r"$\ln\left(\lambda/\lambda_0\right)$", fontsize=10)
 ax[1].set_aspect(7e-4)
 for tick in ax[1].xaxis.get_major_ticks() + ax[1].yaxis.get_major_ticks():
     tick.label.set_fontsize(10)
 ax[1].margins(0, 0.2)
 ax[1].set_xticks([-0.0003, 0.0, 0.0003])
+
+# Plot the data
+ax_data.plot(dop.lnlam_padded, spectra[0])
+ax_data_twin = ax_data.twinx()
+label = "observed"
+for n in range(len(dop.F)):
+    ax_data_twin.plot(
+        dop.lnlam,
+        dop.F[n] / dop.F[n].max(),
+        color="C1",
+        alpha=0.3,
+        label=label,
+    )
+    label = None
+ax_data.axvspan(dop.lnlam_padded[0], dop.lnlam[0], color="k", alpha=0.3)
+ax_data.axvspan(dop.lnlam[-1], dop.lnlam_padded[-1], color="k", alpha=0.3)
+
+# Tweak
+ax_data.set_ylabel(r"rest frame spectrum", fontsize=10)
+ax_data_twin.set_ylabel(r"observed spectrum", fontsize=10)
+ax_data.set_xlabel(r"$\ln\left(\lambda/\lambda_0\right)$", fontsize=12)
+for axis in [ax_data, ax_data_twin]:
+    for tick in axis.xaxis.get_major_ticks() + axis.yaxis.get_major_ticks():
+        tick.label1.set_fontsize(10)
+        tick.label2.set_fontsize(10)
+ax_data.margins(0, None)
+ax_data.set_ylim(0.35, 1.05)
+ax_data_twin.set_ylim(0.835, 1.0125)
+
+# We're done!
 fig.savefig("spot_setup.pdf", bbox_inches="tight", dpi=400)

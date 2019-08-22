@@ -28,10 +28,7 @@ if high_snr:
     ferr = 1e-4
     T = 5000.0
     niter = 3000
-    lr = 1.5e-4
-    dlogT = -0.25
-
-    # DEBUG
+    lr = 1e-4
     dlogT = -0.025
 
 else:
