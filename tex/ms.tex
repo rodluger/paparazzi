@@ -1509,6 +1509,9 @@ points.
         spectrum is computed at 16 equally-spaced phases between
         $-180^\circ$ and $180^\circ$ (middle panel).
         %
+        The grey regions indicate wavelength
+        regions outside the observation window, but whose features still
+        contribute to the observed spectrum due to rotational broadening.
         \label{fig:spot_setup}
     }
     \end{centering}
@@ -1552,7 +1555,8 @@ $i = 40^\circ$.
 
 \xxx{note on the intensities at A and B.}
 
-Given $\bvec{y_1}$ and $\bvec{s}$, we compute the data vector $\bvec{f}$
+Given $\bvec{y_1}$ and $\bvec{s}$, we use Equation~(\ref{eq:deconv:F}) to
+compute the data vector $\bvec{f}$
 at $M = 16$ equally spaced rotational phases; these phases are shown in orthographic
 projection (as an observer would see the star) in the center
 panel of Figure~\ref{fig:spot_setup}. The synthetic spectra for each phase
@@ -1560,7 +1564,8 @@ are shown as the orange curves in the bottom panel of the figure (note the
 different scaling, as all spectral lines become shallower due to the
 broadening). We assume a wavelength-independent,
 quadratic limb darkening law with $u_1 = 0.5$ and $u_2 = 0.25$. Finally,
-we add random Gaussian noise with amplitude $\sigma_\bvec{f} = 10^{-4}$ to
+we divide the flux by the baseline at each epoch (Equation~\ref{eq:norm:b})
+and add random Gaussian noise with amplitude $\sigma_\bvec{f} = 10^{-4}$ to
 simulate a very high signal-to-noise ratio (SNR) spectrum. The mean
 standard deviation in each wavelength bin across all 16 epochs in the
 noiseless data vector is about $10^{-2}$, so our choice of $\sigma_\bvec{f}$
@@ -1575,8 +1580,33 @@ corresponds to SNR $\sim$ 100 in each of the 201 wavelength bins of $\bvec{f}$.
 
 % We Recover images with an effective resolution of $12^\circ$.
 
+In the following sections we discuss various approaches to 
+solving the Doppler imaging problem for this dataset.
+Unless otherwise noted, in all experiments we adopt a Gaussian prior
+for the spherical harmonic coefficients $\bvec{y_1}$ with mean
+$\boldsymbol{\mu}_\bvec{y_1} = \bvec{0}$ and covariance
+$\boldsymbol{\Lambda}_\bvec{y_1} = (10^{-2})^2\bvec{I}$,
+corresponding to a flat power spectrum prior.
+We place a Gaussian process prior on the spectrum $\bvec{s}$ with mean
+$\boldsymbol{\mu}_\bvec{s} = \bvec{1}$ and a covariance matrix
+$\boldsymbol{\Lambda}_\bvec{s}$ computed from
+ a Mat\'ern-3/2 kernel with amplitude $\sigma_\bvec{s} = 0.3$
+and lengthscale $\rho_\bvec{s} = 3\times 10^{-5}$.
+
 \subsection{Known baseline and spectrum}
-In our first experiment, we attempt to infer the stellar map...
+%
+In our first experiment, we attempt to infer the stellar map assuming
+we have perfect knowledge of the rest frame spectrum $\bvec{s}$ and
+the baseline $\bvec{b}$ (Equation~\ref{eq:norm:b}). 
+This is analogous to the case where a good physical model exists for
+the stellar spectrum and simultaneous photometry is available to
+constrain the baseline variations.
+As we showed in
+\S\ref{sec:solve_y}, the posterior distribution for the map coefficients 
+$\bvec{y_1}$ is analytic in this case, with mean given by Equation~(\ref{eq:inverse:y1hat})
+and covariance given by Equation~(\ref{eq:inverse:y1cov}). Note that
+we must first scale the data vector $\bvec{f}$ by $\bvec{b}$ (which in this
+case is known).
 
 \begin{figure}[p!]
     \begin{centering}
@@ -1599,6 +1629,41 @@ In our first experiment, we attempt to infer the stellar map...
     }
     \end{centering}
 \end{figure}
+
+The results are shown in Figure~\ref{fig:spot_y1}. The left hand panel
+shows the inferred map alongside the data
+(black points) and best fit model (orange curves) at each of the 16 epochs.
+The panels on the right show the true map (top), the inferred map (center)
+and the posterior pointwise uncertainty (bottom) on a rectangular
+latitude-longitude grid. The uncertainty on the vector of pixels $\bvec{p}$ where
+we evaluate the map is equal to the square root of the diagonal of
+the posterior covariance matrix for the pixel values, computed from
+%
+\begin{align}
+    \label{eq:spotstar:uncert}
+    \boldsymbol{\Sigma}_\bvec{p} = \bvec{P} \boldsymbol{\Sigma}_\bvec{\hat{y}_1}^{-1} \bvec{P}^\top
+\end{align}
+%
+where $\bvec{P}$ is the change-of-basis matrix from spherical harmonic 
+coefficients to pixels on the grid.
+
+The inferred map is nearly indistinguishable from the true map, save for a
+few small differences, particularly below the stellar equator. This is 
+captured by the uncertainty, which increases
+south of $+30^\circ$ latitude, reaching a maximum at $-30^\circ$, below
+which the uncertainty is constant at about 10\%. This is due to the fact
+that regions below $-40^\circ$ latitude are never in view from the
+observer's perspective, while regions between about $-30^\circ$ and
+$-40^\circ$ are so strongly limb-darkened that the data contains little
+information about them. The particular value of the uncertainty in this
+region---10\%---is the uncertainty associated with the prior, which can
+be computed by replacing $\boldsymbol{\Sigma}_\bvec{\hat{y}_1}$ with 
+$\boldsymbol{\Lambda}_\bvec{y_1}$ in Equation~(\ref{eq:spotstar:uncert}).
+
+\subsection{Known spectrum, unknown baseline}
+%
+We next investigate the case where the spectrum is known exactly, but
+the baseline is not.
 
 \begin{figure}[p!]
     \begin{centering}
@@ -1645,9 +1710,7 @@ In our first experiment, we attempt to infer the stellar map...
         coefficients. The bottommost panel now shows the true rest frame
         spectrum (blue line), the initial guess based on a deconvolution
         (dotted orange line), and the inferred spectrum (orange line, with
-        shaded $1\sigma$ uncertainty). The grey regions indicate wavelength
-        regions outside the observation window, but whose features still
-        contribute to the observed spectrum due to rotational broadening.
+        shaded $1\sigma$ uncertainty).
         \label{fig:spot_y1bs}
     }
     \end{centering}
