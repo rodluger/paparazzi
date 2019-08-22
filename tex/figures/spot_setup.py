@@ -120,7 +120,7 @@ for lat, lon in zip(lats, lons):
 
 # Tweak & save
 ax[1].set_ylabel(r"intensity", fontsize=10)
-ax[1].set_xlabel(r"$\ln\left(\lambda/\mathrm{nm}\right)$", fontsize=10)
+ax[1].set_xlabel(r"$\ln\left(\lambda/\ln_0\right)$", fontsize=10)
 ax[1].set_aspect(7e-4)
 for tick in ax[1].xaxis.get_major_ticks() + ax[1].yaxis.get_major_ticks():
     tick.label.set_fontsize(10)

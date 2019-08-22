@@ -29,6 +29,11 @@ if high_snr:
     T = 5000.0
     niter = 3000
     lr = 1.5e-4
+    dlogT = -0.25
+
+    # DEBUG
+    dlogT = -0.025
+
 else:
     # This case is easier; just a little tempering for
     # good measure, followed by a fast non-linear
@@ -37,6 +42,7 @@ else:
     T = 10.0
     niter = 250
     lr = 2e-3
+    dlogT = -0.25
 
 # Generate data
 dop = pp.Doppler(ydeg=15, u=[0.5, 0.25])
@@ -47,7 +53,7 @@ dop.y1 = None
 dop.s = None
 
 # Solve!
-loss, cho_y1, cho_s = dop.solve(niter=niter, lr=lr, T=T)
+loss, cho_y1, cho_s = dop.solve(niter=niter, lr=lr, T=T, dlogT=dlogT)
 
 # Plot the results
 plot_results(dop, name="spot_y1bs", loss=loss, cho_y1=cho_y1, cho_s=cho_s)

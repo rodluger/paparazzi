@@ -33,6 +33,25 @@
 \newcommand{\imag}{{\ensuremath{\mathbb{i}}}}
 \newcommand{\quadquad}{\quad\quad\quad\quad}
 
+\newcommand{\R}{\bvec{R}}
+\newcommand{\AOne}{\bvec{A_1}}
+\newcommand{\alm}{\bvec{a}}
+\newcommand{\x}{\bvec{x}}
+\newcommand{\D}{D}
+\newcommand{\Doppler}{\bvec{D}}
+\newcommand{\Surf}{\mathcal{S}}
+\newcommand{\Curve}{\mathcal{C}}
+\newcommand{\Dargs}{\bvec{d}}
+\newcommand{\lmax}{\ensuremath{l_\mathrm{max}}}
+\newcommand{\spot}{\texttt{SPOT}\xspace}
+\newcommand{\vogtstar}{\texttt{VOGTSTAR}\xspace}
+\newcommand{\kT}{\boldsymbol{\kappa}^\top}
+\newcommand{\rhoT}{\boldsymbol{\rho}^\top}
+\newcommand{\ylmbasis}{\boldsymbol{\psi}^\top}
+\newcommand{\pbasis}{\boldsymbol{\phi}^\top}
+\newcommand{\pbasisn}{\ensuremath{\phi_n}}
+\newcommand{\azero}{\ensuremath{\bvec{a_0}}}
+
 % References to text content
 \newcommand{\documentname}{\textsl{article}}
 \newcommand{\figureref}[1]{\ref{fig:#1}}
@@ -71,19 +90,19 @@
 % Display the runtime on Azure
 \usepackage[skins]{tcolorbox}
 \newtcbox{\figtimebox}{enhanced,nobeforeafter,tcbox raise=-0.8mm,boxrule=0.6pt,
-  top=0.5mm,bottom=0mm,right=0mm,left=4mm,arc=1pt,boxsep=2pt,
+  top=0.5mm,bottom=0mm,right=0mm,left=6mm,arc=1pt,boxsep=2pt,
   before upper={\vphantom{dlg}},colframe=linkcolor,coltext=linkcolor,
   fontupper=\sffamily\bfseries\tiny,colback=white,overlay={\begin{tcbclipinterior}
   \fill[linkcolor] (frame.south west)
-  rectangle node[text=white,font=\sffamily\bfseries\tiny,rotate=0]{CI} 
-  ([xshift=4mm]frame.north west);\end{tcbclipinterior}}}
+  rectangle node[text=white,font=\sffamily\bfseries\tiny,rotate=0]{CPU} 
+  ([xshift=6mm]frame.north west);\end{tcbclipinterior}}}
 \robustify{\figtimebox}
 \pdfstringdefDisableCommands{%
   \def\figtimebox#1{'#1'}%
 }
-\newcommand{\figtime}[1]{\IfFileExists{figures/#1.figtime}%
+\newcommand{\figtime}[1]{\IfFileExists{figures/#1.py.time}%
 {%
-\cilink{\figtimebox{\input{figures/#1.figtime}}}
+\cilink{\figtimebox{\input{figures/#1.py.time}\unskip s}}
 }{}}
 
 % Define the `oscaption` command for open source figure captions

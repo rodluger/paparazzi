@@ -9,4 +9,4 @@ __pycache__
 *.log
 *.blg
 scratch/old
-*.figtime
+*.time

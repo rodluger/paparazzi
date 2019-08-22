@@ -5,26 +5,7 @@
 
 
 
-\newcommand{\R}{\bvec{R}}
-\newcommand{\AOne}{\bvec{A_1}}
-\newcommand{\alm}{\bvec{a}}
-\newcommand{\x}{\bvec{x}}
 
-\newcommand{\D}{D}
-\newcommand{\Doppler}{\bvec{D}}
-\newcommand{\Surf}{\mathcal{S}}
-\newcommand{\Curve}{\mathcal{C}}
-\newcommand{\Dargs}{\bvec{d}}
-\newcommand{\lmax}{\ensuremath{l_\mathrm{max}}}
-\newcommand{\spot}{\texttt{SPOT}\xspace}
-
-\newcommand{\kT}{\boldsymbol{\kappa}^\top}
-\newcommand{\rhoT}{\boldsymbol{\rho}^\top}
-\newcommand{\ylmbasis}{\boldsymbol{\psi}^\top}
-\newcommand{\pbasis}{\boldsymbol{\phi}^\top}
-\newcommand{\pbasisn}{\ensuremath{\phi_n}}
-
-\newcommand{\azero}{\ensuremath{\bvec{a_0}}}
 
 % Bibliography stuff
 \bibliographystyle{aasjournal}
@@ -61,24 +42,50 @@ computationally trivial to evaluate. When neither the unbroadened spectrum
 nor the stellar map is known a priori, the global optimum can usually be
 found via a fast iterative approach that also yields a lower bound on the
 uncertainties.
+\xxx{%
+Data-driven modeling at its finest $\cdot$ %
+Works on blended lines $\cdot$ %
+Uses the whole spectrum $\cdot$ %
+Uncertainties FTW $\cdot$ %
+Probably works on slow rotators $\cdot$ %
+Differentiable! $\cdot$ %
+Fast! $\cdot$ %
+Use in MCMC to marginalize over inclination and stuff $\cdot$ %
+}
 %
 \href{https://github.com/rodluger/paparazzi}{\color{linkcolor}\faGithub}
-\figtime{allfigures}
 \end{abstract}
 
 %
 \section{Introduction}
 %
-Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.
+\xxx{Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.}
+
 %
+
+The paper is organized as follows: in \S\ref{sec:the_problem}~and~%
+\S\ref{sec:the_solution} we introduce the math behind the Doppler imaging
+problem and derive a closed form expression for the model. In
+\S\ref{sec:linear},~\S\ref{sec:inverse},~and~\S\ref{sec:bellswhistles} 
+we demonstrate how to re-express 
+the model as a linear operation on the input spectrum and stellar map and
+derive closed form expressions for the two conditioned on the data and priors.
+In \S\ref{sec:spotstar} we apply our techniques to a mock problem. We
+further discuss and summarize our results in
+\S\ref{sec:discussion}~and~\S\ref{sec:conclusions}. Finally, auxiliary
+derivations are presented in the Appendix.
+
+%
+
 All figures in this paper include links {\color{linkcolor}\faFileCodeO}
-to the \Python scripts that generated them. These figures were auto-generated
+to the \Python scripts that generated them. The figures were auto-generated
 using the 
 \href{https://dev.azure.com/rodluger/paparazzi/_build}{Azure Pipelines}
-continuous integration (CI) service, and
-icons next to each caption \figtimebox{XXmYYs} indicate the runtime
-for each figure. The total runtime for the generation of this paper is
-displayed above, at the end of the abstract.
+continuous integration (CI) service, running on
+a two-core 2.3 GHz \texttt{Standard\_DS2\_v2} virtual machine with 6 GiB physical memory.
+% https://docs.microsoft.com/en-us/azure/virtual-machines/windows/sizes-general#dsv2-series
+We also include icons next to each caption \figtimebox{XXmYYs} that
+indicate the total CPU time taken to generate each figure.
 
 %
 \section{The problem}
@@ -86,10 +93,12 @@ displayed above, at the end of the abstract.
 %
 Let $I(\lnlam, \x, t, \Dargs)$ be the specific 
 intensity observed 
-at log wavelength $\lnlam \equiv \ln\lambda$ and at sky-projected 
+at log wavelength $\lnlam \equiv \ln\nicefrac{\lambda}{\lambda_\mathrm{r}}$ 
+and at sky-projected 
 Cartesian position $\x = (x, y, z)$ on the surface of the 
 star at time $t$, where
-$\Dargs$ is a set of arbitrary parameters of the Doppler field.
+$\Dargs$ is a set of arbitrary parameters of the Doppler field
+and $\lambda_\mathrm{r}$ is a reference wavelength.
 We may express this intensity as
 %
 \begin{align}
@@ -146,6 +155,7 @@ this is either numerically inaccurate or computationally inefficient
 
 
 \section{The Solution}
+\label{sec:the_solution}
 
 \subsection{Doppler Deconvolution}
 
@@ -759,7 +769,7 @@ MAP solutions can be found analytically for $\bvec{s}$
 (conditioned on $\bvec{y}$) and $\bvec{y}$ (conditioned on $\bvec{s}$). We
 investigate these solutions below.
 
-\subsection{Solution for the intensity}
+\subsection{Solution for the map}
 \label{sec:solve_y}
 For a fixed, spatially constant rest-frame spectrum $\bvec{s}$, the model
 for the flux vector may be written as
@@ -1012,6 +1022,14 @@ this further below.
 
 \section{Further considerations}
 \label{sec:bellswhistles}
+
+Before we demonstrate our formalism in practice, we consider three
+modifications to our model that are often required when modeling real
+data. Below we discuss what to do when the relative brightness of the
+star across different observations is unknown (\S\ref{sec:norm}), how
+to account for the effects of limb darkening (\S\ref{sec:ld}), and how
+to model stars whose local spectra differ within and outside of starspots
+(\S\ref{sec:eigen}).
 
 \subsection{Unknown continuum normalization}
 \label{sec:norm}
@@ -1453,18 +1471,78 @@ and
 $\mathbf{y} = \mathrm{vec}(\boldsymbol{\mathbb{Y}})$.
 A detailed discussion of this general case is deferred to future work,
 but we present an example of a two-component stellar spectrum in the
-examples section below.
+following section.
 
-\section{The SPOT star}
+\section{Application to a spotted star}
 \label{sec:spotstar}
 
-\cite{Vogt1987}
+In this section we apply the formalism developed in \S\ref{sec:inverse}
+and \S\ref{sec:bellswhistles} to a synthetic dataset of a rapidly
+rotating spotted star. This section is motivated by the
+examples in \cite{Vogt1987}, who generated rotationally-broadened spectra
+of a rapidly-rotating star with the letters ``VOGT'' painted across 
+the northern hemisphere. In that paper, the authors
+generated synthetic line profiles of the Fe I 
+$\lambda 6430$ absorption line with equivalent width $W \approx 10$~km/s
+and from these computed rotationally broadened spectra for a star at an 
+inclination $i=40^\circ$ rotating at projected velocity $v\sin i = 40$~km/s.
+The spectra were computed at 16 equally spaced rotational phases and
+downsampled to 32 wavelength bins per epoch, for a total of 512 data
+points. 
 
-\begin{figure}[p!]
-    \begin{centering}
+
+We generated our spectrum at high resolution 
+($R \equiv \frac{\lambda}{\Delta\lambda} = 300,000$)
+centered at a reference wavelength $\lambda_\mathrm{r} = 6430$ nm.
+The spectrum consists of a Gaussian absorption line in log-wavelength
+($\lnlam$) space with amplitude $0.5$ and standard deviation 
+$\sigma_{\lnlam} = 1.4\times 10^{-5}$. This corresponds to a FWHM of about
+$2.355~\sigma_{\lnlam}~\lambda_\mathrm{r}~\approx~0.2$ nm or, in velocity space,
+$2.355~\sigma_{\lnlam}~c~\approx~10$ km/s, equal to the value used in
+\citet{Vogt1987}. Unlike \citet{Vogt1987}, we add 20 additional small
+absorption lines at random positions throughout the spectrum, all of 
+the same FWHM but of varying depths, including some line blends. In total,
+our spectrum consists of $K = 201$ log-wavelength bins in the range
+$-3.3\times 10^{-4} < \lnlam < 3.3\times 10^{-4}$ plus an additional
+%
+\begin{align}
+    W - 1 &= \frac{40~\mathrm{km/s}}{c} \frac{201}{3.3 \times 10^{-4}} - 1 \nonumber \\
+          &= 80
+\end{align}
+%
+log-wavelength bins of padding (40 on either side) to eliminate edge
+effects due to the convolution. As in \citet{Vogt1987},
+we assume a projected velocity of $v\sin i = 40$ km/s and an inclination
+$i = 40^\circ$.
+
+
+
+% Our default SNR is about 75.
+
+
+
+Recover images with an effective resolution of $12^\circ$.
+
+\begin{figure}[t!]
+    \begin{centering} 
     \includegraphics[width=0.85\linewidth]{figures/spot_setup.pdf}
     \oscaption{spot_setup}{%
-        Setup for the \spot problem.
+        The basic setup for the \spot problem. We compute the 
+        $l_\mathrm{max} = 15$ spherical harmonic expansion of 
+        a map where the word ``SPOT'' has been placed across the northern 
+        hemisphere (top left). Each point on the surface is
+        given the same spectrum, composed of a sum of synthetic 
+        Gaussian absorption lines (top right). The specific intensity
+        at each point on the surface is equal to this spectrum weighted
+        by the intensity of the map, which is close to zero within the
+        spot (point labeled \texttt{B}) and close ot unity 
+        outside the spot (point labeled \texttt{A}).
+        %
+        To generate the synthetic dataset, the star is inclined at
+        $40^\circ$ with respect to the line of sight and the disk-integrated
+        spectrum is computed at 16 equally-spaced phases between
+        $-180^\circ$ and $180^\circ$ (lower panel).
+        %
         \label{fig:spot_setup}
     }
     \end{centering}
@@ -1475,8 +1553,18 @@ examples section below.
     \includegraphics[width=0.49\linewidth]{figures/spot_y1_timeseries.pdf}
     \includegraphics[width=0.49\linewidth]{figures/spot_y1_rect.pdf}
     \oscaption{spot_y1}{%
-        Solution to the \spot problem at high SNR when both 
+        The solution to the \spot problem at high SNR when both 
         the rest frame spectrum and the baseline are known.
+        The panel on the left shows the inferred map at each of the 16
+        epochs, alongside the observed spectrum (black points) and the
+        best-fit model (orange lines). The rectangular projection of the
+        original map is shown at the top right; the inferred map is
+        displayed below it. The bottom panel shows the posterior uncertainty
+        as a function of latitude and longitude, ranging from close to zero
+        in the northern hemisphere to $\sigma_\mathrm{prior} \approx 10\%$
+        below a latitude of $-30^\circ$. The latter is the uncertainty
+        associated with our particular choice of prior, as the southernmost
+        latitudes of the star are never visible to the observer.
         \label{fig:spot_y1}
     }
     \end{centering}
@@ -1491,7 +1579,22 @@ examples section below.
     \includegraphics[width=0.575\linewidth]{figures/spot_y1b_coeffs.pdf}
     \oscaption{spot_y1b}{%
         Similar to Figure~\ref{fig:spot_y1}, but assuming the baseline
-        is not known.
+        is not known. The panel at the bottom left shows the true baseline
+        (blue) and the inferred baseline (orange), along with its $1\sigma$
+        uncertainty. The large offset between the two highlights one of the
+        fundamental degeneracies of the problem: since most of the southern
+        hemisphere of the star is never visible, the coefficient of the
+        $Y_{1,-1}$
+        (\raisebox{-0.2em}{\includegraphics[width=1em]{figures/Y1m1.pdf}})
+        spherical harmonic is not constrained by the data, resulting in 
+        an unknowable additive offset in the baseline.
+        This effect can be seen also in (\emph{a}) the inferred map, 
+        where the background 
+        intensity in the northern hemisphere is significantly larger than 
+        that in the southern hemisphere, and (\emph{b}) the spherical
+        harmonic coefficients (bottom right), where a large discrepancy is
+        visible between the true and inferred values of the first two
+        coefficients.
         \label{fig:spot_y1b}
     }
     \end{centering}
@@ -1509,27 +1612,41 @@ examples section below.
     \oscaption{spot_y1bs}{%
         Similar to Figure~\ref{fig:spot_y1}, but assuming we have no
         information about either the spectrum, the baseline, or the map
-        coefficients.
+        coefficients. The bottommost panel now shows the true rest frame
+        spectrum (blue line), the initial guess based on a deconvolution
+        (dotted orange line), and the inferred spectrum (orange line, with
+        shaded $1\sigma$ uncertainty). The grey regions indicate wavelength
+        regions outside the observation window, but whose features still
+        contribute to the observed spectrum due to rotational broadening.
         \label{fig:spot_y1bs}
     }
     \end{centering}
 \end{figure}
 
-\begin{figure}[h!]
+\begin{figure}[p!]
     \begin{centering}
     \includegraphics[width=0.98\linewidth]{figures/inclinations.pdf}
     \oscaption{inclinations}{%
-        Recovered \spot map as a function of inclination.
+        Recovered \spot map as a function of stellar inclination. The
+        rest frame spectrum is assumed to be known exactly, but the
+        baseline is not. At very low inclinations, the small
+        projected velocities begin to degrade the spatial resolution of
+        the inferred map, while at inclinations close to $90^\circ$ there
+        is a degeneracy between the northern and southern hemispheres.
         \label{fig:inclinations}
     }
     \end{centering}
 \end{figure}
 
-\begin{figure}[h!]
+\begin{figure}[p!]
     \begin{centering}
     \includegraphics[width=0.98\linewidth]{figures/snr.pdf}
     \oscaption{snr}{%
         Recovered \spot map as a function of SNR per resolution element.
+        The quality of the inferred map in the northern hemisphere improves
+        with SNR, but at very high SNR the region surrounding the global
+        optimum becomes so small that our optimization methods struggle to
+        converge on the correct solution.
         \label{fig:snr}
     }
     \end{centering}
@@ -1539,14 +1656,21 @@ examples section below.
     \begin{centering}
     \includegraphics[width=\linewidth]{figures/twospec.pdf}
     \oscaption{twospec}{%
-        Learning two spectra simultaneously.
+        An example of a star whose spectrum is different within the spot
+        (\texttt{B}) and outside of the spot (\texttt{A}). Everywhere on 
+        the surface, the spectrum is a linear combination of two
+        ``eigenspectra'' ($s_1$ and $s_2$).
+        As in Figure~\ref{fig:spot_y1bs}, we assume
+        we do not know the map, the baseline, or either of the eigenspectra.
+        The top row shows the true values for the map and the spectra, and
+        the bottom row shows our inferred values.
         \label{fig:twospec}
     }
     \end{centering}
 \end{figure}
 
-\section{Performance}
-\label{sec:performance}
+\section{Discussion}
+\label{sec:discussion}
 %
 \xxx{In progress...}
 Evaluation of the model via Equation~(\ref{eq:deconv:F}) requires 
@@ -1561,10 +1685,13 @@ approximately as $W K \lmax^2$. Since typically $K \gg \lmax$,
 the latter computation dominates and the entire evaluation 
 takes $\mathcal{O}(W K \lmax^2)$ operations.
 
-\section{Stuff we're not addressing}
-%
-\xxx{In progress...}
-Differential rotation and convective blueshift.
+\xxx{We are not addressing differential rotation and convective blueshift.}
+\xxx{Telluric lines could be treated much as in Figure~\ref{fig:twospec}.}
+\xxx{Instrumental profile is another Toeplitz matrix.}
+
+\section{Conclusions}
+\label{sec:conclusions}
+\xxx{Hello.}
 
 %
 %
@@ -1861,9 +1988,10 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
     $\beta$                  & relativistic parameter                                & Equation~(\ref{eq:the_problem:D})\\
     $\delta$                 & Dirac delta function                                  & Equation~(\ref{eq:deconv:convolution})\\
     $\kT$                    & convolution kernel basis vector                       & Equation~(\ref{eq:deconv:kT})\\
-    $\lambda$                & wavelength (in nm)                                    & \S\ref{sec:the_problem}\\
-    $\lnlam$                 & $\ln\lambda$ (observer frame)                         & \S\ref{sec:the_problem}\\
-    $\lnlam_0$               & $\ln\lambda$ (rest frame)                             & \S\ref{sec:the_problem}\\
+    $\lambda$                & wavelength                                            & \S\ref{sec:the_problem}\\
+    $\lambda_\mathrm{r}$     & reference wavelength                                  & \S\ref{sec:the_problem}\\
+    $\lnlam$                 & $\ln\nicefrac{\lambda}{\lambda_\mathrm{r}}$ (observer frame)  & \S\ref{sec:the_problem}\\
+    $\lnlam_0$               & $\ln\nicefrac{\lambda}{\lambda_\mathrm{r}}$ (rest frame)      & \S\ref{sec:the_problem}\\
     $\boldsymbol{\Lambda}$   & prior covariance matrix                               & \\
     $\boldsymbol{\mu}$       & prior mean vector                                     & \\
     $\ylmbasis$              & spherical harmonic basis vector                       & Equation~(\ref{eq:deconv:ylmbasis})\\
