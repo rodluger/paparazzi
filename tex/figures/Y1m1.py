@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+"""
+Plots the ``Y_{1,-1}`` spherical harmonic.
+
+"""
 import matplotlib.pyplot as plt
 import starry
 

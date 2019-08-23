@@ -9,7 +9,7 @@ import numpy as np
 import paparazzi as pp
 
 
-# Get the `g` functions at high res
+# Get the `kT` functions at high res
 ydeg = 10
 dop = pp.Doppler(ydeg=ydeg)
 dop.generate_data(R=1e6, nlam=99, y1=np.zeros(dop.N - 1))

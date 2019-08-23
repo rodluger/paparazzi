@@ -48,7 +48,7 @@ def is_theano(*objs):
 np.random.seed(13)
 ferr = 1.0e-4
 res = 300
-dop = pp.Doppler(ydeg=15)
+dop = pp.Doppler(ydeg=15, u=[0.5, 0.25])  # DEBUG
 dop.generate_data(ferr=ferr)
 D = dop.D()
 kT = dop.kT()

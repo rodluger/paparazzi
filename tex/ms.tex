@@ -40,14 +40,16 @@ nor the stellar map is known a priori, the global optimum can usually be
 found via a fast iterative approach that also yields a lower bound on the
 uncertainties.
 \xxx{%
-Data-driven modeling at its finest $\cdot$ %
+\textbf{Mention the following things:}
+Advantages of data-driven modeling $\cdot$ %
+Interpretable priors $\cdot$ %
 Works on blended lines $\cdot$ %
 Uses the whole spectrum $\cdot$ %
-Uncertainties FTW $\cdot$ %
+Yields uncertainties! $\cdot$ %
 Probably works on slow rotators $\cdot$ %
 Differentiable! $\cdot$ %
 Fast! $\cdot$ %
-Use in MCMC to marginalize over inclination and stuff $\cdot$ %
+Use in MCMC to marginalize over inclination and stuff
 }
 %
 \href{https://github.com/rodluger/paparazzi}{\color{linkcolor}\faGithub}
@@ -56,8 +58,25 @@ Use in MCMC to marginalize over inclination and stuff $\cdot$ %
 %
 \section{Introduction}
 %
-\xxx{Check out \citet{Luger2019} and \citet{Bedell2019} and stuff.}
-
+\xxx{%
+\noindent Introduce the problem of Doppler imaging. Then cite the following papers:\\[0.5em]
+\noindent\textbf{Misc.} \\
+\noindent\citet{Luger2019} --- Surface modeling with spherical harmonics: \starry \\
+\noindent\citet{Bedell2019} --- Data-driven spectral inference: \texttt{wobble} \\[0.5em]
+%
+\noindent\textbf{Theory} \\
+\noindent\citet{Khokhlova1976,Goncharskii1977} --- Local line profile from observed spectrum\\
+\noindent\citet{Vogt1983,Vogt1987} --- Seminal papers on Doppler imaging \\
+\noindent\citet{Rice1989} ---  Another seminal paper\\
+\noindent\citet{Deutsch1958,Deutsch1970,Falk1974} ---  Ylms + Doppler imaging\\
+\noindent\citet{Unruh1995} --- sensitivity to line profile models\\
+\noindent\citet{Piskunov1990} --- notes on regularization \\[0.5em]
+%
+\noindent\textbf{Application} \\
+\noindent\citet{Crossfield2014} --- Global cloud map of Luhman 16B \\
+\noindent\citet{Roettenbacher2016} --- Doppler imaging of $\zeta$ Andromedae \\
+\noindent\citet{Roettenbacher2017} --- Doppler imaging of $\sigma$ Geminorum \\
+}
 %
 
 The paper is organized as follows: in \S\ref{sec:the_problem}~and~%
@@ -970,6 +989,7 @@ with covariance
 \end{align}
 
 \subsection{The full solution}
+\label{sec:full_solve}
 In the previous two sections we showed how, if the stellar
 rest-frame spectrum is spatially constant and known \emph{a priori} 
 (from, say, a template spectrum), the posterior distribution
@@ -1309,7 +1329,7 @@ of the first four spherical harmonics.
 %
 \begin{figure}[t!]
     \begin{centering}
-    \includegraphics[width=0.6\linewidth]{figures/ld.pdf}
+    \includegraphics[width=0.5\linewidth]{figures/ld.pdf}
     \oscaption{ld}{%
         Illustration of the limb darkening transformation given by
         Equation~(\ref{eq:ld:L}) for a linear limb darkening law with
@@ -1467,8 +1487,8 @@ $\mathbf{s} = \mathrm{vec}(\boldsymbol{\mathbb{S}})$
 and
 $\mathbf{y} = \mathrm{vec}(\boldsymbol{\mathbb{Y}})$.
 A detailed discussion of this general case is deferred to future work,
-but we present an example of a two-component stellar spectrum in the
-following section.
+but we present an example of a two-component stellar spectrum in \S\ref{sec:eigen}
+below.
 
 \section{Application to a spotted star}
 \label{sec:spotstar}
@@ -1553,9 +1573,8 @@ $K' = 281$ wavelength bins. As in \citet{Vogt1987},
 we assume a projected velocity of $v\sin i = 40$ km/s and an inclination
 $i = 40^\circ$.
 
-\xxx{note on the intensities at A and B.}
-
-Given $\bvec{y_1}$ and $\bvec{s}$, we use Equation~(\ref{eq:deconv:F}) to
+Given $\bvec{y_1}$ and $\bvec{s}$, we use Equations~(\ref{eq:deconv:F}) and~%
+(\ref{eq:inverse:azero}) to
 compute the data vector $\bvec{f}$
 at $M = 16$ equally spaced rotational phases; these phases are shown in orthographic
 projection (as an observer would see the star) in the center
@@ -1594,6 +1613,7 @@ $\boldsymbol{\Lambda}_\bvec{s}$ computed from
 and lengthscale $\rho_\bvec{s} = 3\times 10^{-5}$.
 
 \subsection{Known baseline and spectrum}
+\label{sec:spot_y1}
 %
 In our first experiment, we attempt to infer the stellar map assuming
 we have perfect knowledge of the rest frame spectrum $\bvec{s}$ and
@@ -1661,9 +1681,50 @@ be computed by replacing $\boldsymbol{\Sigma}_\bvec{\hat{y}_1}$ with
 $\boldsymbol{\Lambda}_\bvec{y_1}$ in Equation~(\ref{eq:spotstar:uncert}).
 
 \subsection{Known spectrum, unknown baseline}
+\label{sec:spot_y1b}
 %
 We next investigate the case where the spectrum is known exactly, but
-the baseline is not.
+the baseline is not. This corresponds to the case discussed in 
+\S\ref{sec:norm}. We use the solution to the linearized problem,
+Equation~(\ref{eq:norm:yhat}), to obtain an initial guess for 
+$\bvec{y_1}$. We then repeatedly solve
+Equation~(\ref{eq:inverse:y1hat}) for $\bvec{y_1}$, given the baseline 
+computed from the previous value of $\bvec{y_1}$ from Equation~(\ref{eq:norm:b}).
+Because of the high SNR of our data, we find that it is necessary to employ
+a simple tempering procedure to avoid getting stuck in local minima. We
+introduce an artificial temperature $T$ that decreases every iteration
+in equally spaced logarithmic steps $\Delta \log T$ from an initial temperature 
+$T=T_0$ to $T=1$. This temperature is used to scale the data covariance
+$\boldsymbol{\Sigma}_\bvec{f}$; in practice, we simply replace
+$\boldsymbol{\Sigma}_\bvec{f}$ with $T \boldsymbol{\Sigma}_\bvec{f}$
+in Equation~(\ref{eq:inverse:y1hat}). This has the effect of smoothing
+out the likelihood space, reducing the likelihood that the solver
+will get stuck in a local minimum. For this particular experiment, we
+set $T_0 = 100$ and $\Delta \log T = -0.25$, for a total of $9$ steps of
+the bilinear solver. 
+%
+In a final step, we run a gradient-descent optimizer, initializing it
+at the solution obtained with the bilinear solver. We use
+the \texttt{Keras} \citep{Keras} implementation of the
+Nesterov momentum-enhanced Adam solver \citep[\texttt{NAdam};][]{NAdam},
+running it for $N_\mathrm{nadam} = 80$ iterations at a learning rate
+$L_\mathrm{nadam} = 10^{-4}$. Our loss function is simply the (negative)
+log probability, equal to the sum of the log likelihood and log prior:
+%
+\begin{align}
+    \label{eq:spotstar:logP}
+    -\ln P &= 
+    \frac{1}{2}
+    \Big(
+        \bvec{r}^\top \boldsymbol{\Sigma}_\bvec{f}^{-1} \bvec{r} \, + \,
+        \bvec{y_1}^\top \boldsymbol{\Lambda}_\bvec{y_1}^{-1} \bvec{y_1} \, + \,
+        (\bvec{b - 1})^\top \boldsymbol{\Lambda}_\bvec{b}^{-1} (\bvec{b - 1})
+    \Big)
+\end{align}
+%
+where $\bvec{r}$ is the residual (data minus model) vector and the last term
+is a prior we include on the baseline $\bvec{b}$, which we force to be close
+to a mean of unity with covariance $\boldsymbol{\Lambda}_\bvec{b} = (0.1)^2\bvec{I}$.
 
 \begin{figure}[p!]
     \begin{centering}
@@ -1695,6 +1756,62 @@ the baseline is not.
     \end{centering}
 \end{figure}
 
+Our results are shown in 
+Figure~\ref{fig:spot_y1b}. The panels at the top are the same as those
+in Figure~\ref{fig:spot_y1}, but now we also plot the inferred baseline
+(lower left) and spherical harmonic coefficients (lower right) next to
+the true values. We recover the \texttt{SPOT} map just as well as before,
+except for the presence of a strong dipolar artifact; the background
+intensity level is higher in the northern hemisphere and lower in the
+southern hemisphere. This effect is closely related to the fact that
+we do not know the true baseline. While we are able to infer the
+shape of the baseline exceedingly well (lower left panel), there is a large
+offset between the true value and our inferred value. This is due to
+a fundamental degeneracy involving the 
+$Y_{1,-1}$ (\raisebox{-0.2em}{\includegraphics[width=1em]{figures/Y1m1.pdf}})
+spherical harmonic coefficient, which, because a large portion of the southern
+hemisphere is never in view, cannot be constrained by the data. The 
+magnitude of the true value of the coefficient is quite large (lower right
+panel), since the northern hemisphere \emph{is} significantly darker than
+the southern hemisphere; however, the data do not constrain this, and 
+our prior shrinks all coefficients toward zero. The net effect is that the
+region surrounding the spot in the northern hemisphere gets brighter to 
+even out the difference between the two hemispheres. This causes the 
+visible portion of the star to get brighter, raising the baseline
+relative to the true value.
+
+Note, importantly, that even in cases where the baseline is known (from, say,
+simultaneous photometry), it is typically only known in a \emph{relative} 
+sense. This degeneracy will typically apply in that case as well, so in
+principle the dipole term will always be unconstrained for stars at
+similar inclinations. For inclinations closer to $90^\circ$ this is much 
+less of an issue, although (as we will see below) other degeneracies show up.
+
+Finally, we note that the pixelwise uncertainty shown is a strict
+\emph{lower bound} on the map uncertainty, since it is the uncertainty
+conditioned on the inferred value of the baseline. Sampling methods
+such as MCMC are required to obtain the \emph{true} uncertainty on the 
+map. We discuss this further in \S\ref{sec:discussion}.
+
+\subsection{Unknown spectrum, unknown baseline}
+\label{sec:spot_y1bs}
+%
+Suppose we are handed a series of spectra in a wavelength regime where
+we do not have a good physical model for the line generation mechanisms,
+or a wavelength regime with many line blends for which we do not have
+reliable templates. Or perhaps the spectra are of a star whose
+rotational broadening does not dominate over other broadening mechanisms,
+in which case our template might not be accurate enough to allow us to
+tease out the small Doppler signals. In these cases, we may want to relax
+the assumption that we know the rest frame spectrum $\bvec{s}$ exactly,
+and instead try to \emph{learn} it from the data.
+
+Given the same data as before, we now try to learn both the stellar map
+and the stellar spectrum, conditioned only on the wide Gaussian priors
+discussed above. We must follow the iterative procedure presented in
+\S\ref{sec:full_solve}, adjusting for the fact that we do not know
+the true baseline, either (\S\ref{sec:norm}).
+
 \begin{figure}[p!]
     \begin{centering}
     \includegraphics[width=0.49\linewidth]{figures/spot_y1bs_timeseries.pdf}
@@ -1709,7 +1826,7 @@ the baseline is not.
         information about either the spectrum, the baseline, or the map
         coefficients. The bottommost panel now shows the true rest frame
         spectrum (blue line), the initial guess based on a deconvolution
-        (dotted orange line), and the inferred spectrum (orange line, with
+        (dashed orange line), and the inferred spectrum (orange line, with
         shaded $1\sigma$ uncertainty).
         \label{fig:spot_y1bs}
     }
@@ -1718,32 +1835,92 @@ the baseline is not.
 
 \begin{figure}[p!]
     \begin{centering}
-    \includegraphics[width=0.98\linewidth]{figures/inclinations.pdf}
-    \oscaption{inclinations}{%
-        Recovered \spot map as a function of stellar inclination. The
-        rest frame spectrum is assumed to be known exactly, but the
-        baseline is not. At very low inclinations, the small
-        projected velocities begin to degrade the spatial resolution of
-        the inferred map, while at inclinations close to $90^\circ$ there
-        is a degeneracy between the northern and southern hemispheres.
-        \label{fig:inclinations}
+    \includegraphics[width=0.49\linewidth]{figures/spot_y1bs_low_snr_timeseries.pdf}
+    \includegraphics[width=0.49\linewidth]{figures/spot_y1bs_low_snr_rect.pdf}
+    \\[0.5em]
+    \includegraphics[width=0.405\linewidth]{figures/spot_y1bs_low_snr_baseline.pdf}
+    \includegraphics[width=0.575\linewidth]{figures/spot_y1bs_low_snr_coeffs.pdf}
+    \\[0.5em]
+    \includegraphics[width=0.98\linewidth]{figures/spot_y1bs_low_snr_spectrum.pdf}
+    \oscaption{spot_y1bs_low_snr}{%
+        Same as Figure~\ref{fig:spot_y1bs}, but for $10\times$ lower SNR.
+        We still recover the \spot map and the input spectrum, albeit with
+        higher uncertainty, as expected.
+        \label{fig:spot_y1bs_low_snr}
     }
     \end{centering}
 \end{figure}
 
-\begin{figure}[p!]
-    \begin{centering}
-    \includegraphics[width=0.98\linewidth]{figures/snr.pdf}
-    \oscaption{snr}{%
-        Recovered \spot map as a function of SNR per resolution element.
-        The quality of the inferred map in the northern hemisphere improves
-        with SNR, but at very high SNR the region surrounding the global
-        optimum becomes so small that our optimization methods struggle to
-        converge on the correct solution.
-        \label{fig:snr}
-    }
-    \end{centering}
-\end{figure}
+Because the problem is generally not convex, we need a good starting
+guess for either the spectrum or the map coefficients. We note that
+we can very crudely approximate the rest frame spectrum by deconvolving the 
+average observed spectrum with the first term of the convolution kernel
+$\kT$ (\raisebox{-0.1em}{\includegraphics[width=2em]{figures/kT00.pdf}}).
+This is equivalent to assuming the average map of the star
+across all observations is featureless, and the average spectrum is equal
+to the (symmetrically) rotationally-broadened version of the rest frame
+spectrum. In practice, this is a fairly poor approximation, but we find that it
+suffices as an initial guess. Given this starting value of $\bvec{s}$, we 
+compute an initial guess for $\bvec{y_1}$ using the linear baseline
+approximation. We then iterate between solving for $\bvec{s}$ and
+solving for $\bvec{y_1}$, always using the previous value of the 
+baseline to compute $\bvec{y_1}$. As in the previous section, we find it
+necessary to implement a tempering scheme, except with a much higher
+starting temperature $T_0 = 5,000$ and a slower decay $\Delta\log T = -0.04$.
+We again refine our solution with \texttt{NAdam}, this time setting
+$N_\mathrm{nadam} = 3,000$ and $L_\mathrm{nadam} = 2.5\times 10^{-5}$. Since
+we are now solving for the spectrum as well, we include the negative log prior 
+term for the spectrum, 
+$\frac{1}{2}(\bvec{s - 1})^\top \boldsymbol{\Lambda}_\bvec{s}^{-1}(\bvec{s - 1})$, 
+in Equation~(\ref{eq:spotstar:logP}).
+
+Figure~\ref{fig:spot_y1bs} shows the results. The top portion of the figure is
+the same as before. A panel at the bottom has been added showing the true
+rest frame spectrum (blue), the initial guess based on the deconvolution
+(dashed orange), and the inferred spectrum (orange). We recover the \spot
+feature as before, albeit with more noise, particularly south of about
+$+30^\circ$ latitude. Our uncertainties are somewhat underestimated, as 
+expected, since they are computed conditioned on the optimum value of 
+the spectrum. On the other hand, we recover the spectrum exceedingly well,
+with low uncertainty and virtually no bias anywhere.
+
+To test our technique on more realistic data, in Figure~\ref{fig:spot_y1bs_low_snr}
+we repeat the experiment on data with $10$ times higher uncertainty,
+setting $\sigma_\bvec{f} = 10^{-3}$. Because the higher uncertainty increases
+the volume of the region surrounding the global optimum, it is
+actually significantly \emph{easier} for the algorithm to converge on the
+best solution, so we set $T_0 = 500$, $\Delta\log T = -0.05$, 
+$N_\mathrm{nadam} = 500$, and $R_\mathrm{nadam} = 10^{-4}$. Interestingly,
+while the uncertainty on the spectrum increased, the quality of the
+recovered \spot map did not noticeably degrade. This suggests we did not
+quite find the global optimum in Figure~\ref{fig:spot_y1bs}. We discuss
+this further in \S\ref{sec:discussion}.
+
+\subsection{Spatially-variable spectrum}
+\label{sec:twospec}
+%
+In our final experiment, we relax the assumption that the stellar
+rest frame spectrum is spatially constant, allowing for different
+spectral features inside and outside of the \spot. This is the case
+for, say, chemically peculiar Ap stars, whose abundance of certain
+elements is significantly different within spotted regions on their
+surfaces. It is also the case in general for spots that are significantly
+cooler than the rest of the photosphere, where the relative abundance
+of different ionization states or molecular features may be different
+than in the hotter, unspotted regions.
+
+The problem setup is the same as that discussed in \S\ref{sec:eigen}, where
+our full map vector $\bvec{a_0}$ is the outer product of a spectral matrix
+$\mathbb{S}$, whose $J$ columns are the different spectral components, and
+a spherical harmonic coefficient matrix $\mathbb{Y}^\top$, whose $J$ rows
+are the corresponding coefficient vectors. For simplicity, in this experiment
+we consider only $J = 2$ spectral components and further require that the
+first component is spatially constant, i.e., the first row of 
+$\mathbb{Y}^\top$ is the vector $(1 \quadquad \bvec{0}^\top)$. The second
+row of $\mathbb{Y}^\top$ is the vector $(1 \quadquad \bvec{y_1}^\top)$, where
+$\bvec{y_1}$ is the (unknown) spherical harmonic expansion of the spot. The
+two columns of $\mathbb{S}$ are $\bvec{s_1}$ and $\bvec{s_2}$, the unknown
+spectral components.
 
 \begin{figure}[t!]
     \begin{centering}
@@ -1761,11 +1938,15 @@ the baseline is not.
     }
     \end{centering}
 \end{figure}
+%
+\xxx{Figure~\ref{fig:twospec} shows...}
 
 \section{Discussion}
 \label{sec:discussion}
 %
-\xxx{In progress...}
+\subsection{Scaling of the computations}
+\label{sec:scaling}
+%
 Evaluation of the model via Equation~(\ref{eq:deconv:F}) requires 
 first the rotation of the $(\lmax + 1)^2$
 $\kT$ kernels (each of length $W$) to the correct stellar 
@@ -1776,15 +1957,61 @@ linear convolutions of the rotated $\kT$ kernels with the
 spectral components (each of length $K$), which scales
 approximately as $W K \lmax^2$. Since typically $K \gg \lmax$,
 the latter computation dominates and the entire evaluation 
-takes $\mathcal{O}(W K \lmax^2)$ operations.
+takes $\mathcal{O}(W K \lmax^2)$ operations. \xxx{More on this.}
 
-\xxx{We are not addressing differential rotation and convective blueshift.}
-\xxx{Telluric lines could be treated much as in Figure~\ref{fig:twospec}.}
-\xxx{Instrumental profile is another Toeplitz matrix.}
+\subsection{Dependence on SNR}
+\label{sec:snr}
+%
+\begin{figure}[p!]
+    \begin{centering}
+    \includegraphics[width=0.98\linewidth]{figures/snr.pdf}
+    \oscaption{snr}{%
+        Recovered \spot map as a function of SNR per resolution element.
+        The quality of the inferred map in the northern hemisphere improves
+        with SNR, but at very high SNR the region surrounding the global
+        optimum becomes so small that our optimization methods struggle to
+        converge on the correct solution.
+        \label{fig:snr}
+    }
+    \end{centering}
+\end{figure}
+%
+\xxx{Figure~\ref{fig:snr} shows...}
+
+\subsection{Dependence on inclination}
+\label{sec:inc}
+%
+\begin{figure}[p!]
+    \begin{centering}
+    \includegraphics[width=0.98\linewidth]{figures/inclinations.pdf}
+    \oscaption{inclinations}{%
+        Recovered \spot map as a function of stellar inclination. The
+        rest frame spectrum is assumed to be known exactly, but the
+        baseline is not. At very low inclinations, the small
+        projected velocities begin to degrade the spatial resolution of
+        the inferred map, while at inclinations close to $90^\circ$ there
+        is a degeneracy between the northern and southern hemispheres.
+        \label{fig:inclinations}
+    }
+    \end{centering}
+\end{figure}
+%
+\xxx{Figure~\ref{fig:inclinations} shows...}
+
+\subsection{Miscellaneous}
+\label{sec:misc}
+\xxx{%
+\begin{enumerate}
+\item In a more realistic scenario, we'd know more info about the spectrum.
+\item We are not addressing differential rotation and convective blueshift.
+\item Telluric lines could be treated much as in Figure~\ref{fig:twospec}.
+\item Instrumental profile is another Toeplitz matrix.
+\end{enumerate}
+}
 
 \section{Conclusions}
 \label{sec:conclusions}
-\xxx{Hello.}
+\xxx{Conclusions here.}
 
 %
 %
@@ -2025,18 +2252,6 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
     \endlastfoot
     %
     \midrule
-    \multicolumn{3}{c}{\emph{Dimensions}}\\
-    \midrule
-    %
-    $J$                      & \# of spectral components                             & \S\ref{sec:eigen} \\
-    $K$                      & \# of wavelength bins in the observed spectrum        & \S\ref{sec:linear} \\
-    $K'$                     & \# of wavelength bins in the latent spectrum          & \S\ref{sec:linear}\\
-    $M$                      & \# of epochs observed                                 & \S\ref{sec:linear}\\
-    $N$                      & \# of spherical harmonic coefficients                 & \S\ref{sec:linear}\\
-    $N'$                     & \# of spherical harmonic coefficients after limb darkening & \S\ref{sec:ld}\\
-    $W$                      & \# of wavelength bins in the convolution kernel       & \S\ref{sec:linear}\\
-    %
-    \midrule
     \multicolumn{3}{c}{\emph{Variables}}\\
     \midrule
     %
@@ -2057,14 +2272,20 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
     $I$                      & specific intensity                                    & Equation~(\ref{eq:the_problem:Ixi})\\
     $\bvec{I}$               & identity matrix                                       & \\
     $l$                      & spherical harmonic degree                             & \\
+    $L_\mathrm{nadam}$       & \texttt{NAdam} learning rate                          & \S\ref{sec:spotstar}\\
     $\bvec{L}$               & limb darkening operator                               & Equation~(\ref{eq:ld:L})\\
     $m$                      & spherical harmonic order                              & \\
+    $N_\mathrm{nadam}$       & number of \texttt{NAdam} iterations                   & \S\ref{sec:spotstar}\\
+    $\bvec{P}$               & Change of basis matrix from $Y_{lm}$ to pixels        & Equation~(\ref{eq:spotstar:uncert})\\
     $\bvec{R}$               & Wigner rotation matrix                                & Equation~(\ref{eq:deconv:R})\\
     $\bvec{s}$               & vector representation of the spectrum                 & Equation~(\ref{eq:inverse:azero})\\
     $\bvec{S}$               & block matrix representation of $\bvec{s}$             & Equation~(\ref{eq:inverse:S})\\
     $\boldsymbol{\mathbb{S}}$& matrix of $J$ spectral components                     & Equation~(\ref{eq:eigen:azero})\\
     $\Surf$                  & projected visible area of the star                    & Equation~(\ref{eq:the_problem:F})\\
     $t$                      & time                                                  & \S\ref{sec:the_problem}\\
+    $T$                      & artificial temperature in bilinear solver             & \S\ref{sec:spotstar}\\
+    $T_0$                    & initial artificial temperature setting                & \S\ref{sec:spotstar}\\
+    $\Delta\log T$           & artificial temperature step size                      & \S\ref{sec:spotstar}\\
     $u$                      & limb darkening coefficient                            & \S\ref{sec:ld}\\
     $\x$                     & Cartesian position on the sky                         & \S\ref{sec:the_problem}\\
     $y_{lm}$                 & spherical harmonic coefficient                        & \S\ref{sec:inverse}\\
@@ -2092,7 +2313,19 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
     $\omega$                 & angular velocity                                      & Equation~(\ref{eq:kT:beta})\\
     %
     \midrule
-    \multicolumn{3}{c}{\emph{Operators}}\\
+    \multicolumn{3}{c}{\emph{Dimensions}}\\
+    \midrule
+    %
+    $J$                      & \# of spectral components                             & \S\ref{sec:eigen} \\
+    $K$                      & \# of wavelength bins in the observed spectrum        & \S\ref{sec:linear} \\
+    $K'$                     & \# of wavelength bins in the latent spectrum          & \S\ref{sec:linear}\\
+    $M$                      & \# of epochs observed                                 & \S\ref{sec:linear}\\
+    $N$                      & \# of spherical harmonic coefficients                 & \S\ref{sec:linear}\\
+    $N'$                     & \# of spherical harmonic coefficients after limb darkening & \S\ref{sec:ld}\\
+    $W$                      & \# of wavelength bins in the convolution kernel       & \S\ref{sec:linear}\\
+    %
+    \midrule
+    \multicolumn{3}{c}{\emph{Operators \& Other symbols}}\\
     \midrule
     %
     $\mathrm{diag}$          & diagonal matricization                                & Equation~(\ref{eq:ld:Dmwav})\\
@@ -2101,7 +2334,12 @@ this vector into the change of basis matrix $\AOne$, as discussed above.
     $\circ$                  & element-wise product                                  & Equation~(\ref{eq:norm:fapprox})\\
     $\otimes$                & Kronecker product                                     & Equation~(\ref{eq:linear:Dm})\\
     $\ceil*{\,}$             & ceiling                                               & Equation~(\ref{eq:kT:lm})\\
-    $\floor*{\,}$            & floor                                                 & Equation~(\ref{eq:kT:lm})
+    $\floor*{\,}$            & floor                                                 & Equation~(\ref{eq:kT:lm})\\
+    $\bvec{0}$               & the zero vector,     
+                             $(0 \quadquad 0 \quadquad \cdots \quadquad 0)^\top$     & \\  
+    $\bvec{1}$               & the one vector,     
+                             $(1 \quadquad 1 \quadquad \cdots \quadquad 1)^\top$     & \\  
+
 \end{longtable}
 \end{center}
 

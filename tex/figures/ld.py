@@ -55,26 +55,27 @@ for l in range(ydeg + 1):
         ax[n, 0].imshow(render(y), origin="lower", cmap="plasma")
         ax[n, 1].imshow(render(yprime), origin="lower", cmap="plasma")
 
-        ax[n, 0].set_ylabel(r"$Y_{%d, %d}$" % (l, m), rotation=0)
+        ax[n, 0].set_ylabel(r"$Y_{%d, %d}$" % (l, m), rotation=0, fontsize=24)
         ax[n, 0].yaxis.set_label_coords(-0.35, 0.4)
 
         n += 1
 
 # Label the results
-ax[0, 1].set_ylabel(r"$\frac{\sqrt{3}}{2}Y_{1, 0}$", rotation=0)
-ax[0, 1].yaxis.set_label_coords(1.4, 0.4)
-ax[1, 1].set_ylabel(r"$\frac{3}{2\sqrt{5}}Y_{2, -1}$", rotation=0)
-ax[1, 1].yaxis.set_label_coords(1.5, 0.4)
+ax[0, 1].set_ylabel(r"$\frac{\sqrt{3}}{2}Y_{1, 0}$", rotation=0, fontsize=24)
+ax[0, 1].yaxis.set_label_coords(1.5, 0.3)
+ax[1, 1].set_ylabel(r"$\frac{3}{2\sqrt{5}}Y_{2, -1}$", rotation=0, fontsize=24)
+ax[1, 1].yaxis.set_label_coords(1.6, 0.3)
 ax[2, 1].set_ylabel(
     r"$\frac{\sqrt{3}}{2}Y_{0, 0} + \frac{\sqrt{3}}{\sqrt{5}}Y_{2, 0}$",
     rotation=0,
+    fontsize=24,
 )
-ax[2, 1].yaxis.set_label_coords(1.8, 0.4)
-ax[3, 1].set_ylabel(r"$\frac{3}{2\sqrt{5}}Y_{2, 1}$", rotation=0)
-ax[3, 1].yaxis.set_label_coords(1.5, 0.4)
+ax[2, 1].yaxis.set_label_coords(2.0, 0.3)
+ax[3, 1].set_ylabel(r"$\frac{3}{2\sqrt{5}}Y_{2, 1}$", rotation=0, fontsize=24)
+ax[3, 1].yaxis.set_label_coords(1.6, 0.3)
 
 # Transformation arrow
-eps = -0.06
+eps = -0.09
 plt.annotate(
     r"$\mathbf{L}(u_1 = 1)$",
     xy=(0.5 + eps, 0.525),
