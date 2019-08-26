@@ -1,7 +1,6 @@
 jobs:
 - job: Default
   timeoutInMinutes: 90
-  pr: none
   pool:
     vmImage: Ubuntu-16.04
   steps:
