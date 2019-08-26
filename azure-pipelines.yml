@@ -1,6 +1,8 @@
 # no pull requests
 pr: none
 
+timeoutInMinutes: 90
+
 pool:
   vmImage: Ubuntu-16.04
 
