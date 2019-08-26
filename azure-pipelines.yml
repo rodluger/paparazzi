@@ -1,8 +1,6 @@
 # no pull requests
 pr: none
 
-timeoutInMinutes: 90
-
 pool:
   vmImage: Ubuntu-16.04
 
@@ -42,6 +40,7 @@ steps:
     make
   displayName: 'Build the paper'
   condition: contains(variables['Build.SourceVersionMessage'], '[build paper]')
+  timeoutInMinutes: 90
 
 - script: |
     cd $(Build.SourcesDirectory)
