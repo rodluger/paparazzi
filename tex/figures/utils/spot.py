@@ -355,7 +355,7 @@ def plot_results(
     ax.axvspan(lnlam_padded[0], lnlam[0], color="k", alpha=0.3)
     ax.axvspan(lnlam[-1], lnlam_padded[-1], color="k", alpha=0.3)
     ax.set_xlim(lnlam_padded[0], lnlam_padded[-1])
-    ax.set_xlabel(r"$\ln\left(\lambda/\lambda_0\right)$")
+    ax.set_xlabel(r"$\ln\left(\lambda/\lambda_\mathrm{r}\right)$")
     ax.set_ylabel(r"Normalized intensity")
     ax.legend(loc="lower left", fontsize=12)
     fig.savefig("%s_spectrum.pdf" % name, bbox_inches="tight")

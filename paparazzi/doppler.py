@@ -512,7 +512,7 @@ class Doppler(object):
         self,
         R=3e5,
         nlam=200,
-        sigma=1.4e-5,  # 7.5e-6,
+        sigma=1.4e-5,
         nlines=21,
         ntheta=16,
         ferr=1.0e-4,

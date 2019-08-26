@@ -73,26 +73,26 @@ img_true = map.render(projection="rect", res=res)[0]
 
 # Generate two spectra with lines of different depths
 # and cenetered at different wavelengths
-sigma = 7.5e-6
 mu1 = -0.00015
-line1 = -0.25 * np.exp(-0.5 * (lnlam_padded - mu1) ** 2 / sigma ** 2)
 mu2 = 0.00015
-line2 = -0.5 * np.exp(-0.5 * (lnlam_padded - mu2) ** 2 / sigma ** 2)
+sigma = 1.4e-5  # ~ 10 km / s
+line1 = -0.5 * np.exp(-0.5 * (lnlam_padded - mu1) ** 2 / sigma ** 2)
+line2 = -0.9 * np.exp(-0.5 * (lnlam_padded - mu2) ** 2 / sigma ** 2)
 
 # Construct the two "eigenspectra".
 # There's no particular logic here; I simply found a linear combination of the
 # two vectors above that gives me plausible-looking spectra in the spot and in
 # the background. In the end it doesn't really matter how I construct this.
 s0_true = 1 + line1 + line2
-s1_true = 1 + line1 - 0.5 * line2
+s1_true = 1 + line1 - 0.75 * line2
 
 # Priors: assuming we know NOTHING, and placing generous
 # Gaussian priors on things.
 s0_mu = 1.0
-s0_sig = 0.1
+s0_sig = 0.01
 s0_rho = 3.0e-5
 s1_mu = 1.0
-s1_sig = 0.1
+s1_sig = 0.01
 s1_rho = 3.0e-5
 y1_mu = 0
 y1_sig = 0.01
@@ -104,8 +104,8 @@ dcf = 10.0
 # nonlinear refinement.
 T = 5000.0
 dlogT = -0.025
-niter = 100
-lr = 1e-4
+niter = 2000
+lr = 3e-4
 
 # Pre-compute the GP on the spectral components
 if s0_rho > 0.0:
@@ -238,6 +238,10 @@ niter_bilin = len(T_arr)
 print("Running bi-linear solver...")
 like_val = np.zeros(niter_bilin + niter)
 prior_val = np.zeros(niter_bilin + niter)
+best_loss = np.inf
+best_y1 = np.zeros(N - 1)
+best_s0 = s0
+best_s1 = s1
 for i in tqdm(range(niter_bilin)):
 
     # Set the temperature
@@ -257,8 +261,8 @@ for i in tqdm(range(niter_bilin)):
     cho_C = cho_factor(XTCInvX)
     XTXInvy = np.dot(XTCInv, 2 * F.reshape(-1) - (Ds0 + Ds1).reshape(-1))
     mu = np.ones(N - 1) * y1_mu
-    y1_new = cho_solve(cho_C, XTXInvy + cinv * mu)
-    b = np.reshape(2.0 + np.dot(B1, y1_new), (M, -1))
+    y1 = cho_solve(cho_C, XTXInvy + cinv * mu)
+    b = np.reshape(2.0 + np.dot(B1, y1), (M, -1))
 
     # Solve for `s0` and `s1`
     offsets = -np.arange(0, N) * Kp
@@ -269,7 +273,7 @@ for i in tqdm(range(niter_bilin)):
     )
     X0 = np.array(D.dot(Y0).todense())
     Y1 = diags(
-        [np.ones(Kp)] + [np.ones(Kp) * y1_new[j] for j in range(N - 1)],
+        [np.ones(Kp)] + [np.ones(Kp) * y1[j] for j in range(N - 1)],
         offsets,
         shape=(N * Kp, Kp),
     )
@@ -279,22 +283,22 @@ for i in tqdm(range(niter_bilin)):
     XTCInvX = XTCInv.dot(X)
     XTCInvf = np.dot(XTCInv, F.reshape(-1))
     cho_C = cho_factor(XTCInvX + s_CInv)
-    s0_new, s1_new = cho_solve(cho_C, XTCInvf + s_CInvmu).reshape(2, -1)
+    s0, s1 = cho_solve(cho_C, XTCInvf + s_CInvmu).reshape(2, -1)
 
     # Compute the loss
-    like_val[i], prior_val[i] = loss(y1_new, s0_new, s1_new)
-    if (i == 0) or (
-        like_val[i] + prior_val[i] < like_val[i - 1] + prior_val[i - 1]
-    ):
-        # Loss improved
-        y1 = y1_new
-        s0 = s0_new
-        s1 = s1_new
-    else:
-        # Loss got worse -- let's get out of here!
-        like_val[i:niter_bilin] = like_val[i - 1]
-        prior_val[i:niter_bilin] = prior_val[i - 1]
-        break
+    like_val[i], prior_val[i] = loss(y1, s0, s1)
+
+    # Did it improve?
+    if like_val[i] + prior_val[i] < best_loss:
+        best_loss = like_val[i] + prior_val[i]
+        best_y1 = y1
+        best_s0 = s0
+        best_s1 = s1
+
+# Set to best values
+y1 = best_y1
+s0 = best_s0
+s1 = best_s1
 
 if niter > 0:
 
@@ -342,6 +346,10 @@ ax[2].plot(like_val + prior_val)
 ax[2].axhline(like_true + prior_true, color="C1", ls="--")
 ax[0].set_yscale("log")
 fig.savefig("twospec_loss.pdf", bbox_inches="tight")
+
+# Print for the record
+print("True loss: %.2f" % (like_true + prior_true))
+print("Best loss: %.2f" % np.min(like_val + prior_val))
 
 # Plot the model
 fig = plt.figure()
@@ -436,6 +444,7 @@ for axis in [ax[0], ax[1]]:
 # Plot the spectra @ the evaluation points
 sz = 5
 n = 0
+map[1:, :] = y1_true
 intensities = map.intensity(x=xyz[0].eval(), y=xyz[1].eval())
 intensities /= vmax
 c = [plt.get_cmap("plasma")(i) for i in intensities]
@@ -515,7 +524,7 @@ for n, dy in zip([0, 1], [4, -14]):
             fontsize=10,
             color="C%d" % (n * 2),
         )
-ax[4].set_title("eigen spectra", fontsize=22, y=1.1)
+ax[4].set_title("components", fontsize=22, y=1.1)
 
 for i in [2, 3, 4, 5]:
     ax[i].margins(0, None)

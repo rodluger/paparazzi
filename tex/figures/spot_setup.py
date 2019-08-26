@@ -121,7 +121,7 @@ for lat, lon in zip(lats, lons):
 
 # Tweak
 ax[1].set_ylabel(r"intensity", fontsize=10)
-ax[1].set_xlabel(r"$\ln\left(\lambda/\lambda_0\right)$", fontsize=10)
+ax[1].set_xlabel(r"$\ln\left(\lambda/\lambda_\mathrm{r}\right)$", fontsize=10)
 ax[1].set_aspect(7e-4)
 for tick in ax[1].xaxis.get_major_ticks() + ax[1].yaxis.get_major_ticks():
     tick.label.set_fontsize(10)
@@ -147,7 +147,9 @@ ax_data.axvspan(dop.lnlam[-1], dop.lnlam_padded[-1], color="k", alpha=0.3)
 # Tweak
 ax_data.set_ylabel(r"rest frame spectrum", fontsize=10)
 ax_data_twin.set_ylabel(r"observed spectrum", fontsize=10)
-ax_data.set_xlabel(r"$\ln\left(\lambda/\lambda_0\right)$", fontsize=12)
+ax_data.set_xlabel(
+    r"$\ln\left(\lambda/\lambda_\mathrm{r}\right)$", fontsize=12
+)
 for axis in [ax_data, ax_data_twin]:
     for tick in axis.xaxis.get_major_ticks() + axis.yaxis.get_major_ticks():
         tick.label1.set_fontsize(10)

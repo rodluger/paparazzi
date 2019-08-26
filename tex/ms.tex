@@ -11,7 +11,7 @@
 \begin{document}
 
 % Title
-\title{Analytic Doppler Imaging}
+\title{A Closed-Form Solution to the Doppler Imaging Problem}
 
 % Author list
 \author[0000-0002-0296-3826]{Rodrigo Luger}
@@ -30,27 +30,16 @@
 \begin{abstract} 
 We derive a closed form, analytic solution to the problem of Doppler imaging
 of stellar surfaces in the limit of negligible differential rotation and
-convective blueshift. The model for the observed spectrum is linear in 
-both the unbroadened spectrum and the surface map of the star, provided the
-latter is expressed as a sum of spherical harmonics. As a result, the 
-posterior distributions of both the unbroadened spectrum and the stellar map
-conditioned on each other have a closed form, analytic solution that is 
-computationally trivial to evaluate. When neither the unbroadened spectrum
-nor the stellar map is known a priori, the global optimum can usually be
-found via a fast iterative approach that also yields a lower bound on the
-uncertainties.
-\xxx{%
-\textbf{Mention the following things:}
-Advantages of data-driven modeling $\cdot$ %
-Interpretable priors $\cdot$ %
-Works on blended lines $\cdot$ %
-Uses the whole spectrum $\cdot$ %
-Yields uncertainties! $\cdot$ %
-Probably works on slow rotators $\cdot$ %
-Differentiable! $\cdot$ %
-Fast! $\cdot$ %
-Use in MCMC to marginalize over inclination and stuff
-}
+convective blueshift. The model for the observed spectrum is linear in the
+coefficients of the spherical harmonic expansion of the specific intensity
+distribution on the surface and, in certain limits, the posterior over surface maps
+has a closed form, analytic solution that is computationally trivial to
+evaluate. The model is also linear in the local (rest frame) stellar spectrum,
+which may itself be spatially variable. This allows one to perform Doppler
+imaging without knowledge of the local stellar spectrum and therefore works
+on blended lines or regions of the spectrum where line formation mechanisms
+are not well understood. Finally, the model is fast, differentiable, and allows
+one to calculate uncertainties on the inferred surface map.
 %
 \href{https://github.com/rodluger/paparazzi}{\color{linkcolor}\faGithub}
 \end{abstract}
@@ -161,7 +150,7 @@ surface of the star $\Surf$, which is typically all we can observe:
 The difficulty in solving Equation~(\ref{eq:the_problem:F}) stems from the fact
 that $I(\lnlam, \x, t, \Dargs)$ is difficult to write down in 
 closed form, given
-the non-linearity of the Doppler shift.
+the nonlinearity of the Doppler shift.
 The standard approach to solving this integral is therefore
 to discretize the surface of the star with a fine grid, evaluate the
 Doppler-shifted spectrum in each cell, and sum over the spatial axes
@@ -1011,7 +1000,7 @@ compute not only the ``optimal'' solution to the Doppler imaging problem,
 but also its uncertainty. The problem of re-constructing surface images
 of stars from spectra and/or light curves is fundamentally ill-posed because
 of intrinsic degeneracies and a large null space
-\citep[e.g.,][]{Luger2019} \xxx{more cites}. Coupled to uncertainties in
+\citep[e.g.,][]{Cowan2017,Luger2019}. Coupled to uncertainties in
 the observations themselves, this makes the process of searching for the
 ``optimal'' solution flawed at best, and meaningless at worst. Access to the
 full covariance matrix of the solution is therefore essential to assessing our
@@ -1022,10 +1011,10 @@ analytically for either the surface map or the spectrum, but not both. If
 neither are known exactly \emph{a priori}, which is quite often the case,
 we can still find the MAP solution quickly by guessing at an initial
 spectrum $\bvec{s}$ and iterating between optimizing for $\bvec{y}$ and
-optimizing for $\bvec{s}$. This bi-linear problem is not generally convex,
+optimizing for $\bvec{s}$. This bilinear problem is not generally convex,
 but given a good starting point for $\bvec{s}$ and sufficient regularization
 on $\bvec{y}$, we find that it typically converges to the correct solution,
-especially after refinement with a non-linear solver;
+especially after refinement with a nonlinear solver;
 we discuss this in detail below.
 
 Once the MAP solution has been found for both $\bvec{s}$ and $\bvec{y}$,
@@ -1148,7 +1137,7 @@ vector of interest appears in both the numerator and the denominator:
     \quad.
 \end{align}
 %
-While we can solve for $\bvec{y}$ using a non-linear optimizer, it is
+While we can solve for $\bvec{y}$ using a nonlinear optimizer, it is
 often the case that the denominator in Equation~(\ref{eq:norm:fy}) is close
 to unity; i.e., the total flux from the star typically varies by only a
 few percent. When this is the case, it is straightforward to linearize
@@ -1262,7 +1251,7 @@ with covariance
 Note, importantly, that these equations are valid only in the limit that the
 change in the total flux from the star is small. Nevertheless, even in the 
 general case, we find that solving this linear problem yields a good
-starting point for a non-linear optimization, which we revisit in more
+starting point for a nonlinear optimization, which we revisit in more
 detail below.
 
 \subsection{Limb darkening}
@@ -1929,9 +1918,9 @@ spectral components.
         An example of a star whose spectrum is different within the spot
         (\texttt{B}) and outside of the spot (\texttt{A}). Everywhere on 
         the surface, the spectrum is a linear combination of two
-        ``eigenspectra'' ($s_1$ and $s_2$).
+        spectral components ($s_1$ and $s_2$).
         As in Figure~\ref{fig:spot_y1bs}, we assume
-        we do not know the map, the baseline, or either of the eigenspectra.
+        we do not know the map, the baseline, or either of the spectra.
         The top row shows the true values for the map and the spectra, and
         the bottom row shows our inferred values.
         \label{fig:twospec}
@@ -1939,28 +1928,127 @@ spectral components.
     \end{centering}
 \end{figure}
 %
-\xxx{Figure~\ref{fig:twospec} shows...}
+We set \bvec{s_1} equal to a flat spectrum with two absorption lines of
+different depths, and \bvec{s_2} to the same spectrum, except we make the
+second line an emission feature. The local rest-frame spectrum everywhere on the 
+surface is a linear combination of these two spectra. In our simple problem,
+the weight given to the first spectrum is the same everywhere (encoded in 
+the first row of $\mathbb{Y}^\top$), and the weight
+given to the second spectrum is large outside of the spot and small within
+the spot (encoded in the second row of $\mathbb{Y}^\top$, which we set equal
+to the spherical harmonic expansion of the \spot feature).
+The first row of Figure ~\ref{fig:twospec} shows the problem setup. The two
+spectral components are shown as the blue ($\bvec{s_1}$) and green
+($\bvec{s_2}$) curves at the right. Point \texttt{A} on the map (left panel)
+is outside the spot feature, so its local spectrum has nearly equal
+contributions from $\bvec{s_1}$ and $\bvec{s_2}$, and the second spectral
+line is absent (center panel). Point \texttt{B} is inside the spot, so
+it receives a contribution from $\bvec{s_1}$ only.
+
+In our inference step, we again assume we have no knowledge of the map,
+the baseline, or either of the spectral components. As before, we initialize 
+$\bvec{s_1}$ to the deconvolved mean spectrum and $\bvec{s_2}$ to the
+deconvolved mean spectrum after subtracting $\bvec{s_1}$. In practice this
+leads to a decent approximation to $\bvec{s_1}$ but a rather featureless
+guess for $\bvec{s_2}$. We use the same priors as before, except we 
+set $\sigma_\bvec{s_1} = \sigma_\bvec{s_2} = 0.01$ to force the continuum
+to be flatter. We run our bilinear solver with $T_0 = 5,000$ and 
+$\Delta\log T = -0.025$ followed by the nonlinear solver with
+$N_\mathrm{nadam} = 2,000$ and $L_\mathrm{nadam} = 3\times 10^{-4}$.
+
+The results are shown in the bottom panel of Figure~\ref{fig:twospec}.
+We recover the \spot feature reasonably well, although with more artifacts
+than in the previous experiments. We also recover the two spectral components,
+although our solution for $\bvec{s_2}$ is significantly better than that for
+$\bvec{s_1}$. This is due to the fact that the only information
+about $\bvec{s_1}$ that makes it into our dataset is the convolution of
+$\bvec{s_1}$ with the first term of the convolution kernel
+$\kT$ (\raisebox{-0.1em}{\includegraphics[width=2em]{figures/kT00.pdf}}),
+since this spectral component has no spatial variability.
+Since the deconvolution operation is in general ill-posed, there is no
+unique solution for $\bvec{s_1}$. On the other hand, the other spectral
+component projects into the data via convolutions with all other
+terms of the kernel and is therefore very well constrained.
+Finally, we can estimate the spectra at points \texttt{A} and \texttt{B}
+as before (center panel). We recover the single spectral line at \texttt{A}
+and the two lines at \texttt{B}, albeit rather noisily due to the uncertainty
+in $\bvec{s_1}$.
+
 
 \section{Discussion}
 \label{sec:discussion}
 %
-\subsection{Scaling of the computations}
-\label{sec:scaling}
-%
-Evaluation of the model via Equation~(\ref{eq:deconv:F}) requires 
-first the rotation of the $(\lmax + 1)^2$
-$\kT$ kernels (each of length $W$) to the correct stellar 
-rotational phase, an operation that scales approximately
-as $W \lmax^3$,
-followed by $(\lmax + 1)^2$
-linear convolutions of the rotated $\kT$ kernels with the 
-spectral components (each of length $K$), which scales
-approximately as $W K \lmax^2$. Since typically $K \gg \lmax$,
-the latter computation dominates and the entire evaluation 
-takes $\mathcal{O}(W K \lmax^2)$ operations. \xxx{More on this.}
+
+\xxx{%
+\begin{enumerate}
+    %
+    \item%
+    A gaussian prior with unit mean is a pretty bad prior for the spectrum.
+    In a more realistic scenario, we'd know a lot more information about the
+    spectrum---such as where the lines are and some estimate of their shapes
+    and depths---so the fidelity of our maps would be higher.
+    %
+    \item We are not addressing differential rotation and convective blueshift.
+    These make the integral in Equation~(\ref{eq:deconv:kT}) very difficult
+    to solve. We will tackle this in the next paper.
+    %
+    \item Telluric lines could be treated much as in Figure~\ref{fig:twospec},
+    and marginalized over as in \citet{Bedell2019}.
+    %
+    \item The instrumental profile is another Toeplitz matrix that can be
+    dotted into Equation~(\ref{eq:linear:f}).
+    %
+    \item Discuss the case where the inclination/period/velocity is unknown.
+    The problem is not linear in these variables, so we need MCMC. But our
+    model is differentiable, so we can easily use HMC. Discuss.
+    %
+    \item%
+    Evaluation of the model via Equation~(\ref{eq:deconv:F}) requires 
+    first the rotation of the $(\lmax + 1)^2$
+    $\kT$ kernels (each of length $W$) to the correct stellar 
+    rotational phase, an operation that scales approximately
+    as $W \lmax^3$,
+    followed by $(\lmax + 1)^2$
+    linear convolutions of the rotated $\kT$ kernels with the 
+    spectral components (each of length $K$), which scales
+    approximately as $W K \lmax^2$. Since typically $K \gg \lmax$,
+    the latter computation dominates and the entire evaluation 
+    takes $\mathcal{O}(W K \lmax^2)$ operations.
+\end{enumerate}
+}
 
 \subsection{Dependence on SNR}
 \label{sec:snr}
+%
+Most of the examples in this paper considered very high SNR spectra.
+Figure~\ref{fig:snr} shows the effect of different SNR on the quality
+of the inferred map. As before, the SNR we report is the ratio of the
+standard deviation of the true model in each wavelength bin across 
+all epochs, averaged over all wavelength bins (i.e., the ``signal'') to the 
+standard deviation of the added noise term, $\sigma_\bvec{f}$ (the ``noise'').
+The panels in Figure~\ref{fig:snr} show the inferred map for SNR in the range
+1---1000, where SNR $\sim 100$ is the fiducial case considered in the
+examples so far. The setup is the same as that in \S\ref{sec:spot_y1b}, where
+the spectrum is known exactly but the map coefficients and the baseline are
+not.
+
+As may be expected, the quality of the map decreases with lower SNR, but
+a reduction of the SNR by $\sim 20\times$ still allows for reasonable
+recovery of the \spot feature. In general, as the SNR decreases further, 
+two things happen: the \spot contrast decreases, and the features begin to
+blur out, especially south of about $+30^\circ$ latitude, where features 
+are more limb-darkened
+at this inclination and in view for a smaller fraction of the time.
+
+As the SNR incraeses, however, the quality of the \spot feature does not
+improve appreciably, since a SNR of 100 is more than sufficient to recover 
+a $l_\mathrm{max} = 15$ band-limited map. Interestingly, south of the equator,
+the map quality actually begins to degrade with higher SNR. This is due to
+the fact that finding the global optimum becomes exponentially more difficult
+with higher SNR, as the posterior volume becomes ever smaller. Even with
+aggressive tempering, we were unable to converge on the best solution for
+SNR $\gtrsim 500$ given our standard, conservative priors and initial
+guesses (\S\ref{sec:spotstar}).
 %
 \begin{figure}[p!]
     \begin{centering}
@@ -1976,8 +2064,6 @@ takes $\mathcal{O}(W K \lmax^2)$ operations. \xxx{More on this.}
     \end{centering}
 \end{figure}
 %
-\xxx{Figure~\ref{fig:snr} shows...}
-
 \subsection{Dependence on inclination}
 \label{sec:inc}
 %
@@ -1995,23 +2081,42 @@ takes $\mathcal{O}(W K \lmax^2)$ operations. \xxx{More on this.}
     }
     \end{centering}
 \end{figure}
-%
-\xxx{Figure~\ref{fig:inclinations} shows...}
-
-\subsection{Miscellaneous}
-\label{sec:misc}
-\xxx{%
-\begin{enumerate}
-\item In a more realistic scenario, we'd know more info about the spectrum.
-\item We are not addressing differential rotation and convective blueshift.
-\item Telluric lines could be treated much as in Figure~\ref{fig:twospec}.
-\item Instrumental profile is another Toeplitz matrix.
-\end{enumerate}
-}
+As in \citet{Vogt1987},
+we also investigate the dependence of the solution on the inclination
+of the star.
+Figure~\ref{fig:inclinations} shows the inferred map for the same problem
+setup as before (with SNR $\sim 100$), but this time varying the
+inclination between $10^\circ$ (nearly face-on) and $90^\circ$ (perfectly
+edge-on). As before, the inclination is assumed to be known exactly. We
+further keep the true equatorial velocity of the star constant across
+all panels, so that the figure corresponds to the same star viewed at
+different orientations. Because of this, decreasing the inclination
+decreases $v\sin i$, reducing the width of the convolution kernel and
+therefore the spatial resolution of our inferred map. Increasing the
+inclination does not result in appreciable changes until an inclination of
+$\sim 80^\circ$, above which it becomes difficult to differentiate between
+features in the northern and southern hemispheres, whose projected
+velocities are nearly equal. At $i = 90^\circ$, there is a formal
+degeneracy between the two hemispheres, which can be seen from the
+mirror-image symmetry in the inferred map. These results are broadly consistent
+with those of \citet{Vogt1987}.
 
 \section{Conclusions}
 \label{sec:conclusions}
-\xxx{Conclusions here.}
+\xxx{%
+\begin{enumerate}
+    \item Advantages of data-driven modeling
+    \item Interpretable priors
+    \item Works on blended lines
+    \item Uses the whole spectrum
+    \item Yields uncertainties!
+    \item Probably works on slow rotators
+    \item Differentiable!
+    \item Fast!
+    \item Use in MCMC to marginalize over inclination and stuff
+\end{enumerate}
+}
+
 
 %
 %
