@@ -125,7 +125,7 @@ def plot_results(
     plt.close()
 
     # Render the true map
-    map = starry.Map(ydeg=ydeg, udeg=udeg, lazy=False)
+    map = starry.Map(ydeg=ydeg, udeg=udeg)
     map.inc = inc
     map[1:, :] = y1_true
     if udeg > 0:
@@ -138,17 +138,19 @@ def plot_results(
     if render_movies:
         map.show(theta=np.linspace(-180, 180, 50), mp4="%s_true.mp4" % name)
         files.append("true.mp4")
-    img_true_rect = map.render(projection="rect", res=res).reshape(res, res)
+    img_true_rect = (
+        map.render(projection="rect", res=res).eval().reshape(res, res)
+    )
 
     # Render the inferred map
     map[1:, :] = y1
-    img = map.render(theta=theta_img)
+    img = map.render(theta=theta_img).eval()
     if render_movies:
         map.show(
             theta=np.linspace(-180, 180, 50), mp4="%s_inferred.mp4" % name
         )
         files.append("inferred.mp4")
-    img_rect = map.render(projection="rect", res=res).reshape(res, res)
+    img_rect = map.render(projection="rect", res=res).eval().reshape(res, res)
 
     # Render the pixelwise uncertainties
     if cho_y1 is not None:
@@ -161,10 +163,12 @@ def plot_results(
         P = ts.dot(P, map.ops.A1).eval()
 
         # Rotate it so north points up
+        """
         R = map.ops.R([1, 0, 0], -(90.0 - inc) * np.pi / 180.0)
         for l in range(map.ydeg + 1):
             idx = slice(l ** 2, (l + 1) ** 2)
             P[:, idx] = P[:, idx].dot(R[l])
+        """
 
         # Discard Y_{0, 0}, whose variance is zero
         P = P[:, 1:]

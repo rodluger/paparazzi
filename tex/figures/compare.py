@@ -16,12 +16,12 @@ CLIGHT = 3.0e5
 # Get the Ylm expansion of a Gaussian spot
 ydeg = 20
 N = (ydeg + 1) ** 2
-map = starry.Map(ydeg, lazy=False)
-map.add_spot(amp=-0.1, sigma=0.05, lat=30, lon=30)
-y1 = np.array(map.y)[1:]
+map = starry.Map(ydeg)
+map.add_spot(amp=-0.03, sigma=0.05, lat=30, lon=30)
+y1 = np.array(map.y.eval())[1:]
 
 # Check that the specific intensity is positive everywhere
-assert np.nanmin(map.render()) > 0
+assert np.nanmin(map.render().eval()) > 0
 
 # This work
 vsini = 40.0  # km/s
@@ -49,7 +49,7 @@ for i, res in enumerate(res_arr):
     z = z[on_disk]
     npts[i] = len(x)
     D = 0.5 * np.log((1 + vsini / CLIGHT * x) / (1 - vsini / CLIGHT * x))
-    image = map.render(res=res).reshape(-1, 1)[on_disk]
+    image = map.render(res=res).eval().reshape(-1, 1)[on_disk]
     spec = np.interp(lnlam_padded - D.reshape(-1, 1), lnlam_padded, s)
     spec = spec[:, obs]
     Fnum[i] = np.nansum(image * spec, axis=0)
@@ -80,7 +80,7 @@ ax[1].set_ylabel(r"residuals")
 
 # Show the image
 aximg = inset_axes(ax[0], width="15%", height="45%", loc=4, borderpad=1)
-img = map.render(res=300).reshape(300, 300)
+img = map.render(res=300).eval().reshape(300, 300)
 aximg.imshow(img, origin="lower", cmap="plasma", vmin=0.042, vmax=0.353)
 aximg.axis("off")
 

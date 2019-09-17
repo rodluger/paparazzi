@@ -8,16 +8,15 @@ import numpy as np
 import starry
 import paparazzi as pp
 
-
 # Get the Ylm expansion of a Gaussian spot
 ydeg = 20
 N = (ydeg + 1) ** 2
-map = starry.Map(ydeg, lazy=False)
-map.add_spot(amp=-0.12, sigma=0.05, lat=30, lon=0)
-y1 = np.array(map.y)[1:]
+map = starry.Map(ydeg)
+map.add_spot(amp=-0.03, sigma=0.05, lat=30, lon=0)
+y1 = np.array(map.y.eval())[1:]
 
 # Check that the specific intensity is positive everywhere
-assert np.nanmin(map.render()) > 0
+assert np.nanmin(map.render().eval()) > 0
 
 # Generate the dataset
 vsini = 40.0  # km/s
@@ -32,7 +31,7 @@ F0 = dop.F[0]
 F = dop.F[1:]
 
 # Render the images
-img = map.render(theta=theta[1:], res=100)
+img = map.render(theta=theta[1:], res=100).eval()
 
 # Set up the plot
 fig, ax = plt.subplots(nt, 3, figsize=(6, 12))

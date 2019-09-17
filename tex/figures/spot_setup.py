@@ -3,6 +3,13 @@
 Setup for the SPOT problem.
 
 """
+
+# DEBUG
+import theano
+
+theano.config.optimizer = "None"
+theano.config.exception_verbosity = "high"
+
 import paparazzi as pp
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,7 +24,7 @@ dop.s = dop.s_true
 dop.y1 = dop.y1_true
 map = dop._map
 res = 300
-img = map.render(projection="rect", res=res).eval()[0]
+img = map.render(projection="rect", res=res).eval()
 img_ortho = map.render(theta=dop.theta, projection="ortho", res=res).eval()
 
 # Set up the plot

@@ -166,56 +166,29 @@ def get_ortho_longitude_lines(
 ydeg = 2
 ntheta = 11
 inc = 40.0
-vsini = 80.0
-nlam = 121
+vsini = 35.0
+nlam = 151
 u = []
 
 #
 # Compute stuff!
 #
 
-# Compute the g-functions and the corresponding Toeplitz matrices
-lnlam = np.linspace(-6e-4, 6e-4, nlam)
-doppler = pp.Doppler(ydeg=ydeg, vsini=vsini, inc=inc, u=u)
-doppler._set_lnlam(lnlam)
-kT = doppler.kT()
-T = [None for n in range(doppler.N)]
-for n in range(doppler.N):
-    diagonals = np.tile(kT[n].reshape(-1, 1), doppler.K)
-    if np.any(diagonals):
-        diagonals[diagonals == 0] = 1e-5
-    offsets = np.arange(doppler.W)
-    T[n] = diags(
-        diagonals,
-        offsets,
-        (doppler.K, doppler.K + doppler.W - 1),
-        format="csr",
-    )
+# Compute the `D` matrix
+theta = np.linspace(0, 360, ntheta)
+theta[-1] = 0.0
+dop = pp.Doppler(ydeg=ydeg, vsini=vsini, inc=inc, u=u)
+dop.generate_data(theta=theta, nlam=nlam)
+D = dop.D().todense()
 
-# Tensordot with rotation matrices to get the full Doppler matrix
-theta = np.linspace(0, 2 * np.pi, ntheta)
-theta[-1] = 0
-sini = np.sin(inc * np.pi / 180.0)
-cosi = np.cos(inc * np.pi / 180.0)
-axis = [0, sini, cosi]
-R = [doppler._R(axis, t) for t in theta]
-D = [None for t in range(ntheta)]
-for t in range(ntheta):
-    TR = [None for n in range(doppler.N)]
-    for l in range(ydeg + 1):
-        idx = slice(l ** 2, (l + 1) ** 2)
-        TR[idx] = np.tensordot(R[t][l].T, T[idx], axes=1)
-    D[t] = hstack(TR)
-D = vstack(D).toarray()
-D /= np.nanmax(D)
-
-# Plot the `D` matrix dotted into the `a` vector
+# Plot it
 fig, ax = plt.subplots(1, figsize=(11, 9.25))
 fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
 cmap = plt.get_cmap("inferno")
+vmax = np.nanmax(np.abs(D))
 D[D == 0] = -99
 cmap.set_under((0.9, 0.9, 0.9))
-ax.imshow(D, cmap=cmap, vmin=-1.1, vmax=1.1)
+ax.imshow(D, cmap=cmap, vmin=-vmax, vmax=vmax)
 ax.axis("off")
 
 # Plot the Ylms
@@ -224,7 +197,7 @@ width = 1.0 / 9.0
 pad = 0.0
 y0 = 1.0
 height = 1.0 / 9.0
-map = starry.Map(ydeg=2, lazy=False)
+map = starry.Map(ydeg=2)
 n = 0
 for l in range(ydeg + 1):
     for m in range(-l, l + 1):
@@ -232,7 +205,7 @@ for l in range(ydeg + 1):
         map.reset()
         if n > 0:
             map[l, m] = 1.0
-        img = map.render(res=500)[0]
+        img = map.render(res=500).eval()
         axins.imshow(img, origin="lower", cmap=cmap, extent=(-1, 1, -1, 1))
         axins.set_xlim(-1.2, 1.2)
         axins.set_ylim(-1.2, 1.2)
@@ -260,7 +233,7 @@ for n in range(ntheta):
     for x, y in lat_lines:
         axins.plot(x, y, "#aaaaaa", lw=0.5, zorder=100)
     lon_lines = get_ortho_longitude_lines(
-        inc=inc * np.pi / 180, theta=np.pi + theta[n]
+        inc=inc * np.pi / 180, theta=np.pi + theta[n] * np.pi / 180
     )
     for n, l in enumerate(lon_lines):
         if n == 0:

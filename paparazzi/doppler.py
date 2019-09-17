@@ -156,8 +156,22 @@ class Doppler(object):
         else:
             self._A1T = self._map.ops.A1.eval().T
 
-        # Grab the rotation matrix op
-        self._R = self._map.ops.R
+        # Compile the rotation/projection Op
+        M = tt.dmatrix()
+        inc = tt.dscalar()
+        theta = tt.dscalar()
+        self.rotate = theano.function(
+            [M, inc, theta],
+            tt.transpose(
+                self._map.ops.right_project(
+                    M,
+                    inc,
+                    tt.as_tensor_variable(0.0),
+                    theta,
+                    tensor_theta=False,
+                )
+            ),
+        )
 
         # Reset
         self._reset_cache()
@@ -436,7 +450,6 @@ class Doppler(object):
             # Rotation axis
             sini = np.sin(self._inc)
             cosi = np.cos(self._inc)
-            axis = [0, sini, cosi]
 
             # Pre-compute a skeleton sparse Doppler matrix row in CSR format.
             # We will directly edit its `data` attribute, whose structure is
@@ -460,20 +473,19 @@ class Doppler(object):
 
                 if self._udeg > 0:
 
-                    # Apply the LD transform & rotate the kernels
-                    R = self._R(axis, self.theta[m] * np.pi / 180.0)
-                    R = sparse_block_diag(R)
-                    LRT = self._L.dot(R).T
-                    kT = LRT.dot(kT0)
+                    # Rotate the kernels
+                    kT = self.rotate(
+                        self._L.T.dot(kT0).T,
+                        self._inc,
+                        self.theta[m] * np.pi / 180.0,
+                    )
 
                 else:
 
-                    # Rotate the kernels (note that R^T(theta) = R(-theta))
-                    RT = self._R(axis, -self.theta[m] * np.pi / 180.0)
-                    kT = np.empty_like(kT0)
-                    for l in range(self.ydeg + 1):
-                        idx = slice(l ** 2, (l + 1) ** 2)
-                        kT[idx] = RT[l].dot(kT0[idx])
+                    # Rotate the kernels
+                    kT = self.rotate(
+                        kT0.T, self._inc, self.theta[m] * np.pi / 180.0
+                    )
 
                 # Populate the Doppler matrix
                 D[m].data = np.tile(kT.reshape(-1), K)
@@ -643,7 +655,6 @@ class Doppler(object):
             kT0 = self.kT()
             sini = np.sin(self._inc)
             cosi = np.cos(self._inc)
-            axis = [0, sini, cosi]
 
             # Loop through each epoch
             model = np.empty((self.M, self.K))
@@ -651,20 +662,19 @@ class Doppler(object):
 
                 if self._udeg > 0:
 
-                    # Apply the LD transform & rotate the kernels
-                    R = self._R(axis, self.theta[m] * np.pi / 180.0)
-                    R = sparse_block_diag(R)
-                    LRT = self._L.dot(R).T
-                    kT = LRT.dot(kT0)
+                    # Rotate the kernels
+                    kT = self.rotate(
+                        self._L.T.dot(kT0).T,
+                        self._inc,
+                        self.theta[m] * np.pi / 180.0,
+                    )
 
                 else:
 
-                    # Rotate the kernels (note that R^T(theta) = R(-theta))
-                    RT = self._R(axis, -self.theta[m] * np.pi / 180.0)
-                    kT = np.empty_like(kT0)
-                    for l in range(self.ydeg + 1):
-                        idx = slice(l ** 2, (l + 1) ** 2)
-                        kT[idx] = RT[l].dot(kT0[idx])
+                    # Rotate the kernels
+                    kT = self.rotate(
+                        kT0.T, self._inc, self.theta[m] * np.pi / 180.0
+                    )
 
                 # Compute the model for this epoch
                 model[m] = np.sum(

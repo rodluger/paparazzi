@@ -48,7 +48,7 @@ def is_theano(*objs):
 np.random.seed(13)
 ferr = 1.0e-4
 res = 300
-dop = pp.Doppler(ydeg=15, u=[0.5, 0.25])  # DEBUG
+dop = pp.Doppler(ydeg=15, u=[0.5, 0.25])
 dop.generate_data(ferr=ferr)
 D = dop.D()
 kT = dop.kT()
@@ -64,12 +64,12 @@ B1 = dop._map.X(theta=dop.theta).eval()[:, 1:]
 B1 = np.repeat(B1, K, axis=0)
 
 # Generate a spot map, get the baseline, and render the image
-map = starry.Map(15, lazy=False)
+map = starry.Map(15)
 map.inc = 40
 map.load("spot")
-y1_true = np.array(map[1:, :])
-b_true = np.repeat(map.flux(theta=theta), K)
-img_true = map.render(projection="rect", res=res)[0]
+y1_true = np.array(map[1:, :].eval())
+b_true = np.repeat(map.flux(theta=theta).eval(), K)
+img_true = map.render(projection="rect", res=res).eval()
 
 # Generate two spectra with lines of different depths
 # and cenetered at different wavelengths
@@ -359,7 +359,7 @@ fig.savefig("twospec_data_model.pdf", bbox_inches="tight")
 
 # Render the inferred map
 map[1:, :] = y1
-img = map.render(projection="rect", res=res)[0]
+img = map.render(projection="rect", res=res).eval()
 
 # Get the full map matrix, `A` (true)
 A0_true = np.dot(
@@ -389,7 +389,7 @@ lons = np.array([-15.0, -62.0])
 
 # Get the change of basis matrix from Ylm to intensity, `P`
 xyz = map.ops.latlon_to_xyz(
-    map.axis, lats * np.pi / 180.0, lons * np.pi / 180.0, no_compile=True
+    lats * np.pi / 180.0, lons * np.pi / 180.0, no_compile=True
 )
 P = map.ops.pT(xyz[0], xyz[1], xyz[2])
 P = ts.dot(P, map.ops.A1).eval()
@@ -445,7 +445,7 @@ for axis in [ax[0], ax[1]]:
 sz = 5
 n = 0
 map[1:, :] = y1_true
-intensities = map.intensity(x=xyz[0].eval(), y=xyz[1].eval())
+intensities = map.intensity(x=xyz[0], y=xyz[1]).eval()
 intensities /= vmax
 c = [plt.get_cmap("plasma")(i) for i in intensities]
 letters = ["A", "B"]

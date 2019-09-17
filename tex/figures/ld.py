@@ -6,6 +6,8 @@ Limb darkening operator illustration.
 import starry
 import matplotlib.pyplot as plt
 import numpy as np
+import theano.tensor as tt
+
 
 # Compute the limb-darkening matrix, `L`
 ydeg = 1
@@ -26,12 +28,23 @@ L = np.array(
 ) / (1 - u1 / 3)
 
 # Go under the hood with `starry` to manually render
-# the limb-darkened map
+# the limb-darkened map. This is super hacky, sorry.
 res = 300
-map = starry.Map(ydeg + udeg, lazy=False)
-render = lambda y: map.ops.render(
-    res, 0, [0.0], map._inc, map._obl, y, map._u, map._f
-).reshape(res, res)
+map = starry.Map(ydeg + udeg)
+render = (
+    lambda y: map.ops.render(
+        res,
+        0,
+        tt.as_tensor_variable([0.0, 0.0]).astype(tt.config.floatX),
+        map._inc,
+        map._obl,
+        tt.as_tensor_variable(y).astype(tt.config.floatX),
+        map._u,
+        map._f,
+    )[0]
+    .eval()
+    .reshape(res, res)
+)
 
 fig, ax = plt.subplots((ydeg + 1) ** 2, 2, figsize=(8, 8))
 fig.subplots_adjust(wspace=0.75)

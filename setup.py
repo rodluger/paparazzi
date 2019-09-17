@@ -20,7 +20,7 @@ setup(
     description="Photos of the stars",
     license="GPL",
     packages=["paparazzi"],
-    install_requires=["scipy>=1.2.1", "starry>=1.0.0.dev3", "celerite"],
+    install_requires=["scipy>=1.2.1", "starry>=1.0.0.dev5", "celerite"],
     data_files=[("maps", glob.glob("paparazzi/*.jpg"))],
     include_package_data=True,
     zip_safe=False,
