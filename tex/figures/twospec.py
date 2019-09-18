@@ -443,7 +443,7 @@ for axis in [ax[0], ax[1]]:
 sz = 5
 n = 0
 map[1:, :] = y1_true
-intensities = map.intensity(x=xyz[0], y=xyz[1]).eval()
+intensities = map.intensity(lat=lats, lon=lons).eval()
 intensities /= vmax
 c = [plt.get_cmap("plasma")(i) for i in intensities]
 letters = ["A", "B"]
