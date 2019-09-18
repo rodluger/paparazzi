@@ -25,7 +25,7 @@ assert np.nanmin(map.render().eval()) > 0
 
 # This work
 vsini = 40.0  # km/s
-dop = pp.Doppler(ydeg, vsini=vsini)
+dop = pp.Doppler(ydeg, vsini=vsini, inc=map.inc.eval())
 dop.generate_data(
     y1=y1, R=3.0e6, nlam=1999, sigma=2.0e-5, nlines=1, theta=[0.0], ferr=0.0
 )
