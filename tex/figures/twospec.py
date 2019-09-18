@@ -388,9 +388,7 @@ lats = np.array([10.0, 25.0])
 lons = np.array([-15.0, -62.0])
 
 # Get the change of basis matrix from Ylm to intensity, `P`
-xyz = map.ops.latlon_to_xyz(
-    lats * np.pi / 180.0, lons * np.pi / 180.0, no_compile=True
-)
+xyz = map.ops.latlon_to_xyz(lats * np.pi / 180.0, lons * np.pi / 180.0)
 P = map.ops.pT(xyz[0], xyz[1], xyz[2])
 P = ts.dot(P, map.ops.A1).eval()
 
