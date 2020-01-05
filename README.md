@@ -1,5 +1,5 @@
 <p align="center">
-  <img width = "450" src="paparazzi.png"/>
+  <img width="450" src="paparazzi.png"/>
   <br/>
   <a href="https://dev.azure.com/rodluger/paparazzi/_build">
     <img src="https://dev.azure.com/rodluger/paparazzi/_apis/build/status/rodluger.paparazzi?branchName=master"/>
