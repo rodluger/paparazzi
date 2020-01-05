@@ -169,7 +169,6 @@ class Doppler(object):
                     tt.as_tensor_variable(0.0),
                     theta,
                     tt.as_tensor_variable(0.0),
-                    tensor_theta=False,
                 )
             ),
         )

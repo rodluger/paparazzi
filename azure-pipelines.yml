@@ -22,9 +22,6 @@ jobs:
       pip install -U setuptools
       pip install -U -r requirements.txt
       conda install -y -q -c conda-forge tectonic
-      git clone --single-branch --branch dev https://github.com/rodluger/starry.git
-      pushd starry && python setup.py develop && popd
-      python setup.py install
     displayName: 'Install dependencies'
   - script: |
       . $CONDA/etc/profile.d/conda.sh
