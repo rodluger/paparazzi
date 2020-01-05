@@ -5,6 +5,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import starry
 import subprocess
 from scipy.linalg import cho_solve
+import theano.tensor as tt
 import theano.sparse as ts
 
 __all__ = ["plot_results"]
