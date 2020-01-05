@@ -22,6 +22,7 @@ jobs:
       pip install -U setuptools
       pip install -U -r requirements.txt
       conda install -y -q -c conda-forge tectonic
+      python setup.py develop
     displayName: 'Install dependencies'
   - script: |
       . $CONDA/etc/profile.d/conda.sh
