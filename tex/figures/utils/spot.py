@@ -59,7 +59,7 @@ def plot_results(
     ax.plot(theta_, baseline_, label="inferred")
     if cho_y1 is not None:
         U = np.triu(cho_y1[0])
-        B = doppler._map.X(theta=doppler.theta).eval()[:, 1:]
+        B = doppler._map.design_matrix(theta=doppler.theta).eval()[:, 1:]
         A = np.linalg.solve(U.T, B.T)
         baseline_sig = np.sqrt(np.sum(A ** 2, axis=0))
         baseline_sig_ = np.append(baseline_sig, [baseline_sig[0]])
@@ -156,7 +156,7 @@ def plot_results(
     if cho_y1 is not None:
 
         # Compute the polynomial transform matrix
-        xyz = map.ops.compute_rect_grid(res)
+        xyz = map.ops.compute_rect_grid(tt.as_tensor_variable(res))
         P = map.ops.pT(xyz[0], xyz[1], xyz[2])[:, : doppler.N]
 
         # Transform it to Ylm & evaluate it
