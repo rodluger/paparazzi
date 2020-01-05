@@ -29,7 +29,7 @@ jobs:
       cd $(Build.SourcesDirectory)/tex
       make
     displayName: 'Build the paper'
-    condition: contains(variables['Build.SourceVersionMessage'], '[build paper]')
+    #condition: contains(variables['Build.SourceVersionMessage'], '[build paper]')
   - script: |
       cd $(Build.SourcesDirectory)
       git checkout --orphan $(Build.SourceBranchName)-pdf
@@ -39,4 +39,4 @@ jobs:
       git -c user.name='azure' -c user.email='azure' commit -m "building the paper"
       git push -q -f https://$(GITHUB_USER):$(GITHUB_API_KEY)@github.com/rodluger/paparazzi $(Build.SourceBranchName)-pdf >/dev/null 2>&1
     displayName: 'Upload the paper'
-    condition: contains(variables['Build.SourceVersionMessage'], '[build paper]')
+    #condition: contains(variables['Build.SourceVersionMessage'], '[build paper]')
