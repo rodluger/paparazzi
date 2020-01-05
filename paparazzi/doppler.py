@@ -751,7 +751,7 @@ class Doppler(object):
 
             # We need to Taylor expand the problem about
             # a baseline of unity.
-            B = self._map.X(theta=self.theta).eval()[:, 1:]
+            B = self._map.design_matrix(theta=self.theta).eval()[:, 1:]
             B = np.repeat(B, self.K, axis=0)
 
             # We are Taylor expanding
@@ -986,7 +986,7 @@ class Doppler(object):
                         (-1,),
                     )
                     b = tt.dot(
-                        self._map.X(theta=self.theta),
+                        self._map.design_matrix(theta=self.theta),
                         tt.reshape(tt.concatenate([[1.0], y1]), (-1, 1)),
                     )
                     B = tt.reshape(b, (-1, 1))
