@@ -126,7 +126,10 @@ class Doppler(object):
             self._map[1:] = self._u
 
             # Compute the limb darkening operator
-            F = self._map.ops.F(np.append([-1.0], self._u), [np.pi])
+            F = self._map.ops.F(
+                tt.as_tensor_variable(np.append([-1.0], self._u)),
+                tt.as_tensor_variable([np.pi]),
+            )
             self._L = ts.dot(
                 ts.dot(self._map.ops.A1Inv, F), self._map.ops.A1
             ).eval()
