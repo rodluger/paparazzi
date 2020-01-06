@@ -60,7 +60,7 @@ N = dop.N
 M = dop.M
 lnlam = dop.lnlam
 lnlam_padded = dop.lnlam_padded
-B1 = dop._map.X(theta=dop.theta).eval()[:, 1:]
+B1 = dop._map.design_matrix(theta=dop.theta).eval()[:, 1:]
 B1 = np.repeat(B1, K, axis=0)
 
 # Generate a spot map, get the baseline, and render the image
@@ -388,7 +388,10 @@ lats = np.array([10.0, 25.0])
 lons = np.array([-15.0, -62.0])
 
 # Get the change of basis matrix from Ylm to intensity, `P`
-xyz = map.ops.latlon_to_xyz(lats * np.pi / 180.0, lons * np.pi / 180.0)
+xyz = map.ops.latlon_to_xyz(
+    tt.as_tensor_variable(lats * np.pi / 180.0),
+    tt.as_tensor_variable(lons * np.pi / 180.0),
+)
 P = map.ops.pT(xyz[0], xyz[1], xyz[2])
 P = ts.dot(P, map.ops.A1).eval()
 
