@@ -67,6 +67,7 @@ B1 = np.repeat(B1, K, axis=0)
 map = starry.Map(15)
 map.inc = 40
 map.load("spot")
+map.amp = 1.0
 y1_true = np.array(map[1:, :].eval())
 b_true = np.repeat(map.flux(theta=theta).eval(), K)
 img_true = map.render(projection="rect", res=res).eval()
