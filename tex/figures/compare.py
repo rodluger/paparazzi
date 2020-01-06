@@ -43,7 +43,7 @@ npts = np.zeros(3, dtype=int)
 res_arr = [50, 100, 300]  # , 600]
 Fnum = np.array([np.zeros_like(lnlam) for i in range(len(res_arr))])
 for i, res in enumerate(res_arr):
-    x, y, z = map.ops.compute_ortho_grid(tt.as_tensor_variable(res)).eval()
+    x, y, z = map.ops.compute_ortho_grid(res)
     on_disk = np.isfinite(z)
     x = x[on_disk]
     y = y[on_disk]
