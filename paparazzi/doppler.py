@@ -596,7 +596,7 @@ class Doppler(object):
                 self._map[1:, :] = y1
             else:
                 raise ValueError("The vector `y1` has the wrong size.")
-        self._map.L = 1.0
+        self._map.amp = 1.0
         y1 = np.array(self._map.y.eval())[1:]
 
         # Compute the model
