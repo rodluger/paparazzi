@@ -41,6 +41,7 @@ render = (
         tt.as_tensor_variable(y).astype(tt.config.floatX),
         map._u,
         map._f,
+        map._alpha,
     )[0]
     .eval()
     .reshape(res, res)
