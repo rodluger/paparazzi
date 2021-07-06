@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import starry
+import matplotlib.pyplot as plt
 from scipy.sparse import csr_matrix, hstack, vstack, diags
 from scipy.sparse import block_diag as sparse_block_diag
 from scipy.linalg import block_diag as dense_block_diag
@@ -172,6 +173,8 @@ class Doppler(object):
                     tt.as_tensor_variable(0.0),
                     theta,
                     tt.as_tensor_variable(0.0),
+                    tt.as_tensor_variable(0.0),  # DEBUG tau
+                    tt.as_tensor_variable(0.0),  # DEBUG delta
                 )
             ),
         )
@@ -590,7 +593,31 @@ class Doppler(object):
                 image = os.path.join(
                     os.path.dirname(os.path.abspath(__file__)), "spot.jpg"
                 )
-            self._map.load(image)
+
+            # SHT DEBUG
+            smoothing = 0.075
+            eps = 1e-12
+            image = plt.imread(image)
+            image = np.flipud(np.mean(image[:, :, :3], axis=-1))
+            lon = np.linspace(-180, 180, image.shape[1])
+            lat = np.linspace(-90, 90, image.shape[0])
+            lon, lat = np.meshgrid(lon, lat)
+            w = np.cos(lat.flatten() * np.pi / 180)
+            P = self._map.intensity_design_matrix(
+                lat=lat.flatten(), lon=lon.flatten()
+            ).eval()
+            PTSinv = P.T * (w ** 2)[None, :]
+            Q = np.linalg.solve(PTSinv @ P + eps * np.eye(P.shape[1]), PTSinv)
+            if smoothing > 0:
+                l = np.concatenate(
+                    [
+                        np.repeat(l, 2 * l + 1)
+                        for l in range(self._map.ydeg + 1)
+                    ]
+                )
+                Q *= np.exp(-0.5 * l * (l + 1) * smoothing ** 2)[:, None]
+            self._map[:, :] = Q @ image.flatten()
+
         else:
             if len(y1) == self.N - 1:
                 self._map[1:, :] = y1
