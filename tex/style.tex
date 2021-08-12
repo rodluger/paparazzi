@@ -1,0 +1,44 @@
+% Packages
+\usepackage{xifthen}
+\usepackage{stackengine}
+\usepackage{tabstackengine}
+\usepackage{array}
+\usepackage{upgreek}
+\usepackage[bbgreekl]{mathbbol}
+\usepackage{afterpage}
+\usepackage[bb=boondox]{mathalpha}
+
+% Shorthand for this paper
+\newcommand{\starry}{\textsf{starry}\xspace}
+\newcommand{\Python}{\textsf{Python}\xspace}
+\newcommand{\cpp}{\textsf{C}++\xspace}
+\newcommand{\bvec}[1]{{\ensuremath{\mathbf{#1}}}}
+\newcommand{\xxx}[1]{{\color{red}#1}}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\newcommand{\imag}{{\ensuremath{\mathbb{i}}}}
+\newcommand{\quadquad}{\quad\quad\quad\quad}
+
+\newcommand{\R}{\bvec{R}}
+\newcommand{\AOne}{\bvec{A_1}}
+\newcommand{\alm}{\bvec{a}}
+\newcommand{\x}{\bvec{x}}
+\newcommand{\D}{D}
+\newcommand{\Doppler}{\bvec{D}}
+\newcommand{\Surf}{\mathcal{S}}
+\newcommand{\Curve}{\mathcal{C}}
+\newcommand{\Dargs}{\bvec{d}}
+\newcommand{\lmax}{\ensuremath{l_\mathrm{max}}}
+\newcommand{\spot}{\texttt{SPOT}\xspace}
+\newcommand{\vogtstar}{\texttt{VOGTSTAR}\xspace}
+\newcommand{\kT}{\boldsymbol{\kappa}^\top}
+\newcommand{\rhoT}{\boldsymbol{\rho}^\top}
+\newcommand{\ylmbasis}{\boldsymbol{\psi}^\top}
+\newcommand{\pbasis}{\boldsymbol{\phi}^\top}
+\newcommand{\pbasisn}{\ensuremath{\phi_n}}
+\newcommand{\azero}{\ensuremath{\bvec{a_0}}}
+
+% https://tex.stackexchange.com/a/184474
+\usepackage{stackengine,scalerel}
+\def\lnlam{\ThisStyle{\ensurestackMath{\stackon[-2.4\LMpt]{%
+                \SavedStyle\lambda}{\kern-.5pt\kern\LMpt\rule{1\LMex}{.25pt+.15\LMpt}}}}}

@@ -1,0 +1,30 @@
+name: paparazzi
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - mkl-service>=2.3.0
+  - numpy>=1.19.2
+  - openblas=0.3.6
+  - pip>=20.3.3
+  - python=3.7.3
+  - scipy>=1.5.2
+  - setuptools>=51.3.3
+  - sympy>=1.7.1
+  - tectonic>=0.1.12
+  - pip:
+    - astropy>=4.2
+    - corner>=2.1.0
+    - dynesty>=1.0.1
+    - emcee>=3.0.2
+    - exoplanet
+    - matplotlib>=3.3.3
+    - nose>=1.3.7
+    - parameterized>=0.8.1
+    - pymc3
+    - pymc3-ext
+    - pytest>=6.2.1
+    - pytest-dependency>=0.5.1
+    - pytest-env>=0.6.2
+    - tqdm>=4.56.0
+    - git+https://github.com/rodluger/starry.git@paparazzi#egg=starry
