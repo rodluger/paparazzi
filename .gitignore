@@ -12,3 +12,7 @@
 *.aux
 *.out
 *.egg-info
+**/.showyourwork
+**/.snakemake
+.Snakefile
+.helpers.smk

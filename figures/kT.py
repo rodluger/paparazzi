@@ -6,14 +6,16 @@ Plots the basis of `g` kernels.
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import paparazzi as pp
+import starry
 
 
 # Get the `kT` functions at high res
 ydeg = 10
-dop = pp.Doppler(ydeg=ydeg)
-dop.generate_data(R=1e6, nlam=99, y1=np.zeros(dop.N - 1))
-kT = dop.kT()
+map = starry.DopplerMap(ydeg)
+vsini = map.ops.vsini_max
+x = map.ops.get_x(vsini)
+rT = map.ops.get_rT(x)
+kT = map.ops.get_kT0(rT)
 
 # Set up the plot
 fig, ax = plt.subplots(

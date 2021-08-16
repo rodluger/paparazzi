@@ -8,81 +8,81 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import numpy as np
 import starry
-import paparazzi as pp
-import theano.tensor as tt
-
-CLIGHT = 3.0e5
 
 
 # Get the Ylm expansion of a Gaussian spot
 ydeg = 20
 N = (ydeg + 1) ** 2
-map = starry.Map(ydeg)
-map.add_spot(amp=-0.03, sigma=0.05, lat=30, lon=30)
-y1 = np.array(map.y.eval())[1:]
+spot_map = starry.Map(ydeg, lazy=False)
+spot_map.spot(contrast=0.95, radius=20, lat=30, lon=0)
+y = spot_map.y.reshape(-1)
 
-# Check that the specific intensity is positive everywhere
-assert np.nanmin(map.render().eval()) > 0
+# Generate a Doppler map
+inc = 90
+veq = 60000.0  # m/s
+theta = [0.0]
+wav = np.linspace(642.75, 643.25, 200)
+map = starry.DopplerMap(ydeg, veq=veq, vsini_max=veq, inc=inc, nt=1, wav=wav, lazy=False)
+map[:, :] = y
+map.spectrum = 1.0 - np.exp(-0.5 * (map.wav0 - 643.0) ** 2 / 0.0085 ** 2)
 
-# This work
-vsini = 40.0  # km/s
-dop = pp.Doppler(ydeg, vsini=vsini, inc=map.inc.eval())
-dop.generate_data(
-    y1=y1, R=3.0e6, nlam=1999, sigma=2.0e-5, nlines=1, theta=[0.0], ferr=0.0
-)
-F = dop.F[0] / dop.F[0][0]
+# Compute the observed spectrum using starry
+F = map.flux(theta=theta).reshape(-1)
+F /= F[0]
 
-# The rest frame spectrum
-s = dop.s_true
-lnlam = dop.lnlam
-lnlam_padded = dop.lnlam_padded
-obs = (lnlam_padded >= lnlam[0]) & (lnlam_padded <= lnlam[-1])
-
-# Numerical
-npts = np.zeros(3, dtype=int)
-res_arr = [50, 100, 300]  # , 600]
-Fnum = np.array([np.zeros_like(lnlam) for i in range(len(res_arr))])
+# Compute the observed spectrum numerically
+# for different grid resolutions
+vsini = veq * np.sin(inc * np.pi / 180)
+res_arr = [12, 36, 113, 357] #, 1129]
+npts = np.zeros(len(res_arr), dtype=int)
+Fnum = np.array([np.zeros_like(map.wav) for i in range(len(res_arr))])
 for i, res in enumerate(res_arr):
-    x, y, z = map.ops.compute_ortho_grid(res)
-    on_disk = np.isfinite(z)
-    x = x[on_disk]
-    y = y[on_disk]
-    z = z[on_disk]
+    _, xyz = spot_map.ops.compute_ortho_grid(res)
+    on_disk = np.isfinite(xyz[2])
+    x = xyz[0][on_disk]
+    y = xyz[1][on_disk]
+    z = xyz[2][on_disk]
     npts[i] = len(x)
-    D = 0.5 * np.log((1 + vsini / CLIGHT * x) / (1 - vsini / CLIGHT * x))
-    image = map.render(res=res).eval().reshape(-1, 1)[on_disk]
-    spec = np.interp(lnlam_padded - D.reshape(-1, 1), lnlam_padded, s)
-    spec = spec[:, obs]
-    Fnum[i] = np.nansum(image * spec, axis=0)
-    Fnum[i] /= Fnum[i, 0]
+    D = np.sqrt((1 + vsini / map._clight * x) / (1 - vsini / map._clight * x))
+    image = spot_map.render(res=res).reshape(-1, 1)[on_disk]
+    spec = np.interp(map.wav0 * D.reshape(-1, 1), map.wav0, map.spectrum.reshape(-1))
+    flux = np.nansum(image * spec, axis=0)
+    flux = np.interp(map.wav, map.wav0, flux)
+    Fnum[i] = flux / flux[0]
 
 # Compare
 fig, ax = plt.subplots(2, sharex=True, figsize=(8, 8))
-ax[0].plot(1e4 * lnlam, F, lw=2.5, label="Luger et al. (2019)")
-ax[0].plot(1e4 * lnlam, Fnum[-1], "--", lw=2.5, label="numerical")
-ax[0].set_xlim(-3, 3)
-alpha = [0.2, 0.5, 1.0]
-npts_rounded = np.array(np.round(1e-4 * npts, 1) * 1e4, dtype=int)
+ax[0].plot(map.wav, F, lw=2.5, label="Luger et al. (2021)")
+ax[0].plot(map.wav, Fnum[-1], "--", lw=2.5, label="numerical")
+ax[0].margins(0, None)
+alpha = [0.2, 0.4, 0.6, 1.0]
+exp = np.array(np.round(np.log10(npts)), dtype=int)
 for i in range(len(Fnum)):
     ax[1].plot(
-        1e4 * lnlam,
+        map.wav,
         np.abs(F - Fnum[i]),
-        label=r"$n = %d$" % npts_rounded[i],
+        label="$n = 10^{}$".format(exp[i]),
         color="k",
         alpha=alpha[i],
     )
 ax[0].set_ylabel(r"spectrum")
-ax[0].legend(fontsize=12, loc="lower left")
+ax[0].legend(fontsize=10, loc="lower left")
 ax[1].set_yscale("log")
-ax[1].set_xlabel(r"$\lambdabar$ (arbitrary units)")
+ax[1].set_xlabel(r"$\lambdabar$ [nm]")
 ax[1].legend(fontsize=10, loc="upper right")
 ax[1].set_ylim(1e-10, 1e0)
 ax[1].set_ylabel(r"residuals")
 
 # Show the image
 aximg = inset_axes(ax[0], width="15%", height="45%", loc=4, borderpad=1)
-img = map.render(res=300).eval().reshape(300, 300)
-aximg.imshow(img, origin="lower", cmap="plasma", vmin=0.042, vmax=0.353)
+img = spot_map.render(res=300).reshape(300, 300)
+aximg.imshow(img, extent=(-1, 1, -1, 1), origin="lower", cmap="plasma", vmin=0.042, vmax=0.353)
+aximg.set_xlim(-1.02, 1.02)
+aximg.set_ylim(-1.02, 1.02)
 aximg.axis("off")
+x = np.linspace(-1, 1, 3000)
+y = np.sqrt(1 - x ** 2)
+aximg.plot(0.999 * x, 0.999 * y, "k-", lw=0.5, zorder=100)
+aximg.plot(0.999 * x, -0.999 * y, "k-", lw=0.5, zorder=100)
 
-fig.savefig("compare.pdf", bbox_inches="tight")
+fig.savefig("compare.pdf", bbox_inches="tight", dpi=300)
