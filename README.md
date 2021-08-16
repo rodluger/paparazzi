@@ -1,15 +1,8 @@
 <p align="center">
 <a href="https://github.com/rodluger/showyourwork">
-<img width = "450" src="https://raw.githubusercontent.com/rodluger/showyourwork/main/showyourwork.png" alt="showyourwork"/>
+<img width = "450" src="paparazzi.png" alt="paparazzi"/>
 </a>
 </p>
-<br>
-<br>
-
-<p align="center">
-An open source scientific article generated with <a href='https://github.com/rodluger/showyourwork'>showyourwork</a>.
-</p>
-
 <p align="center">
 <a href="https://github.com/rodluger/paparazzi/actions/workflows/showyourwork.yml">
 <img src="https://github.com/rodluger/paparazzi/actions/workflows/showyourwork.yml/badge.svg" alt="Article status"/>
