@@ -6,11 +6,8 @@ degree inference problem.
 """
 import matplotlib.pyplot as plt
 import numpy as np
-import paparazzi as pp
 from scipy.sparse import hstack, vstack, csr_matrix, block_diag, diags
 import starry
-
-np.random.seed(11)
 
 
 def RAxisAngle(axis=[0, 1, 0], theta=0):
@@ -164,27 +161,25 @@ def get_ortho_longitude_lines(
 
 # Settings for this figure
 ydeg = 2
-ntheta = 11
+nt = 11
 inc = 40.0
-vsini = 35.0
-nlam = 151
-u = []
+veq = 100000
 
 #
 # Compute stuff!
 #
 
 # Compute the `D` matrix
-theta = np.linspace(0, 360, ntheta)
+theta = np.linspace(0, 360, nt)
 theta[-1] = 0.0
-dop = pp.Doppler(ydeg=ydeg, vsini=vsini, inc=inc, u=u)
-dop.generate_data(theta=theta, nlam=nlam)
-D = dop.D().todense()
+vsini = veq * np.sin(inc * np.pi / 180)
+map = starry.DopplerMap(ydeg=ydeg, nt=nt, veq=veq, vsini_max=vsini, inc=inc, lazy=False)
+D = np.array(map.design_matrix(theta=theta).todense())
 
 # Plot it
 fig, ax = plt.subplots(1, figsize=(11, 9.25))
 fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
-cmap = plt.get_cmap("inferno")
+cmap = plt.get_cmap("inferno").copy()
 vmax = np.nanmax(np.abs(D))
 D[D == 0] = -99
 cmap.set_under((0.9, 0.9, 0.9))
@@ -197,7 +192,7 @@ width = 1.0 / 9.0
 pad = 0.0
 y0 = 1.0
 height = 1.0 / 9.0
-map = starry.Map(ydeg=2)
+map = starry.Map(ydeg=ydeg)
 n = 0
 for l in range(ydeg + 1):
     for m in range(-l, l + 1):
@@ -207,6 +202,10 @@ for l in range(ydeg + 1):
             map[l, m] = 1.0
         img = map.render(res=500).eval()
         axins.imshow(img, origin="lower", cmap=cmap, extent=(-1, 1, -1, 1))
+        x = np.linspace(-1, 1, 10000)
+        y = np.sqrt(1 - x ** 2)
+        axins.plot(x, y, "k-", lw=1, zorder=102)
+        axins.plot(x, -y, "k-", lw=1, zorder=102)
         axins.set_xlim(-1.2, 1.2)
         axins.set_ylim(-1.2, 1.2)
         n += 1
@@ -218,7 +217,7 @@ width = 1.0 / 11.0
 pad = 0.0
 y0 = 1.0 - 1.0 / 11.0
 height = 1.0 / 11.0
-for n in range(ntheta):
+for n in range(nt):
     axins = ax.inset_axes([x0, y0 - n * (height + pad), width, height])
     x = np.linspace(-1, 1, 10000)
     y = np.sqrt(1 - x ** 2)

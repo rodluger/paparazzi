@@ -3,29 +3,46 @@
 Setup for the SPOT problem.
 
 """
-
-# DEBUG
-import theano
-
-theano.config.optimizer = "None"
-theano.config.exception_verbosity = "high"
-
-import paparazzi as pp
 import numpy as np
 import matplotlib.pyplot as plt
+import starry
 
 # Generate the data
 np.random.seed(13)
-dop = pp.Doppler(ydeg=15, u=[0.5, 0.25])
-dop.generate_data(ferr=0)
 
-# Render the map
-dop.s = dop.s_true
-dop.y1 = dop.y1_true
-map = dop._map
+
+# Instantiate the Doppler map
+ydeg = 15
+u = [0.5, 0.25]
+udeg = len(u)
+inc = 40.0
+veq = 60000
+nt = 16
+map = starry.DopplerMap(ydeg=ydeg, udeg=udeg, nt=nt, inc=inc, veq=veq, lazy=False)
+map[1:] = u
+map.load(map="spot")
+map.spectrum = (
+    1.0
+    - 0.55 * np.exp(-0.5 * (map.wav0 - 643.0) ** 2 / 0.0085 ** 2)
+    - 0.02 * np.exp(-0.5 * (map.wav0 - 642.895) ** 2 / 0.0085 ** 2)
+    - 0.10 * np.exp(-0.5 * (map.wav0 - 642.97) ** 2 / 0.0085 ** 2)
+    - 0.04 * np.exp(-0.5 * (map.wav0 - 643.1) ** 2 / 0.0085 ** 2)
+    - 0.12 * np.exp(-0.5 * (map.wav0 - 643.4) ** 2 / 0.0085 ** 2)
+    - 0.08 * np.exp(-0.5 * (map.wav0 - 643.25) ** 2 / 0.0085 ** 2)
+    - 0.06 * np.exp(-0.5 * (map.wav0 - 642.79) ** 2 / 0.0085 ** 2)
+    - 0.03 * np.exp(-0.5 * (map.wav0 - 642.81) ** 2 / 0.0085 ** 2)
+    - 0.18 * np.exp(-0.5 * (map.wav0 - 642.63) ** 2 / 0.0085 ** 2)
+    - 0.04 * np.exp(-0.5 * (map.wav0 - 642.60) ** 2 / 0.0085 ** 2)
+)
+
+# Render the surface map for plotting
 res = 300
-img = map.render(projection="rect", res=res).eval()
-img_ortho = map.render(theta=dop.theta, projection="ortho", res=res).eval()
+theta = np.linspace(-180, 180, nt, endpoint=False)
+tmp = starry.Map(ydeg=ydeg, udeg=udeg, inc=inc, lazy=False)
+tmp[1:] = u
+tmp.load("spot", smoothing=0.05, force_psd=True, oversample=2)
+img = tmp.render(projection="rect", res=res)
+img_ortho = tmp.render(theta=theta, projection="ortho", res=res)
 
 # Set up the plot
 fig = plt.figure(figsize=(11, 9))
@@ -58,15 +75,10 @@ ax[0].set_xlabel("Longitude [deg]", fontsize=10)
 ax[0].set_ylabel("Latitude [deg]", fontsize=10)
 
 # Show the ortho images
-vmin = np.nanmin(img_ortho)
-vmax = np.nanmax(img_ortho)
 for n in range(16):
-    ax_ortho[n].imshow(
-        img_ortho[n], origin="lower", cmap="plasma", vmin=vmin, vmax=vmax
-    )
-    ax_ortho[n].axis("off")
+    tmp.show(ax=ax_ortho[n], image=img_ortho[n])
     ax_ortho[n].annotate(
-        r"$%d^\circ$" % dop.theta[n],
+        r"$%d^\circ$" % theta[n],
         xy=(0, 1),
         xycoords="axes fraction",
         xytext=(4, -4),
@@ -80,12 +92,12 @@ for n in range(16):
 # Points where we'll evaluate the spectrum. One corresponds to
 # a place within the spot; the other is outside the spot.
 lats = np.array([10.0, 25.0])
-lons = np.array([-15.0, -60.0])
+lons = np.array([-15.0, -55.0])
 sz = 5
-intensities = map.intensity(lat=lats, lon=lons).eval()
-spectra = dop.s.reshape(-1, 1).dot(intensities.reshape(1, -1)).T
+intensities = tmp.intensity(lat=lats, lon=lons)
+spectra = map.spectrum.reshape(-1, 1).dot(intensities.reshape(1, -1)).T
 spectra /= np.max(spectra)
-c = [plt.get_cmap("plasma")(i) for i in intensities]
+c = [plt.get_cmap("plasma")(0.8), plt.get_cmap("plasma")(0.2)]
 letters = ["A", "B"]
 n = 0
 for lat, lon in zip(lats, lons):
@@ -112,10 +124,10 @@ for lat, lon in zip(lats, lons):
         fontsize=10,
         color="w",
     )
-    ax[1].plot(dop.lnlam_padded, spectra[n], "-", color=c[n])
+    ax[1].plot(map.wav0, spectra[n], "-", color=c[n])
     ax[1].annotate(
         "%s" % letters[n],
-        xy=(dop.lnlam_padded[0], intensities[n] / np.max(intensities)),
+        xy=(map.wav0[0], intensities[n] / np.max(intensities)),
         xycoords="data",
         xytext=(4, 4),
         textcoords="offset points",
@@ -128,34 +140,36 @@ for lat, lon in zip(lats, lons):
 
 # Tweak
 ax[1].set_ylabel(r"intensity", fontsize=10)
-ax[1].set_xlabel(r"$\ln\left(\lambda/\lambda_\mathrm{r}\right)$", fontsize=10)
-ax[1].set_aspect(7e-4)
+ax[1].set_xlabel(r"$\lambda$ [nm]", fontsize=10)
+ax[1].set_aspect(0.7)
 for tick in ax[1].xaxis.get_major_ticks() + ax[1].yaxis.get_major_ticks():
     tick.label.set_fontsize(10)
 ax[1].margins(0, 0.2)
-ax[1].set_xticks([-0.0003, 0.0, 0.0003])
+
+# Compute the spectra
+flux = map.flux(theta=theta)
 
 # Plot the data
-ax_data.plot(dop.lnlam_padded, spectra[0])
+ax_data.plot(map.wav0, spectra[0])
 ax_data_twin = ax_data.twinx()
 label = "observed"
-for n in range(len(dop.F)):
+for n in range(len(flux)):
     ax_data_twin.plot(
-        dop.lnlam,
-        dop.F[n] / dop.F[n].max(),
+        map.wav,
+        flux[n] / flux[n].max(),
         color="C1",
         alpha=0.3,
         label=label,
     )
     label = None
-ax_data.axvspan(dop.lnlam_padded[0], dop.lnlam[0], color="k", alpha=0.3)
-ax_data.axvspan(dop.lnlam[-1], dop.lnlam_padded[-1], color="k", alpha=0.3)
+ax_data.axvspan(map.wav0[0], map.wav[0], color="k", alpha=0.3)
+ax_data.axvspan(map.wav[-1], map.wav0[-1], color="k", alpha=0.3)
 
 # Tweak
 ax_data.set_ylabel(r"rest frame spectrum", fontsize=10)
 ax_data_twin.set_ylabel(r"observed spectrum", fontsize=10)
 ax_data.set_xlabel(
-    r"$\ln\left(\lambda/\lambda_\mathrm{r}\right)$", fontsize=12
+    r"$\lambda$ [nm]", fontsize=12
 )
 for axis in [ax_data, ax_data_twin]:
     for tick in axis.xaxis.get_major_ticks() + axis.yaxis.get_major_ticks():
@@ -166,4 +180,4 @@ ax_data.set_ylim(0.35, 1.05)
 ax_data_twin.set_ylim(0.835, 1.0125)
 
 # We're done!
-fig.savefig("spot_setup.pdf", bbox_inches="tight", dpi=400)
+fig.savefig("spot_setup.pdf", bbox_inches="tight", dpi=300)
