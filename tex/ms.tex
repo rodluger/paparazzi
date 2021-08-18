@@ -1,8 +1,7 @@
-% Replace "([a-z$,])\n(\s*)([$\(a-z])" with "$1 $3"
-% Replace "\.\s([a-z])" with ". \n$1"
 % Define document class & import showyourwork
 \documentclass[modern]{aastex631}
 
+% Custom defs
 \include{style}
 
 % Begin!
@@ -1170,18 +1169,662 @@ We assume a wavelength-independent, quadratic limb darkening law with $u_1 = 0.5
 Finally, we divide the flux by the baseline at each epoch (Equation~\ref{eq:norm:b})
 and add random Gaussian noise with amplitude $\sigma_\bvec{f} = 10^{-4}$ to simulate a very high signal-to-noise ratio (SNR) spectrum. 
 The mean standard deviation in each wavelength bin across all 16 epochs in the noiseless data vector is about $10^{-2}$, so our choice of $\sigma_\bvec{f}$ corresponds to SNR $\sim$ 100 in each of the 201 wavelength bins of $\bvec{f}$.
-%
+
 %For reference, \citet{Vogt1987} report SNRs per 60 m\AA\, pixel, while our
 %resolution elements are approximately $\lambda_r\Delta\lnlam/K \approx 100$ m\AA\,
 %across, so our SNR in the same units as \citet{Vogt1987} is about 80.
 %
 % TODO: Perhaps Vogt computes the "signal" as the line depth, rather than
 % as the amplitude of the perturbations? Check this.
-
 % We Recover images with an effective resolution of $12^\circ$.
 
 In the following sections we discuss various approaches to solving the Doppler imaging problem for this dataset.
 Unless otherwise noted, in all experiments we adopt a Gaussian prior for the spherical harmonic coefficients $\bvec{y_1}$ with mean $\boldsymbol{\mu}_\bvec{y_1} = \bvec{0}$ and covariance $\boldsymbol{\Lambda}_\bvec{y_1} = (10^{-2})^2\bvec{I}$, corresponding to a flat power spectrum prior.
 We place a Gaussian process prior on the spectrum $\bvec{s}$ with mean $\boldsymbol{\mu}_\bvec{s} = \bvec{1}$ and a covariance matrix $\boldsymbol{\Lambda}_\bvec{s}$ computed from a Mat\'ern-3/2 kernel with amplitude $\sigma_\bvec{s} = 0.3$ and lengthscale $\rho_\bvec{s} = 3\times 10^{-5}$.
+
+\subsection{Known baseline and spectrum}
+\label{sec:spot_y1}
+%
+In our first experiment, we attempt to infer the stellar map assuming we have perfect knowledge of the rest frame spectrum $\bvec{s}$ and the baseline $\bvec{b}$ (Equation~\ref{eq:norm:b}).
+This is analogous to the case where a good physical model exists for the stellar spectrum and simultaneous photometry is available to constrain the baseline variations.
+As we showed in \S\ref{sec:solve_y}, the posterior distribution for the map coefficients $\bvec{y_1}$ is analytic in this case, with mean given by Equation~(\ref{eq:inverse:y1hat})
+and covariance given by Equation~(\ref{eq:inverse:y1cov}). 
+Note that we must first scale the data vector $\bvec{f}$ by $\bvec{b}$ (which in this case is known).
+
+% \begin{figure}[p!]
+%     \begin{centering}
+%         \includegraphics[width=0.49\linewidth]{spot_y1_timeseries.pdf}
+%         \includegraphics[width=0.49\linewidth]{spot_y1_rect.pdf}
+%         \caption{%
+%             The solution to the \spot problem at high SNR when both the rest frame spectrum and the baseline are known.
+%             The panel on the left shows the inferred map at each of the 16
+%             epochs, alongside the observed spectrum (black points) and the best-fit model (orange lines). 
+%             The rectangular projection of the original map is shown at the top right; the inferred map is displayed below it. 
+%             The bottom panel shows the posterior uncertainty as a function of latitude and longitude, ranging from close to zero in the northern hemisphere to $\sigma_\mathrm{prior} \approx 10\%$ below a latitude of $-30^\circ$. 
+%             The latter is the uncertainty associated with our particular choice of prior, as the southernmost latitudes of the star are never visible to the observer.
+%         }
+%         \label{fig:spot_y1}
+%     \end{centering}
+% \end{figure}
+
+The results are shown in Figure~\ref{fig:spot_y1}. 
+The left hand panel shows the inferred map alongside the data (black points) and best fit model (orange curves) at each of the 16 epochs.
+The panels on the right show the true map (top), the inferred map (center)
+and the posterior pointwise uncertainty (bottom) on a rectangular latitude-longitude grid. 
+The uncertainty on the vector of pixels $\bvec{p}$ where we evaluate the map is equal to the square root of the diagonal of the posterior covariance matrix for the pixel values, computed from
+%
+\begin{align}
+    \label{eq:spotstar:uncert}
+    \boldsymbol{\Sigma}_\bvec{p} = \bvec{P} \boldsymbol{\Sigma}_\bvec{\hat{y}_1}^{-1} \bvec{P}^\top
+\end{align}
+%
+where $\bvec{P}$ is the change-of-basis matrix from spherical harmonic coefficients to pixels on the grid.
+
+The inferred map is nearly indistinguishable from the true map, save for a few small differences, particularly below the stellar equator. 
+This is captured by the uncertainty, which increases south of $+30^\circ$ latitude, reaching a maximum at $-30^\circ$, below which the uncertainty is constant at about 10\%. 
+This is due to the fact that regions below $-40^\circ$ latitude are never in view from the observer's perspective, while regions between about $-30^\circ$ and $-40^\circ$ are so strongly limb-darkened that the data contains little information about them. 
+The particular value of the uncertainty in this region---10\%---is the uncertainty associated with the prior, which can be computed by replacing $\boldsymbol{\Sigma}_\bvec{\hat{y}_1}$ with $\boldsymbol{\Lambda}_\bvec{y_1}$ in Equation~(\ref{eq:spotstar:uncert}).
+
+\subsection{Known spectrum, unknown baseline}
+\label{sec:spot_y1b}
+%
+We next investigate the case where the spectrum is known exactly, but the baseline is not. 
+This corresponds to the case discussed in
+\S\ref{sec:norm}. 
+We use the solution to the linearized problem, Equation~(\ref{eq:norm:yhat}), to obtain an initial guess for $\bvec{y_1}$. 
+We then repeatedly solve Equation~(\ref{eq:inverse:y1hat}) for $\bvec{y_1}$, given the baseline computed from the previous value of $\bvec{y_1}$ from Equation~(\ref{eq:norm:b}).
+Because of the high SNR of our data, we find that it is necessary to employ a simple tempering procedure to avoid getting stuck in local minima. 
+We introduce an artificial temperature $T$ that decreases every iteration in equally spaced logarithmic steps $\Delta \log T$ from an initial temperature $T=T_0$ to $T=1$. 
+This temperature is used to scale the data covariance $\boldsymbol{\Sigma}_\bvec{f}$; in practice, we simply replace $\boldsymbol{\Sigma}_\bvec{f}$ with $T \boldsymbol{\Sigma}_\bvec{f}$ in Equation~(\ref{eq:inverse:y1hat}). 
+This has the effect of smoothing out the likelihood space, reducing the likelihood that the solver will get stuck in a local minimum. 
+For this particular experiment, we set $T_0 = 100$ and $\Delta \log T = -0.25$, for a total of $9$ steps of the bilinear solver.
+%
+In a final step, we run a gradient-descent optimizer, initializing it at the solution obtained with the bilinear solver. 
+We use the \texttt{Keras} \citep{Keras} implementation of the Nesterov momentum-enhanced Adam solver \citep[\texttt{NAdam};][]{NAdam}, running it for $N_\mathrm{nadam} = 80$ iterations at a learning rate $L_\mathrm{nadam} = 10^{-4}$. 
+Our loss function is simply the (negative) log probability, equal to the sum of the log likelihood and log prior:
+%
+\begin{align}
+    \label{eq:spotstar:logP}
+    -\ln P & =
+    \frac{1}{2}
+    \Big(
+    \bvec{r}^\top \boldsymbol{\Sigma}_\bvec{f}^{-1} \bvec{r} \, + \,
+    \bvec{y_1}^\top \boldsymbol{\Lambda}_\bvec{y_1}^{-1} \bvec{y_1} \, + \, (\bvec{b - 1})^\top \boldsymbol{\Lambda}_\bvec{b}^{-1} (\bvec{b - 1})
+    \Big)
+\end{align}
+%
+where $\bvec{r}$ is the residual (data minus model) vector and the last term is a prior we include on the baseline $\bvec{b}$, which we force to be close to a mean of unity with covariance $\boldsymbol{\Lambda}_\bvec{b} = (0.1)^2\bvec{I}$.
+
+% \begin{figure}[p!]
+%     \begin{centering}
+%         \includegraphics[width=0.49\linewidth]{spot_y1b_timeseries.pdf.pdf}
+%         \includegraphics[width=0.49\linewidth]{spot_y1b_rect.pdf}
+%         \\[0.5em]
+%         \includegraphics[width=0.405\linewidth]{spot_y1b_baseline.pdf}
+%         \includegraphics[width=0.575\linewidth]{spot_y1b_coeffs.pdf}
+%         \caption{%
+%             Similar to Figure~\ref{fig:spot_y1}, but assuming the baseline is not known. 
+%             The panel at the bottom left shows the true baseline (blue) and the inferred baseline (orange), along with its $1\sigma$ uncertainty. 
+%             The large offset between the two highlights one of the fundamental degeneracies of the problem: since most of the southern hemisphere of the star is never visible, the coefficient of the $Y_{1,-1}$ (\raisebox{-0.2em}{\includegraphics[width=1em]{Y1m1.pdf}}) spherical harmonic is not constrained by the data, resulting in an unknowable additive offset in the baseline.
+%             This effect can be seen also in (\emph{a}) the inferred map, where the background intensity in the northern hemisphere is significantly larger than that in the southern hemisphere, and (\emph{b}) the spherical harmonic coefficients (bottom right), where a large discrepancy is visible between the true and inferred values of the first two coefficients.
+%         }
+%         \label{fig:spot_y1b}
+%     \end{centering}
+% \end{figure}
+
+Our results are shown in Figure~\ref{fig:spot_y1b}. 
+The panels at the top are the same as those in Figure~\ref{fig:spot_y1}, but now we also plot the inferred baseline (lower left) and spherical harmonic coefficients (lower right) next to the true values. 
+We recover the \texttt{SPOT} map just as well as before, except for the presence of a strong dipolar artifact; the background intensity level is higher in the northern hemisphere and lower in the southern hemisphere. 
+This effect is closely related to the fact that we do not know the true baseline. 
+While we are able to infer the shape of the baseline exceedingly well (lower left panel), there is a large offset between the true value and our inferred value. 
+This is due to a fundamental degeneracy involving the $Y_{1,-1}$ (\raisebox{-0.2em}{\includegraphics[width=1em]{Y1m1.pdf}}) spherical harmonic coefficient, which, because a large portion of the southern hemisphere is never in view, cannot be constrained by the data. 
+The magnitude of the true value of the coefficient is quite large (lower right panel), since the northern hemisphere \emph{is} significantly darker than the southern hemisphere; however, the data do not constrain this, and our prior shrinks all coefficients toward zero. 
+The net effect is that the region surrounding the spot in the northern hemisphere gets brighter to even out the difference between the two hemispheres. 
+This causes the visible portion of the star to get brighter, raising the baseline relative to the true value.
+
+Note, importantly, that even in cases where the baseline is known (from, say, simultaneous photometry), it is typically only known in a \emph{relative} sense. 
+This degeneracy will typically apply in that case as well, so in principle the dipole term will always be unconstrained for stars at similar inclinations. 
+For inclinations closer to $90^\circ$ this is much less of an issue, although (as we will see below) other degeneracies show up.
+
+Finally, we note that the pixelwise uncertainty shown is a strict \emph{lower bound} on the map uncertainty, since it is the uncertainty conditioned on the inferred value of the baseline. 
+Sampling methods such as MCMC are required to obtain the \emph{true} uncertainty on the map. 
+We discuss this further in \S\ref{sec:discussion}.
+
+\subsection{Unknown spectrum, unknown baseline}
+\label{sec:spot_y1bs}
+%
+Suppose we are handed a series of spectra in a wavelength regime where we do not have a good physical model for the line generation mechanisms, or a wavelength regime with many line blends for which we do not have reliable templates. 
+Or perhaps the spectra are of a star whose rotational broadening does not dominate over other broadening mechanisms, in which case our template might not be accurate enough to allow us to tease out the small Doppler signals. 
+In these cases, we may want to relax the assumption that we know the rest frame spectrum $\bvec{s}$ exactly, and instead try to \emph{learn} it from the data.
+
+Given the same data as before, we now try to learn both the stellar map and the stellar spectrum, conditioned only on the wide Gaussian priors discussed above. 
+We must follow the iterative procedure presented in
+\S\ref{sec:full_solve}, adjusting for the fact that we do not know the true baseline, either (\S\ref{sec:norm}).
+
+% \begin{figure}[p!]
+%     \begin{centering}
+%         \includegraphics[width=0.49\linewidth]{spot_y1bs_timeseries.pdf}
+%         \includegraphics[width=0.49\linewidth]{spot_y1bs_rect.pdf}
+%         \\[0.5em]
+%         \includegraphics[width=0.405\linewidth]{spot_y1bs_baseline.pdf}
+%         \includegraphics[width=0.575\linewidth]{spot_y1bs_coeffs.pdf}
+%         \\[0.5em]
+%         \includegraphics[width=0.98\linewidth]{spot_y1bs_spectrum.pdf}
+%         \caption{%
+%             Similar to Figure~\ref{fig:spot_y1}, but assuming we have no information about either the spectrum, the baseline, or the map coefficients. 
+%             The bottommost panel now shows the true rest frame spectrum (blue line), the initial guess based on a deconvolution (dashed orange line), and the inferred spectrum (orange line, with shaded $1\sigma$ uncertainty).
+%         }
+%         \label{fig:spot_y1bs}
+%     \end{centering}
+% \end{figure}
+
+% \begin{figure}[p!]
+%     \begin{centering}
+%         \includegraphics[width=0.49\linewidth]{spot_y1bs_low_snr_timeseries.pdf}
+%         \includegraphics[width=0.49\linewidth]{spot_y1bs_low_snr_rect.pdf}
+%         \\[0.5em]
+%         \includegraphics[width=0.405\linewidth]{spot_y1bs_low_snr_baseline.pdf}
+%         \includegraphics[width=0.575\linewidth]{spot_y1bs_low_snr_coeffs.pdf}
+%         \\[0.5em]
+%         \includegraphics[width=0.98\linewidth]{spot_y1bs_low_snr_spectrum.pdf}
+%         \caption{%
+%             Same as Figure~\ref{fig:spot_y1bs}, but for $10\times$ lower SNR.
+%             We still recover the \spot map and the input spectrum, albeit with higher uncertainty, as expected.
+%         }
+%         \label{fig:spot_y1bs_low_snr}
+%     \end{centering}
+% \end{figure}
+
+Because the problem is generally not convex, we need a good starting guess for either the spectrum or the map coefficients. 
+We note that we can very crudely approximate the rest frame spectrum by deconvolving the average observed spectrum with the first term of the convolution kernel $\kT$ (\raisebox{-0.1em}{\includegraphics[width=2em]{kT00.pdf}}).
+In practice, this is a fairly poor approximation, but we find that it suffices as an initial guess. 
+Given this starting value of $\bvec{s}$, we compute an initial guess for $\bvec{y_1}$ using the linear baseline approximation. 
+We then iterate between solving for $\bvec{s}$ and solving for $\bvec{y_1}$, always using the previous value of the baseline to compute $\bvec{y_1}$. 
+As in the previous section, we find it necessary to implement a tempering scheme, except with a much higher starting temperature $T_0 = 5,000$ and a slower decay $\Delta\log T = -0.04$.
+We again refine our solution with \texttt{NAdam}, this time setting $N_\mathrm{nadam} = 3,000$ and $L_\mathrm{nadam} = 2.5\times 10^{-5}$. 
+Since we are now solving for the spectrum as well, we include the negative log prior term for the spectrum, $\frac{1}{2}(\bvec{s - 1})^\top \boldsymbol{\Lambda}_\bvec{s}^{-1}(\bvec{s - 1})$, in Equation~(\ref{eq:spotstar:logP}).
+
+Figure~\ref{fig:spot_y1bs} shows the results. 
+The top portion of the figure is the same as before. 
+A panel at the bottom has been added showing the true rest frame spectrum (blue), the initial guess based on the deconvolution (dashed orange), and the inferred spectrum (orange). 
+We recover the \spot feature as before, albeit with more noise, particularly south of about $+30^\circ$ latitude. 
+Our uncertainties are somewhat underestimated, as expected, since they are computed conditioned on the optimum value of the spectrum. 
+On the other hand, we recover the spectrum exceedingly well, with low uncertainty and virtually no bias anywhere.
+
+To test our technique on more realistic data, in Figure~\ref{fig:spot_y1bs_low_snr} we repeat the experiment on data with $10$ times higher uncertainty, setting $\sigma_\bvec{f} = 10^{-3}$. 
+Because the higher uncertainty increases the volume of the region surrounding the global optimum, it is actually significantly \emph{easier} for the algorithm to converge on the best solution, so we set $T_0 = 500$, $\Delta\log T = -0.05$, $N_\mathrm{nadam} = 500$, and $R_\mathrm{nadam} = 10^{-4}$. 
+Interestingly, while the uncertainty on the spectrum increased, the quality of the recovered \spot map did not noticeably degrade. 
+This suggests we did not quite find the global optimum in Figure~\ref{fig:spot_y1bs}. 
+We discuss this further in \S\ref{sec:discussion}.
+
+\subsection{Spatially-variable spectrum}
+\label{sec:twospec}
+%
+In our final experiment, we relax the assumption that the stellar rest frame spectrum is spatially constant, allowing for different spectral features inside and outside of the \spot. 
+This is the case for, say, chemically peculiar Ap stars, whose abundance of certain elements is significantly different within spotted regions on their surfaces. 
+It is also the case in general for spots that are significantly cooler than the rest of the photosphere, where the relative abundance of different ionization states or molecular features may be different than in the hotter, unspotted regions.
+
+The problem setup is the same as that discussed in \S\ref{sec:eigen}, where our full map vector $\bvec{a_0}$ is the outer product of a spectral matrix $\mathbb{S}$, whose $J$ columns are the different spectral components, and a spherical harmonic coefficient matrix $\mathbb{Y}^\top$, whose $J$ rows are the corresponding coefficient vectors. 
+For simplicity, in this experiment we consider only $J = 2$ spectral components and further require that the first component is spatially constant, i.e., the first row of $\mathbb{Y}^\top$ is the vector $(1 \quadquad \bvec{0}^\top)$. 
+The second row of $\mathbb{Y}^\top$ is the vector $(1 \quadquad \bvec{y_1}^\top)$, where $\bvec{y_1}$ is the (unknown) spherical harmonic expansion of the spot. 
+The two columns of $\mathbb{S}$ are $\bvec{s_1}$ and $\bvec{s_2}$, the unknown spectral components.
+
+% \begin{figure}[t!]
+%     \begin{centering}
+%         \includegraphics[width=\linewidth]{twospec.pdf}
+%         \caption{%
+%             An example of a star whose spectrum is different within the spot (\texttt{B}) and outside of the spot (\texttt{A}). 
+%             Everywhere on the surface, the spectrum is a linear combination of two spectral components ($s_1$ and $s_2$).
+%             As in Figure~\ref{fig:spot_y1bs}, we assume we do not know the map, the baseline, or either of the spectra.
+%             The top row shows the true values for the map and the spectra, and the bottom row shows our inferred values. 
+%         }
+%         \label{fig:twospec}
+%     \end{centering}
+% \end{figure}
+
+We set \bvec{s_1} equal to a flat spectrum with two absorption lines of different depths, and \bvec{s_2} to the same spectrum, except we make the second line an emission feature. 
+The local rest-frame spectrum everywhere on the surface is a linear combination of these two spectra. 
+In our simple problem, the weight given to the first spectrum is the same everywhere (encoded in the first row of $\mathbb{Y}^\top$), and the weight given to the second spectrum is large outside of the spot and small within the spot (encoded in the second row of $\mathbb{Y}^\top$, which we set equal to the spherical harmonic expansion of the \spot feature).
+The first row of Figure ~\ref{fig:twospec} shows the problem setup. 
+The two spectral components are shown as the blue ($\bvec{s_1}$) and green ($\bvec{s_2}$) curves at the right. 
+Point \texttt{A} on the map (left panel) is outside the spot feature, so its local spectrum has nearly equal contributions from $\bvec{s_1}$ and $\bvec{s_2}$, and the second spectral line is absent (center panel). 
+Point \texttt{B} is inside the spot, so it receives a contribution from $\bvec{s_1}$ only.
+
+In our inference step, we again assume we have no knowledge of the map, the baseline, or either of the spectral components. 
+As before, we initialize $\bvec{s_1}$ to the deconvolved mean spectrum and $\bvec{s_2}$ to the deconvolved mean spectrum after subtracting $\bvec{s_1}$. 
+In practice this leads to a decent approximation to $\bvec{s_1}$ but a rather featureless guess for $\bvec{s_2}$. 
+We use the same priors as before, except we set $\sigma_\bvec{s_1} = \sigma_\bvec{s_2} = 0.01$ to force the continuum to be flatter. 
+We run our bilinear solver with $T_0 = 5,000$ and $\Delta\log T = -0.025$ followed by the nonlinear solver with $N_\mathrm{nadam} = 2,000$ and $L_\mathrm{nadam} = 3\times 10^{-4}$.
+
+The results are shown in the bottom panel of Figure~\ref{fig:twospec}.
+We recover the \spot feature reasonably well, although with more artifacts than in the previous experiments. 
+We also recover the two spectral components, although our solution for $\bvec{s_2}$ is significantly better than that for $\bvec{s_1}$. 
+This is due to the fact that the only information about $\bvec{s_1}$ that makes it into our dataset is the convolution of $\bvec{s_1}$ with the first term of the convolution kernel $\kT$ (\raisebox{-0.1em}{\includegraphics[width=2em]{kT00.pdf}}), since this spectral component has no spatial variability.
+Since the deconvolution operation is in general ill-posed, there is no unique solution for $\bvec{s_1}$. 
+On the other hand, the other spectral component projects into the data via convolutions with all other terms of the kernel and is therefore very well constrained.
+Finally, we can estimate the spectra at points \texttt{A} and \texttt{B} as before (center panel). 
+We recover the single spectral line at \texttt{A} and the two lines at \texttt{B}, albeit rather noisily due to the uncertainty in $\bvec{s_1}$.
+
+
+\section{Discussion}
+\label{sec:discussion}
+%
+
+\xxx{%
+    \begin{enumerate}
+        %
+        \item%
+              A gaussian prior with unit mean is a pretty bad prior for the spectrum.
+              In a more realistic scenario, we'd know a lot more information about the spectrum---such as where the lines are and some estimate of their shapes and depths---so the fidelity of our maps would be higher.
+              %
+        \item%
+              We are not addressing differential rotation and convective blueshift.
+              These make the integral in Equation~(\ref{eq:deconv:kT}) very difficult to solve. 
+              We will tackle this in the next paper.
+              %
+        \item%
+              Telluric lines could be treated much as in Figure~\ref{fig:twospec}, and marginalized over as in \citet{Bedell2019}.
+              %
+        \item% 
+              The instrumental profile is another Toeplitz matrix that can be dotted into Equation~(\ref{eq:linear:f}).
+              %
+        \item Discuss the case where the inclination/period/velocity is unknown.
+              The problem is not linear in these variables, so we need MCMC. 
+              But our model is differentiable, so we can easily use HMC. 
+              Discuss.
+              %
+        \item%
+              Evaluation of the model via Equation~(\ref{eq:deconv:F}) requires first the rotation of the $(\lmax + 1)^2$ $\kT$ kernels (each of length $W$) to the correct stellar rotational phase, an operation that scales approximately as $W \lmax^3$, followed by $(\lmax + 1)^2$ linear convolutions of the rotated $\kT$ kernels with the spectral components (each of length $K$), which scales approximately as $W K \lmax^2$. 
+              Since typically $K \gg \lmax$, the latter computation dominates and the entire evaluation takes $\mathcal{O}(W K \lmax^2)$ operations.
+    \end{enumerate}
+}
+
+\subsection{Dependence on SNR}
+\label{sec:snr}
+%
+Most of the examples in this paper considered very high SNR spectra.
+Figure~\ref{fig:snr} shows the effect of different SNR on the quality of the inferred map. 
+As before, the SNR we report is the ratio of the standard deviation of the true model in each wavelength bin across all epochs, averaged over all wavelength bins (i.e., the ``signal'') to the standard deviation of the added noise term, $\sigma_\bvec{f}$ (the ``noise'').
+The panels in Figure~\ref{fig:snr} show the inferred map for SNR in the range 1---1000, where SNR $\sim 100$ is the fiducial case considered in the examples so far. 
+The setup is the same as that in \S\ref{sec:spot_y1b}, where the spectrum is known exactly but the map coefficients and the baseline are not.
+
+As may be expected, the quality of the map decreases with lower SNR, but a reduction of the SNR by $\sim 20\times$ still allows for reasonable recovery of the \spot feature. 
+In general, as the SNR decreases further, two things happen: the \spot contrast decreases, and the features begin to blur out, especially south of about $+30^\circ$ latitude, where features are more limb-darkened at this inclination and in view for a smaller fraction of the time.
+
+As the SNR incraeses, however, the quality of the \spot feature does not improve appreciably, since a SNR of 100 is more than sufficient to recover a $l_\mathrm{max} = 15$ band-limited map. 
+Interestingly, south of the equator, the map quality actually begins to degrade with higher SNR. 
+This is due to the fact that finding the global optimum becomes exponentially more difficult with higher SNR, as the posterior volume becomes ever smaller. 
+Even with aggressive tempering, we were unable to converge on the best solution for SNR $\gtrsim 500$ given our standard, conservative priors and initial guesses (\S\ref{sec:spotstar}).
+%
+% \begin{figure}[p!]
+%     \begin{centering}
+%         \includegraphics[width=0.98\linewidth]{snr.pdf}
+%         \caption{%
+%             Recovered \spot map as a function of SNR per resolution element.
+%             The quality of the inferred map in the northern hemisphere improves with SNR, but at very high SNR the region surrounding the global optimum becomes so small that our optimization methods struggle to converge on the correct solution.
+%         }
+%         \label{fig:snr}
+%     \end{centering}
+% \end{figure}
+
+
+\subsection{Dependence on inclination}
+\label{sec:inc}
+%
+% \begin{figure}[p!]
+%     \begin{centering}
+%         \includegraphics[width=0.98\linewidth]{inclinations.pdf} % 
+%         \caption{%
+%             Recovered \spot map as a function of stellar inclination. 
+%             The rest frame spectrum is assumed to be known exactly, but the baseline is not. 
+%             At very low inclinations, the small projected velocities begin to degrade the spatial resolution of the inferred map, while at inclinations close to $90^\circ$ there is a degeneracy between the northern and southern hemispheres.    
+%         }
+%         \label{fig:inclinations}
+%     \end{centering}
+% \end{figure}
+%
+As in \citet{Vogt1987}, we also investigate the dependence of the solution on the inclination of the star.
+Figure~\ref{fig:inclinations} shows the inferred map for the same problem setup as before (with SNR $\sim 100$), but this time varying the inclination between $10^\circ$ (nearly face-on) and $90^\circ$ (perfectly edge-on). 
+As before, the inclination is assumed to be known exactly. 
+We further keep the true equatorial velocity of the star constant across all panels, so that the figure corresponds to the same star viewed at different orientations. 
+Because of this, decreasing the inclination decreases $v\sin i$, reducing the width of the convolution kernel and therefore the spatial resolution of our inferred map. 
+Increasing the inclination does not result in appreciable changes until an inclination of $\sim 80^\circ$, above which it becomes difficult to differentiate between features in the northern and southern hemispheres, whose projected velocities are nearly equal. 
+At $i = 90^\circ$, there is a formal degeneracy between the two hemispheres, which can be seen from the mirror-image symmetry in the inferred map. 
+These results are broadly consistent with those of \citet{Vogt1987}.
+
+\section{Conclusions}
+\label{sec:conclusions}
+%
+\xxx{%
+    \begin{enumerate}
+        \item Advantages of data-driven modeling
+        \item Interpretable priors
+        \item Works on blended lines
+        \item Uses the whole spectrum
+        \item Yields uncertainties!
+        \item Probably works on slow rotators
+        \item Differentiable!
+        \item Fast!
+        \item Use in MCMC to marginalize over inclination and stuff
+    \end{enumerate}
+}
+
+
+%
+%
+%
+%
+\clearpage
+\appendix
+%
+%
+%
+%
+
+\section{Solving the $\kT$ integral}
+%
+In this section we will show how to compute the integral in Equation~(\ref{eq:kT:kT}), yielding the terms of the convolution kernel $\kT$. 
+It is convenient to first change basis from spherical harmonics to polynomials on the sphere:
+%
+\begin{align}
+    \label{eq:appendix:kT}
+    \kT(\lnlam, \Dargs)
+     & =
+    \int\limits_{-\sqrt{1 - x^2}}^
+    {\sqrt{1 - x^2}}
+    \pbasis
+    \Big(x, y\Big)
+    \mathrm{d}y
+    \,
+    \AOne
+    \nonumber \\[0.5em]
+     & \equiv
+    \rhoT(\lnlam, \Dargs)
+    \,
+    \AOne
+    \quad,
+\end{align}
+%
+where $\AOne$ is the change of basis matrix from spherical harmonics to polynomials \citep[Equation B11 in][]{Luger2019} and
+%
+\begin{align}
+    \pbasis(\x) \equiv
+    \Big(
+    1 \quad\quad\quad\quad\quad\quad x \quad\quad\quad\quad\quad\quad z \quad\quad\quad\quad\quad\quad y \quad\quad\quad\quad\quad\quad x^2 \quad\quad\quad\quad\quad\quad xz \quad\quad\quad\quad\quad\quad xy \quad\quad\quad\quad\quad\quad yz \quad\quad\quad\quad\quad\quad y^2 \quad\quad\quad\quad\quad\quad
+    ...
+    \Big)^\top
+    \quad,
+\end{align}
+%
+is the polynomial basis \citep[Equation 7][]{Luger2019}.
+The $n^\mathrm{th}$ term of the polynomial basis is a polynomial in $x$, $y$, and $z = \sqrt{1 - x^2 - y^2}$:
+%
+\begin{align}
+    \pbasisn
+    &=
+    x^i y^j z^k
+\end{align}
+%
+where $i, j, k$ are integers given by
+%
+\begin{align}
+    \label{eq:kT:lm}
+    i &= \floor*{\Lambda - \Delta}
+    \nonumber \\[0.5em]
+    j &= \floor*{\Delta}
+    \nonumber \\[0.5em]
+    k &= \ceil*{\Delta} - \floor*{\Delta}
+\end{align}
+%
+with
+%
+\begin{align}
+    \Lambda &= \floor*{\sqrt{n}}
+    \nonumber \\[0.5em]
+    \Delta &= \frac{n - \Lambda^2}{2}
+    \quad .
+\end{align}
+%
+We may now explicitly write down the $n^\mathrm{th}$ term of the vector $\rhoT(\lnlam, \Dargs)$ in Equation~(\ref{eq:appendix:kT}),
+%
+\begin{align}
+    \label{eq:kT:sTexpression}
+    \rho_n(\lnlam, \Dargs)
+     & =
+    \rho_{i,\,j,\,k}(\lnlam, \Dargs)
+    =
+    x^i
+    \int\limits_{-\sqrt{1 - x^2}}^
+    {\sqrt{1 - x^2}}
+    y^j
+    \left(1 - x^2 - y^2\right)^{\frac{k}{2}} \,
+    \mathrm{d}y
+    \quad .
+\end{align}
+%
+When $i = k = 0$, the integral is easy to evaluate:
+%
+\begin{align}
+    \rho_{i,\,j,\,0}(\lnlam_0)
+     & =
+    \begin{cases}
+        2 \left( 1 - x^2 \right)^\frac{j + 1}{2}
+        \quad\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad
+          & j \, \mathrm{even}        \\
+        0 & j \, \mathrm{odd} \quad .
+    \end{cases}
+\end{align}
+%
+The general term may be computed from the recurrence relation
+%
+\begin{align}
+    \rho_{0,\,j,\,0}(\lnlam_0) = \frac{j - 1}{j + 1} \big(1 - x^2\big) \rho_{0,\,j-2,\,0}
+\end{align}
+%
+provided
+%
+\begin{align}
+    \rho_{0,\,0,\,0} & = 2 \sqrt{1-x^2} \nonumber \\
+    \rho_{0,\,1,\,0} & = 0 \quad.
+\end{align}
+%
+When $i = 0$ and $k = 1$, we may substitute $y = \sin\psi\sqrt{1 - x^2}$ in the integrand to obtain
+%
+\begin{align}
+    \rho_{0,\,j,\,1}(\lnlam_0)
+     & =
+    (1 - x^2)^{\frac{j + 2}{2}}
+    \int\limits_{-\frac{\pi}{2}}^{\frac{\pi}{2}}
+    \sin^j\psi
+    \cos^2\psi \,
+    \mathrm{d}\psi
+    \quad.
+\end{align}
+%
+We may solve this integral using the recurrence relation
+%
+\begin{align}
+    \int
+    \sin^j\psi
+    \cos^m\psi \,
+    \mathrm{d}\psi
+     & =
+    -\frac{\sin^{j-1}\psi \cos^{m+1}\psi}{j + m}
+    +
+    \frac{j - 1}{j + m}\int\sin^{j-2}\psi \cos^m\psi \mathrm{d}\psi
+    \quad ,
+\end{align}
+%
+which, in our case, simplifies to
+%
+\begin{align}
+    \int\limits_{-\frac{\pi}{2}}^{\frac{\pi}{2}}
+    \sin^j\psi
+    \cos^2\psi \,
+    \mathrm{d}\psi
+     & =
+    \frac{j - 1}{j + 2}\int\limits_{-\frac{\pi}{2}}^
+    {\frac{\pi}{2}}\sin^{j-2}\psi \cos^2\psi \mathrm{d}\psi
+    \quad.
+\end{align}
+%
+We thus arrive at the recurrence relation
+%
+\begin{align}
+    \rho_{0,\,j,\,1} & = \frac{j - 1}{j + 2} \big(1 - x^2\big) \rho_{0,\,j-2,\,1}
+\end{align}
+%
+with initial conditions
+%
+\begin{align}
+    \rho_{0,\,0,\,1} & = \frac{\pi}{2} \big(1-x^2\big) \nonumber \\
+    \rho_{0,\,1,\,1} & = 0 \quad.
+\end{align}
+%
+Given these expressions, recursing upward in $i$ is easy:
+%
+\begin{align}
+    \rho_{i,\,j,\,k} & = x \, \rho_{i-1,\,j,\,k} \quad.
+\end{align}
+%
+This completes our derivation. 
+To summarize, given the boundary conditions
+%
+\begin{align}
+    \rho_{0,\,0,\,0} & = 2 \sqrt{1-x^2} \nonumber                \\
+    \rho_{0,\,0,\,1} & = \frac{\pi}{2} \big(1-x^2\big) \nonumber \\
+    \rho_{0,\,1,\,k} & = 0 \quad ,
+\end{align}
+%
+we may compute any term in $\rhoT$ via the expressions
+%
+\begin{align}
+    \label{eq:kT:sTrecurrence}
+    \rho_{0,\,j,\,k} & = \frac{j - 1}{j + 1 + k} \big(1 - x^2\big) \rho_{0,\,j-2,\,k} \nonumber \\
+    \rho_{i,\,j,\,k} & = x \, \rho_{i-1,\,j,\,k} \quad.
+\end{align}
+%
+The terms of the convolution kernel $\kT$ are then obtained by dotting this vector into the change of basis matrix $\AOne$, as discussed above.
+
+% Table
+\clearpage
+\begin{center}
+    \begin{longtable}{cll}
+        \caption{Common notation used in this paper}
+        \label{tab:notation}                                                                                                                                            \\
+        %
+        \toprule
+        \multicolumn{1}{c}{\textbf{Symbol}}                 &
+        \multicolumn{1}{c}{\textbf{Description}}            &
+        \multicolumn{1}{c}{\textbf{Reference}}                                                                                                                          \\
+        \midrule
+        \endfirsthead
+        %
+        \multicolumn{3}{c}%
+        {{\bfseries \tablename\ \thetable{}}. (continued from previous page)}                                                                                           \\[0.5em]
+        \toprule
+        \multicolumn{1}{c}{\textbf{Symbol}}                 &
+        \multicolumn{1}{c}{\textbf{Definition}}             &
+        \multicolumn{1}{c}{\textbf{Reference}}                                                                                                                          \\
+        \midrule
+        \endhead
+        \bottomrule
+        %
+        \endfoot
+        %
+        \endlastfoot
+        %
+        \midrule
+        \multicolumn{3}{c}{\emph{Variables}}                                                                                                                            \\
+        \midrule
+        %
+        $a_{lm}$                                            & spectral spherical harmonic coefficient                      & Equation~(\ref{eq:deconv:Ixi0})            \\
+        $\alm$                                              & vector of spectral spherical harmonic coefficients           & Equation~(\ref{eq:deconv:alm})             \\
+        $\bvec{a_0}$                                        & $\alm$ at reference time $t = t_0$                           & Equation~(\ref{eq:deconv:R})               \\
+        $\bvec{A_0}$                                        & matrix form of $\bvec{a_0}$                                  & Equation~(\ref{eq:inverse:azero})          \\
+        $\bvec{b}$                                          & flux baseline vector                                         & Equation~(\ref{eq:norm:b})                 \\
+        $\bvec{B}$                                          & block matrix representation of $\bvec{b}$                    & Equation~(\ref{eq:norm:b})                 \\
+        $c$                                                 & speed of light                                               & Equation~(\ref{eq:kT:beta})                \\
+        $\Curve$                                            & curve of constant radial velocity                            & Equation~(\ref{eq:deconv:kT})              \\
+        $\Dargs$                                            & parameters of the Doppler field                              & \S\ref{sec:the_problem}                    \\
+        $\D$                                                & logarithmic Doppler shift                                    & Equation~(\ref{eq:the_problem:D})          \\
+        $\Doppler$                                          & Doppler design matrix                                        & Equation~(\ref{eq:linear:f})               \\
+        $\bvec{f}$                                          & vector of observed flux values                               & Equation~(\ref{eq:linear:f})               \\
+        $F$                                                 & flux                                                         & Equation~(\ref{eq:the_problem:F})          \\
+        $i$                                                 & inclination                                                  & Equation~(\ref{eq:kT:beta})                \\
+        $I$                                                 & specific intensity                                           & Equation~(\ref{eq:the_problem:Ixi})        \\
+        $\bvec{I}$                                          & identity matrix                                              &                                            \\
+        $l$                                                 & spherical harmonic degree                                    &                                            \\
+        $L_\mathrm{nadam}$                                  & \texttt{NAdam} learning rate                                 & \S\ref{sec:spotstar}                       \\
+        $\bvec{L}$                                          & limb darkening operator                                      & Equation~(\ref{eq:ld:L})                   \\
+        $m$                                                 & spherical harmonic order                                     &                                            \\
+        $N_\mathrm{nadam}$                                  & number of \texttt{NAdam} iterations                          & \S\ref{sec:spotstar}                       \\
+        $\bvec{P}$                                          & Change of basis matrix from $Y_{lm}$ to pixels               & Equation~(\ref{eq:spotstar:uncert})        \\
+        $\bvec{R}$                                          & Wigner rotation matrix                                       & Equation~(\ref{eq:deconv:R})               \\
+        $\bvec{s}$                                          & vector representation of the spectrum                        & Equation~(\ref{eq:inverse:azero})          \\
+        $\bvec{S}$                                          & block matrix representation of $\bvec{s}$                    & Equation~(\ref{eq:inverse:S})              \\
+        $\boldsymbol{\mathbb{S}}$                           & matrix of $J$ spectral components                            & Equation~(\ref{eq:eigen:azero})            \\
+        $\Surf$                                             & projected visible area of the star                           & Equation~(\ref{eq:the_problem:F})          \\
+        $t$                                                 & time                                                         & \S\ref{sec:the_problem}                    \\
+        $T$                                                 & artificial temperature in bilinear solver                    & \S\ref{sec:spotstar}                       \\
+        $T_0$                                               & initial artificial temperature setting                       & \S\ref{sec:spotstar}                       \\
+        $\Delta\log T$                                      & artificial temperature step size                             & \S\ref{sec:spotstar}                       \\
+        $u$                                                 & limb darkening coefficient                                   & \S\ref{sec:ld}                             \\
+        $\x$                                                & Cartesian position on the sky                                & \S\ref{sec:the_problem}                    \\
+        $y_{lm}$                                            & spherical harmonic coefficient                               & \S\ref{sec:inverse}                        \\
+        $\bvec{y}$                                          & vector of spherical harmonic coefficients                    & Equation~(\ref{eq:inverse:azero})          \\
+        $Y_{lm}$                                            & spherical harmonic                                           & Equation~(\ref{eq:deconv:Ixi0})            \\
+        $\bvec{Y}$                                          & block matrix representation of $\bvec{y}$                    & Equation~(\ref{eq:inverse:Y})              \\
+        $\boldsymbol{\mathbb{Y}}$                           & matrix of $J$ spherical harmonic components                  & Equation~(\ref{eq:eigen:azero})            \\
+        %
+        \pagebreak
+        \midrule
+        \multicolumn{3}{c}{\emph{Variables (Greek)}}                                                                                                                    \\
+        \midrule
+        %
+        $\beta$                                             & relativistic parameter                                       & Equation~(\ref{eq:the_problem:D})          \\
+        $\delta$                                            & Dirac delta function                                         & Equation~(\ref{eq:deconv:convolution})     \\
+        $\kT$                                               & convolution kernel basis vector                              & Equation~(\ref{eq:deconv:kT})              \\
+        $\lambda$                                           & wavelength                                                   & \S\ref{sec:the_problem}                    \\
+        $\lambda_\mathrm{r}$                                & reference wavelength                                         & \S\ref{sec:the_problem}                    \\
+        $\lnlam$                                            & $\ln\frac{\lambda}{\lambda_\mathrm{r}}$ (observer frame) & \S\ref{sec:the_problem}                    \\
+        $\lnlam_0$                                          & $\ln\frac{\lambda}{\lambda_\mathrm{r}}$ (rest frame)     & \S\ref{sec:the_problem}                    \\
+        $\boldsymbol{\Lambda}$                              & prior covariance matrix                                      &                                            \\
+        $\boldsymbol{\mu}$                                  & prior mean vector                                            &                                            \\
+        $\ylmbasis$                                         & spherical harmonic basis vector                              & Equation~(\ref{eq:deconv:ylmbasis})        \\
+        $\boldsymbol{\Sigma}$                               & covariance matrix                                            &                                            \\
+        $\omega$                                            & angular velocity                                             & Equation~(\ref{eq:kT:beta})                \\
+        %
+        \midrule
+        \multicolumn{3}{c}{\emph{Dimensions}}                                                                                                                           \\
+        \midrule
+        %
+        $J$                                                 & \# of spectral components                                    & \S\ref{sec:eigen}                          \\
+        $K$                                                 & \# of wavelength bins in the observed spectrum               & \S\ref{sec:linear}                         \\
+        $K'$                                                & \# of wavelength bins in the latent spectrum                 & \S\ref{sec:linear}                         \\
+        $M$                                                 & \# of epochs observed                                        & \S\ref{sec:linear}                         \\
+        $N$                                                 & \# of spherical harmonic coefficients                        & \S\ref{sec:linear}                         \\
+        $N'$                                                & \# of spherical harmonic coefficients after limb darkening   & \S\ref{sec:ld}                             \\
+        $W$                                                 & \# of wavelength bins in the convolution kernel              & \S\ref{sec:linear}                         \\
+        %
+        \midrule
+        \multicolumn{3}{c}{\emph{Operators \& Other symbols}}                                                                                                           \\
+        \midrule
+        %
+        $\mathrm{diag}$                                     & diagonal matricization                                       & Equation~(\ref{eq:ld:Dmwav})               \\
+        $\mathrm{vec}$                                      & vectorization                                                & Equation~(\ref{eq:inverse:azero})          \\
+        $*$                                                 & convolution                                                  & Equation~(\ref{eq:deconv:convolution_def}) \\
+        $\circ$                                             & element-wise product                                         & Equation~(\ref{eq:norm:fapprox})           \\
+        $\otimes$                                           & Kronecker product                                            & Equation~(\ref{eq:linear:Dm})              \\
+        $\ceil*{\,}$                                        & ceiling                                                      & Equation~(\ref{eq:kT:lm})                  \\
+        $\floor*{\,}$                                       & floor                                                        & Equation~(\ref{eq:kT:lm})                  \\
+        $\bvec{0}$                                          & the zero vector, $(0 \quadquad 0 \quadquad \cdots \quadquad 0)^\top$ &                                                                                                           \\
+        $\bvec{1}$                                          & the one vector, $(1 \quadquad 1 \quadquad \cdots \quadquad 1)^\top$ &                                                                                                           \\
+    \end{longtable}
+\end{center}
+
+% Bibliography
+\clearpage
+\bibliography{bib}
 
 \end{document}

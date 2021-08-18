@@ -18,9 +18,11 @@ y = spot_map[:, :].reshape(-1)
 veq = 60000.0  # m/s
 nt = 16
 theta = np.append([-180], np.linspace(-90, 90, nt - 1))
-map = starry.DopplerMap(ydeg, veq=veq, vsini_max=veq, inc=90, nt=nt, lazy=False)
+map = starry.DopplerMap(
+    ydeg, veq=veq, vsini_max=veq, inc=90, nt=nt, lazy=False
+)
 map[:, :] = y
-map.spectrum=1.0 - np.exp(-0.5 * (map.wav0 - 643.0) ** 2 / 0.0085 ** 2)
+map.spectrum = 1.0 - np.exp(-0.5 * (map.wav0 - 643.0) ** 2 / 0.0085 ** 2)
 flux = map.flux(theta=theta)
 F0 = flux[0]
 F = flux[1:]
@@ -53,14 +55,24 @@ for t in range(nt - 1):
     alpha = np.linspace(0.25, 1, 5)
     for i in range(5):
         ax[t, 2].plot(
-            map.wav, F[t] - F0, ls="-", lw=lw[i], color=color[i], alpha=alpha[i]
+            map.wav,
+            F[t] - F0,
+            ls="-",
+            lw=lw[i],
+            color=color[i],
+            alpha=alpha[i],
         )
     ax[t, 2].axis("off")
     ax[t, 2].set_ylim(-0.022, 0.022)
 
     # Plot current stellar image
     ax[t, 0].imshow(
-        img[t], origin="lower", extent=(-1, 1, -1, 1), cmap=cmap, vmin=vmin, vmax=vmax,
+        img[t],
+        origin="lower",
+        extent=(-1, 1, -1, 1),
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
     )
     x = np.linspace(-1, 1, 3000)
     y = np.sqrt(1 - x ** 2)

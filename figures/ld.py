@@ -40,7 +40,7 @@ render = (
         map._obl,
         tt.as_tensor_variable(y).astype(tt.config.floatX),
         map._u,
-        map._f
+        map._f,
     )[0]
     .eval()
     .reshape(res, res)
@@ -67,8 +67,15 @@ for l in range(ydeg + 1):
         y[n] = 1.0
         yprime = L.dot(y[: (ydeg + 1) ** 2])
 
-        ax[n, 0].imshow(render(y), origin="lower", cmap="plasma", extent=(-1, 1, -1, 1))
-        ax[n, 1].imshow(render(yprime), origin="lower", cmap="plasma", extent=(-1, 1, -1, 1))
+        ax[n, 0].imshow(
+            render(y), origin="lower", cmap="plasma", extent=(-1, 1, -1, 1)
+        )
+        ax[n, 1].imshow(
+            render(yprime),
+            origin="lower",
+            cmap="plasma",
+            extent=(-1, 1, -1, 1),
+        )
 
         for k in [0, 1]:
             ax[n, k].plot(xc, yc, "k-")
@@ -77,7 +84,9 @@ for l in range(ydeg + 1):
             ax[n, k].set_xlim(-1.02, 1.02)
             ax[n, k].set_ylim(-1.02, 1.02)
 
-        ax[n, 0].set_ylabel(r"$Y_{{%d},{%d}}$" % (l, m), rotation=0, fontsize=20)
+        ax[n, 0].set_ylabel(
+            r"$Y_{{%d},{%d}}$" % (l, m), rotation=0, fontsize=20
+        )
         ax[n, 0].yaxis.set_label_coords(-0.35, 0.4)
 
         n += 1

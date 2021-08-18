@@ -173,7 +173,9 @@ veq = 100000
 theta = np.linspace(0, 360, nt)
 theta[-1] = 0.0
 vsini = veq * np.sin(inc * np.pi / 180)
-map = starry.DopplerMap(ydeg=ydeg, nt=nt, veq=veq, vsini_max=vsini, inc=inc, lazy=False)
+map = starry.DopplerMap(
+    ydeg=ydeg, nt=nt, veq=veq, vsini_max=vsini, inc=inc, lazy=False
+)
 D = np.array(map.design_matrix(theta=theta).todense())
 
 # Plot it

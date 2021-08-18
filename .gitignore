@@ -1,4 +1,5 @@
 *.code-workspace
+.vscode
 *.ipynb_checkpoints
 *.pyc
 *.pytest_cache

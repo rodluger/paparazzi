@@ -22,7 +22,9 @@ inc = 90
 veq = 60000.0  # m/s
 theta = [0.0]
 wav = np.linspace(642.75, 643.25, 200)
-map = starry.DopplerMap(ydeg, veq=veq, vsini_max=veq, inc=inc, nt=1, wav=wav, lazy=False)
+map = starry.DopplerMap(
+    ydeg, veq=veq, vsini_max=veq, inc=inc, nt=1, wav=wav, lazy=False
+)
 map[:, :] = y
 map.spectrum = 1.0 - np.exp(-0.5 * (map.wav0 - 643.0) ** 2 / 0.0085 ** 2)
 
@@ -33,7 +35,7 @@ F /= F[0]
 # Compute the observed spectrum numerically
 # for different grid resolutions
 vsini = veq * np.sin(inc * np.pi / 180)
-res_arr = [12, 36, 113, 357] #, 1129]
+res_arr = [12, 36, 113, 357]  # , 1129]
 npts = np.zeros(len(res_arr), dtype=int)
 Fnum = np.array([np.zeros_like(map.wav) for i in range(len(res_arr))])
 for i, res in enumerate(res_arr):
@@ -45,7 +47,9 @@ for i, res in enumerate(res_arr):
     npts[i] = len(x)
     D = np.sqrt((1 + vsini / map._clight * x) / (1 - vsini / map._clight * x))
     image = spot_map.render(res=res).reshape(-1, 1)[on_disk]
-    spec = np.interp(map.wav0 * D.reshape(-1, 1), map.wav0, map.spectrum.reshape(-1))
+    spec = np.interp(
+        map.wav0 * D.reshape(-1, 1), map.wav0, map.spectrum.reshape(-1)
+    )
     flux = np.nansum(image * spec, axis=0)
     flux = np.interp(map.wav, map.wav0, flux)
     Fnum[i] = flux / flux[0]
@@ -76,7 +80,14 @@ ax[1].set_ylabel(r"residuals")
 # Show the image
 aximg = inset_axes(ax[0], width="15%", height="45%", loc=4, borderpad=1)
 img = spot_map.render(res=300).reshape(300, 300)
-aximg.imshow(img, extent=(-1, 1, -1, 1), origin="lower", cmap="plasma", vmin=0.042, vmax=0.353)
+aximg.imshow(
+    img,
+    extent=(-1, 1, -1, 1),
+    origin="lower",
+    cmap="plasma",
+    vmin=0.042,
+    vmax=0.353,
+)
 aximg.set_xlim(-1.02, 1.02)
 aximg.set_ylim(-1.02, 1.02)
 aximg.axis("off")
