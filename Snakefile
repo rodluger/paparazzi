@@ -1,4 +1,4 @@
-rule ms_kT00:
+rule kT00:
     input:
         "figures/kT00.py"
     output:
@@ -9,7 +9,7 @@ rule ms_kT00:
         "cd figures && python kT00.py"
 
 
-rule ms_Y1m1:
+rule Y1m1:
     input:
         "figures/Y1m1.py"
     output:
@@ -18,3 +18,6 @@ rule ms_Y1m1:
         "environment.yml"
     shell:
         "cd figures && python Y1m1.py"
+
+
+pdf_extras = ["figures/kT00.pdf", "figures/Y1m1.pdf"]
