@@ -14,7 +14,7 @@ import starry
 ydeg = 20
 N = (ydeg + 1) ** 2
 spot_map = starry.Map(ydeg, lazy=False)
-spot_map.spot(contrast=0.95, radius=20, lat=30, lon=0)
+spot_map.spot(contrast=0.95, radius=20, lat=30, lon=0, spot_smoothing=0.125)
 y = spot_map.y.reshape(-1)
 
 # Generate a Doppler map
@@ -72,7 +72,7 @@ for i in range(len(Fnum)):
 ax[0].set_ylabel(r"spectrum")
 ax[0].legend(fontsize=10, loc="lower left")
 ax[1].set_yscale("log")
-ax[1].set_xlabel(r"$\lambdabar$ [nm]")
+ax[1].set_xlabel(r"$\lambda$ [nm]")
 ax[1].legend(fontsize=10, loc="upper right")
 ax[1].set_ylim(1e-10, 1e0)
 ax[1].set_ylabel(r"residuals")

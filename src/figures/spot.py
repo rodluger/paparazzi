@@ -11,7 +11,7 @@ import starry
 ydeg = 20
 N = (ydeg + 1) ** 2
 spot_map = starry.Map(ydeg, lazy=False)
-spot_map.spot(contrast=0.95, radius=20, lat=30, lon=0)
+spot_map.spot(contrast=0.95, radius=20, lat=30, lon=0, spot_smoothing=0.125)
 y = spot_map[:, :].reshape(-1)
 
 # Generate the dataset
