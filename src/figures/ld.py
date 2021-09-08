@@ -13,19 +13,22 @@ import theano.tensor as tt
 ydeg = 1
 udeg = 1
 u1 = 1
-L = np.array(
-    [
-        [1 - u1, 0, u1 / np.sqrt(3), 0],
-        [0, 1 - u1, 0, 0],
-        [u1 / np.sqrt(3), 0, 1 - u1, 0],
-        [0, 0, 0, 1 - u1],
-        [0, 0, 0, 0],
-        [0, u1 / np.sqrt(5), 0, 0],
-        [0, 0, (2 * u1) / np.sqrt(15), 0],
-        [0, 0, 0, u1 / np.sqrt(5)],
-        [0, 0, 0, 0],
-    ]
-) / (1 - u1 / 3)
+L = (
+    np.array(
+        [
+            [1 - u1, 0, u1 / np.sqrt(3), 0],
+            [0, 1 - u1, 0, 0],
+            [u1 / np.sqrt(3), 0, 1 - u1, 0],
+            [0, 0, 0, 1 - u1],
+            [0, 0, 0, 0],
+            [0, u1 / np.sqrt(5), 0, 0],
+            [0, 0, (2 * u1) / np.sqrt(15), 0],
+            [0, 0, 0, u1 / np.sqrt(5)],
+            [0, 0, 0, 0],
+        ]
+    )
+    / (1 - u1 / 3)
+)
 
 # Go under the hood with `starry` to manually render
 # the limb-darkened map. This is super hacky, sorry.
