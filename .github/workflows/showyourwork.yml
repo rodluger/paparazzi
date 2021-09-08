@@ -1,6 +1,8 @@
 name: article
 
-on: push
+on:
+  push:
+  workflow_dispatch:
 
 jobs:
   showyourwork:
@@ -11,9 +13,8 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+          submodules: recursive
 
       - name: Build the article PDF
         id: build
-        uses: rodluger/showyourwork/showyourwork-action@main
-        with:
-          showyourwork-version: main
+        uses: ./showyourwork/showyourwork-action

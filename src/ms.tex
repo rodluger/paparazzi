@@ -1,4 +1,4 @@
-% Define document class & import showyourwork
+% Define document class
 \documentclass[modern]{aastex631}
 
 % Custom defs
@@ -292,7 +292,7 @@ where the parameters $\Dargs$ of the Doppler field are the angular velocity, $\o
 
 \begin{figure}[t!]
     \begin{centering}
-        \includegraphics[width=\linewidth]{kT.pdf}
+        \includegraphics[width=\linewidth]{figures/kT.pdf}
         \caption{%
             The Doppler $\kT$ basis for a rigidly rotating star computed from Equation~(\ref{eq:kT:kT}) and Equation~(\ref{eq:kT:sTrecurrence}) up to spherical harmonic degree $l_\mathrm{max}=10$. 
             Rows correspond to the degree $l$ and columns correspond to the order $m$. 
@@ -346,7 +346,7 @@ This correspondence between line shape residuals and spot location is the corner
 
 \begin{figure}[p!]
     \begin{centering}
-        \includegraphics[width=0.6\linewidth]{spot.pdf}
+        \includegraphics[width=0.6\linewidth]{figures/spot.pdf}
         \caption{%
             Time evolution of a Gaussian absorption line on a rigidly rotating, spotted star computed from the analytic formulae in \S\ref{sec:kT}.
             The stellar surface is modeled as a spherical harmonic expansion up to $l_\mathrm{max}=20$, and the line shape is assumed to be the same everywhere;
@@ -370,7 +370,7 @@ Should we expect the numerical solution to actually \emph{converge}
 
 \begin{figure}[t!]
     \begin{centering}
-        \includegraphics[width=0.65\linewidth]{compare.pdf}
+        \includegraphics[width=0.65\linewidth]{figures/compare.pdf}
         \caption{%
             The observed spectrum when the spot is in view computed with
             \starry (blue) and numerically (orange). 
@@ -387,7 +387,7 @@ Should we expect the numerical solution to actually \emph{converge}
 
 \begin{figure}[ht!]
     \begin{centering}
-        \includegraphics[width=0.8\linewidth]{linalg.pdf}
+        \includegraphics[width=0.8\linewidth]{figures/linalg.pdf}
         \caption{%
             The Doppler design matrix $\Doppler$ (Equation~\ref{eq:linear:f}), constructed from a grid of Toeplitz matrices, each of shape $K \times K'$, where $K$ is the number of wavelength bins in the observed spectrum and $K' = K + W - 1$ is the number of bins in the model spectrum, where $W$ is the width of the convolution kernel.
             The $N$ columns of $\Doppler$ correspond to the Toeplitz matrices for each of the $N$ spherical harmonics (shown at the top);
@@ -990,7 +990,7 @@ Figure~\ref{fig:ld} shows this transformation with $u_1 = 1$ applied to each of 
 %
 \begin{figure}[t!]
     \begin{centering}
-        \includegraphics[width=0.5\linewidth]{ld.pdf}
+        \includegraphics[width=0.5\linewidth]{figures/ld.pdf}
         \caption{%
             Illustration of the limb darkening transformation given by Equation~(\ref{eq:ld:L}) for a linear limb darkening law with $u_1 = 1$. 
             Each row shows a spherical harmonic before (left) and after (right) transformation by $\bvec{L}$.
@@ -1130,7 +1130,7 @@ The spectra were computed at 16 equally spaced rotational phases and downsampled
 
 \begin{figure}[t!]
     \begin{centering}
-        \includegraphics[width=0.85\linewidth]{spot_setup.pdf}
+        \includegraphics[width=0.85\linewidth]{figures/spot_setup.pdf}
         \caption{%
             The basic setup for the \spot problem. 
             We compute the $l_\mathrm{max} = 15$ spherical harmonic expansion of a map where the word ``SPOT'' has been placed across the northern hemisphere (top left). 
@@ -1193,8 +1193,8 @@ Note that we must first scale the data vector $\bvec{f}$ by $\bvec{b}$ (which in
 
 % \begin{figure}[p!]
 %     \begin{centering}
-%         \includegraphics[width=0.49\linewidth]{spot_y1_timeseries.pdf}
-%         \includegraphics[width=0.49\linewidth]{spot_y1_rect.pdf}
+%         \includegraphics[width=0.49\linewidth]{figures/spot_y1_timeseries.pdf}
+%         \includegraphics[width=0.49\linewidth]{figures/spot_y1_rect.pdf}
 %         \caption{%
 %             The solution to the \spot problem at high SNR when both the rest frame spectrum and the baseline are known.
 %             The panel on the left shows the inferred map at each of the 16
@@ -1257,11 +1257,11 @@ where $\bvec{r}$ is the residual (data minus model) vector and the last term is 
 
 % \begin{figure}[p!]
 %     \begin{centering}
-%         \includegraphics[width=0.49\linewidth]{spot_y1b_timeseries.pdf.pdf}
-%         \includegraphics[width=0.49\linewidth]{spot_y1b_rect.pdf}
+%         \includegraphics[width=0.49\linewidth]{figures/spot_y1b_timeseries.pdf.pdf}
+%         \includegraphics[width=0.49\linewidth]{figures/spot_y1b_rect.pdf}
 %         \\[0.5em]
-%         \includegraphics[width=0.405\linewidth]{spot_y1b_baseline.pdf}
-%         \includegraphics[width=0.575\linewidth]{spot_y1b_coeffs.pdf}
+%         \includegraphics[width=0.405\linewidth]{figures/spot_y1b_baseline.pdf}
+%         \includegraphics[width=0.575\linewidth]{figures/spot_y1b_coeffs.pdf}
 %         \caption{%
 %             Similar to Figure~\ref{fig:spot_y1}, but assuming the baseline is not known. 
 %             The panel at the bottom left shows the true baseline (blue) and the inferred baseline (orange), along with its $1\sigma$ uncertainty. 
@@ -1277,7 +1277,7 @@ The panels at the top are the same as those in Figure~\ref{fig:spot_y1}, but now
 We recover the \texttt{SPOT} map just as well as before, except for the presence of a strong dipolar artifact; the background intensity level is higher in the northern hemisphere and lower in the southern hemisphere. 
 This effect is closely related to the fact that we do not know the true baseline. 
 While we are able to infer the shape of the baseline exceedingly well (lower left panel), there is a large offset between the true value and our inferred value. 
-This is due to a fundamental degeneracy involving the $Y_{1,-1}$ (\raisebox{-0.2em}{\includegraphics[width=1em]{Y1m1.pdf}}) spherical harmonic coefficient, which, because a large portion of the southern hemisphere is never in view, cannot be constrained by the data. 
+This is due to a fundamental degeneracy involving the $Y_{1,-1}$ (\raisebox{-0.2em}{\includegraphics[width=1em]{figures/Y1m1.pdf}}) spherical harmonic coefficient, which, because a large portion of the southern hemisphere is never in view, cannot be constrained by the data. 
 The magnitude of the true value of the coefficient is quite large (lower right panel), since the northern hemisphere \emph{is} significantly darker than the southern hemisphere; however, the data do not constrain this, and our prior shrinks all coefficients toward zero. 
 The net effect is that the region surrounding the spot in the northern hemisphere gets brighter to even out the difference between the two hemispheres. 
 This causes the visible portion of the star to get brighter, raising the baseline relative to the true value.
@@ -1303,13 +1303,13 @@ We must follow the iterative procedure presented in
 
 % \begin{figure}[p!]
 %     \begin{centering}
-%         \includegraphics[width=0.49\linewidth]{spot_y1bs_timeseries.pdf}
-%         \includegraphics[width=0.49\linewidth]{spot_y1bs_rect.pdf}
+%         \includegraphics[width=0.49\linewidth]{figures/spot_y1bs_timeseries.pdf}
+%         \includegraphics[width=0.49\linewidth]{figures/spot_y1bs_rect.pdf}
 %         \\[0.5em]
-%         \includegraphics[width=0.405\linewidth]{spot_y1bs_baseline.pdf}
-%         \includegraphics[width=0.575\linewidth]{spot_y1bs_coeffs.pdf}
+%         \includegraphics[width=0.405\linewidth]{figures/spot_y1bs_baseline.pdf}
+%         \includegraphics[width=0.575\linewidth]{figures/spot_y1bs_coeffs.pdf}
 %         \\[0.5em]
-%         \includegraphics[width=0.98\linewidth]{spot_y1bs_spectrum.pdf}
+%         \includegraphics[width=0.98\linewidth]{figures/spot_y1bs_spectrum.pdf}
 %         \caption{%
 %             Similar to Figure~\ref{fig:spot_y1}, but assuming we have no information about either the spectrum, the baseline, or the map coefficients. 
 %             The bottommost panel now shows the true rest frame spectrum (blue line), the initial guess based on a deconvolution (dashed orange line), and the inferred spectrum (orange line, with shaded $1\sigma$ uncertainty).
@@ -1320,13 +1320,13 @@ We must follow the iterative procedure presented in
 
 % \begin{figure}[p!]
 %     \begin{centering}
-%         \includegraphics[width=0.49\linewidth]{spot_y1bs_low_snr_timeseries.pdf}
-%         \includegraphics[width=0.49\linewidth]{spot_y1bs_low_snr_rect.pdf}
+%         \includegraphics[width=0.49\linewidth]{figures/spot_y1bs_low_snr_timeseries.pdf}
+%         \includegraphics[width=0.49\linewidth]{figures/spot_y1bs_low_snr_rect.pdf}
 %         \\[0.5em]
-%         \includegraphics[width=0.405\linewidth]{spot_y1bs_low_snr_baseline.pdf}
-%         \includegraphics[width=0.575\linewidth]{spot_y1bs_low_snr_coeffs.pdf}
+%         \includegraphics[width=0.405\linewidth]{figures/spot_y1bs_low_snr_baseline.pdf}
+%         \includegraphics[width=0.575\linewidth]{figures/spot_y1bs_low_snr_coeffs.pdf}
 %         \\[0.5em]
-%         \includegraphics[width=0.98\linewidth]{spot_y1bs_low_snr_spectrum.pdf}
+%         \includegraphics[width=0.98\linewidth]{figures/spot_y1bs_low_snr_spectrum.pdf}
 %         \caption{%
 %             Same as Figure~\ref{fig:spot_y1bs}, but for $10\times$ lower SNR.
 %             We still recover the \spot map and the input spectrum, albeit with higher uncertainty, as expected.
@@ -1336,7 +1336,7 @@ We must follow the iterative procedure presented in
 % \end{figure}
 
 Because the problem is generally not convex, we need a good starting guess for either the spectrum or the map coefficients. 
-We note that we can very crudely approximate the rest frame spectrum by deconvolving the average observed spectrum with the first term of the convolution kernel $\kT$ (\raisebox{-0.1em}{\includegraphics[width=2em]{kT00.pdf}}).
+We note that we can very crudely approximate the rest frame spectrum by deconvolving the average observed spectrum with the first term of the convolution kernel $\kT$ (\raisebox{-0.1em}{\includegraphics[width=2em]{figures/kT00.pdf}}).
 In practice, this is a fairly poor approximation, but we find that it suffices as an initial guess. 
 Given this starting value of $\bvec{s}$, we compute an initial guess for $\bvec{y_1}$ using the linear baseline approximation. 
 We then iterate between solving for $\bvec{s}$ and solving for $\bvec{y_1}$, always using the previous value of the baseline to compute $\bvec{y_1}$. 
@@ -1371,7 +1371,7 @@ The two columns of $\mathbb{S}$ are $\bvec{s_1}$ and $\bvec{s_2}$, the unknown s
 
 % \begin{figure}[t!]
 %     \begin{centering}
-%         \includegraphics[width=\linewidth]{twospec.pdf}
+%         \includegraphics[width=\linewidth]{figures/twospec.pdf}
 %         \caption{%
 %             An example of a star whose spectrum is different within the spot (\texttt{B}) and outside of the spot (\texttt{A}). 
 %             Everywhere on the surface, the spectrum is a linear combination of two spectral components ($s_1$ and $s_2$).
@@ -1399,7 +1399,7 @@ We run our bilinear solver with $T_0 = 5,000$ and $\Delta\log T = -0.025$ follow
 The results are shown in the bottom panel of Figure~\ref{fig:twospec}.
 We recover the \spot feature reasonably well, although with more artifacts than in the previous experiments. 
 We also recover the two spectral components, although our solution for $\bvec{s_2}$ is significantly better than that for $\bvec{s_1}$. 
-This is due to the fact that the only information about $\bvec{s_1}$ that makes it into our dataset is the convolution of $\bvec{s_1}$ with the first term of the convolution kernel $\kT$ (\raisebox{-0.1em}{\includegraphics[width=2em]{kT00.pdf}}), since this spectral component has no spatial variability.
+This is due to the fact that the only information about $\bvec{s_1}$ that makes it into our dataset is the convolution of $\bvec{s_1}$ with the first term of the convolution kernel $\kT$ (\raisebox{-0.1em}{\includegraphics[width=2em]{figures/kT00.pdf}}), since this spectral component has no spatial variability.
 Since the deconvolution operation is in general ill-posed, there is no unique solution for $\bvec{s_1}$. 
 On the other hand, the other spectral component projects into the data via convolutions with all other terms of the kernel and is therefore very well constrained.
 Finally, we can estimate the spectra at points \texttt{A} and \texttt{B} as before (center panel). 
@@ -1458,7 +1458,7 @@ Even with aggressive tempering, we were unable to converge on the best solution 
 %
 % \begin{figure}[p!]
 %     \begin{centering}
-%         \includegraphics[width=0.98\linewidth]{snr.pdf}
+%         \includegraphics[width=0.98\linewidth]{figures/snr.pdf}
 %         \caption{%
 %             Recovered \spot map as a function of SNR per resolution element.
 %             The quality of the inferred map in the northern hemisphere improves with SNR, but at very high SNR the region surrounding the global optimum becomes so small that our optimization methods struggle to converge on the correct solution.
@@ -1473,7 +1473,7 @@ Even with aggressive tempering, we were unable to converge on the best solution 
 %
 % \begin{figure}[p!]
 %     \begin{centering}
-%         \includegraphics[width=0.98\linewidth]{inclinations.pdf} % 
+%         \includegraphics[width=0.98\linewidth]{figures/inclinations.pdf} % 
 %         \caption{%
 %             Recovered \spot map as a function of stellar inclination. 
 %             The rest frame spectrum is assumed to be known exactly, but the baseline is not. 

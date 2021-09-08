@@ -1,0 +1,13 @@
+# Don't track anything...
+*
+
+# ... except the following...
+!figures
+!static
+!.gitignore
+!*.tex
+!*.bib
+
+# ... but never these:
+.showyourwork*
+xstring.tex

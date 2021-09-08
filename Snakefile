@@ -1,23 +1,28 @@
-rule kT00:
+# Import the showyourwork module
+module showyourwork:
+    snakefile:
+        "showyourwork/workflow/Snakefile"
+    config:
+        config
+
+
+# Use all default rules
+use rule * from showyourwork
+
+
+# Generate inline figure
+use rule figure from showyourwork as kT00 with:
     input:
-        "figures/kT00.py"
-    output:
-        "figures/kT00.pdf"
-    conda:
+        "src/figures/kT00.py",
         "environment.yml"
-    shell:
-        "cd figures && python kT00.py"
+    output:
+        report("src/figures/kT00.pdf", category="Figure")
 
 
-rule Y1m1:
+# Generate inline figure
+use rule figure from showyourwork as Y1m1 with:
     input:
-        "figures/Y1m1.py"
-    output:
-        "figures/Y1m1.pdf"
-    conda:
+        "src/figures/Y1m1.py",
         "environment.yml"
-    shell:
-        "cd figures && python Y1m1.py"
-
-
-pdf_extras = ["figures/kT00.pdf", "figures/Y1m1.pdf"]
+    output:
+        report("src/figures/Y1m1.pdf", category="Figure")
