@@ -363,7 +363,7 @@ We show the residuals in the lower panel, where it is clear that as the number o
 %Understand---and comment on---the fundamental
 %differences between a discrete linear convolution and traditional linear 
 %interpolation. 
-Should we expect the numerical solution to actually \emph{converge}
+%Should we expect the numerical solution to actually \emph{converge}
 %to the \starry solution, or is the way the two are interpolating fundamentally
 %different?
 
@@ -751,62 +751,65 @@ Unfortunately, spectrographs are not usually designed to measure this, since the
 For this reason, the spectra are usually normalized to have a fixed baseline continuum, and Equation~\ref{eq:linear:f} is no longer a good model for the data.
 
 One option is to collect simultaneous photometry on the target in a band similar to the wavelength range observed, and use this light curve to (un-)normalize the spectral timeseries $\bvec{f}$. 
-However, when this is not an option, our model for $\bvec{f}$ (Equation~\ref{eq:linear:f}) must be amended.
-
-\xxx{WORK IN PROGRESS BELOW HERE}
-
+However, when this is not an option, our model for $\bvec{f}$ (Equation~\ref{eq:linear:f}) must be amended:
 %
 \begin{align}
     \label{eq:norm:f}
-    \bvec{f}
+    \fnorm
      & =
+     \frac{
+        \mathbf{f}
+    } {
+        \bvec{B}
+        \,
+        \alm
+    }
+    \nonumber 
+    \\[1em]
+    & =
     \frac{
         \Doppler
         \,
         \alm
     } {
-        \bvec{b}
+        \bvec{B}
+        \,
+        \alm
     }
     \quad,
 \end{align}
 %
-where $\bvec{b}$ is the baseline and the vector division is performed elementwise. 
-When $\alm$ is given by Equation~(\ref{eq:inverse:alm}), the baseline $\bvec{b}$ is simply the total (wavelength-integrated) flux at each epoch, repeated for every element in each spectrum.
-Based on \citet{Luger2019}, this can be computed as a purely linear operation on the spherical harmonic vector $\bvec{y}$:
+where $\fnorm$ is the normalized spectral timeseries,
+$\bvec{B}$ is the baseline design matrix, and the vector division is performed
+elementwise. 
+If $c$ is an index in the observed spectrum corresponding to the continuum (at all epochs), the elements of $\bvec{B}$ are computed from
 %
 \begin{align}
-    \label{eq:norm:b}
-    \bvec{b}
-     & =
-    %
-    \begin{pmatrix}
-        \bvec{r}^\top \bvec{A_1} \bvec{R}(t_0)     \\
-        \cdots                                     \\
-        \bvec{r}^\top \bvec{A_1} \bvec{R}(t_0)     \\
-        \bvec{r}^\top \bvec{A_1} \bvec{R}(t_1)     \\
-        \cdots                                     \\
-        \bvec{r}^\top \bvec{A_1} \bvec{R}(t_1)     \\
-        \cdots                                     \\
-        \bvec{r}^\top \bvec{A_1} \bvec{R}(t_{M-1}) \\
-        \cdots                                     \\
-        \bvec{r}^\top \bvec{A_1} \bvec{R}(t_{M-1})
-    \end{pmatrix}
-    \bvec{y}
-    %
-    \nonumber \\[0.5em]
-     & \equiv
-    \bvec{B} \, \bvec{y}
+    B_{ij} = D_{i'j}
 \end{align}
 %
-where $\bvec{r}$ is given by Equation~(18) in \citet{Luger2019}, $\bvec{A_1}$ is given in Appendix B of \citet{Luger2019}, and $\bvec{R}(t)$ is the rotation matrix defined previously.
+where
+%
+\begin{align}
+    i' = c + \bigg\lfloor\frac{i}{K}\bigg\rfloor K
+    \quad.
+\end{align}
+%
+In other words, the matrix $\bvec{B}$ is constructed by repeating the $c^\mathrm{th}$ row of each epoch block $\Doppler_m$ of $\Doppler$ $K$ times.
+Equation~(\ref{eq:norm:f}) is therefore equivalent to computing the $M$ unnormalized spectra using Equation~(\ref{eq:linear:f}) and dividing each one by the value at index $c$.
 
-Given this new equation, we must change how we approach the inverse problem (\S\ref{sec:inverse}). 
-When solving for the spectrum given the spherical harmonic vector (\S\ref{sec:solve_s}), we need only make the replacements $\bvec{f} \rightarrow \frac{\bvec{f}}{\bvec{B}\, \bvec{y}}$ and $\boldsymbol{\Sigma}_\mathbf{f} \rightarrow \frac{\boldsymbol{\Sigma}_\mathbf{f}}{(\bvec{B}\, \bvec{y})^2}$ in Equations~(\ref{eq:inverse:shat}) and (\ref{eq:inverse:scov}).
+
+Given this new equation, we must change how we approach the inverse problem (\S\ref{sec:inverse}) if our data vector is the normalized spectral timeseries $\fnorm$. 
+When solving for the spectrum given the spherical harmonic vector (\S\ref{sec:solve_s}), we need only make the replacements 
+$\bvec{f} \rightarrow \fnorm \circ (\bvec{B}\, \bvec{a})$ 
+and 
+$\boldsymbol{\Sigma}_\mathbf{f} \rightarrow \boldsymbol{\Sigma}_{\fnorm} \circ (\bvec{B}\, \bvec{a})^2$ 
+in Equations~(\ref{eq:inverse:shat}) and (\ref{eq:inverse:scov}), where $\circ$ denotes the elementwise product.
 However, when solving for the spherical harmonic vector given the spectrum (\ref{sec:solve_y}), the problem is no longer linear in $\bvec{y}$, as the vector of interest appears in both the numerator and the denominator:
 %
 \begin{align}
     \label{eq:norm:fy}
-    \bvec{f}
+    \fnorm
      & =
     \frac{
         \bvec{D}
@@ -817,113 +820,16 @@ However, when solving for the spherical harmonic vector given the spectrum (\ref
     }{
         \bvec{B}
         \,
+        \bvec{S}
+        \,
         \bvec{y}
     }
     \quad.
 \end{align}
 %
-While we can solve for $\bvec{y}$ using a nonlinear optimizer, it is often the case that the denominator in Equation~(\ref{eq:norm:fy}) is close to unity; i.e., the total flux from the star typically varies by only a few percent. 
-When this is the case, it is straightforward to linearize this equation.
-Following the notation from \S\ref{sec:solve_y}, we may therefore write
-%
-\begin{align}
-    \bvec{f}
-     & =
-    \frac{
-        \bvec{D} \, \bvec{s_0}
-        \,
-        +
-        \,
-        \bvec{D}\bvec{S_1}
-        \,
-        \bvec{y_1}
-    }{
-        \bvec{B_0}
-        \,
-        +
-        \bvec{B_1}
-        \,
-        \bvec{y_1}
-    }
-    \quad,
-\end{align}
-%
-where $\bvec{B_0} = \bvec{1}$ is the first column of $\bvec{B}$ and $\bvec{B}_\bvec{1}$ denotes the matrix composed from the remaining $N - 1$ columns of $\bvec{B}$.
-Expanding the expression above about $\bvec{B_1} \bvec{y_1} = \bvec{0}$ and keeping only terms up to first order, we have
-%
-\begin{align}
-    \label{eq:norm:fapprox}
-    \bvec{f}
-     & \approx
-    \left(
-    \bvec{D} \, \bvec{s_0}
-    \,
-    +
-    \,
-    \bvec{D}\bvec{S_1}
-    \,
-    \bvec{y_1}
-    \right)
-    \circ
-    \left(
-    \bvec{1}
-    \,
-    -
-    \bvec{B_1}
-    \,
-    \bvec{y_1}
-    \right)
-    \nonumber  \\
-     & \approx
-    \left(
-    \bvec{D}\bvec{S_1}
-    \,
-    -
-    \bvec{C}
-    \right)
-    \bvec{y_1}
-    \,
-    +
-    \,
-    \bvec{D} \, \bvec{s_0}
-    \quad,
-\end{align}
-%
-where $\circ$ denotes an elementwise product and $\bvec{C}$ is a matrix constructed by multiplying each row of $\bvec{B_1}$ by the corresponding element of $\bvec{D}\bvec{s_0}$.
-%
-This equation is now linear in $\bvec{y}_\bvec{1}$, so we may solve the least-squares problem as before:
-%
-\begin{align}
-    \label{eq:norm:yhat}
-    \bvec{\hat{y}_1} & =
-    \boldsymbol{\Sigma}_\mathbf{\hat{y}_1}
-    \left(
-    \left(\bvec{D}\bvec{S_1} - \bvec{C}\right)^\top
-    {\boldsymbol{\Sigma}_\mathbf{f}}^{-1}
-    (\bvec{f} - \bvec{D}\bvec{s_0})
-    +
-    {\boldsymbol{\Lambda}_{\mathbf{y}_\bvec{1}}}^{-1} \boldsymbol{\mu}_{\mathbf{y}_\bvec{1}}
-    \right)
-    \quad,
-\end{align}
-%
-with covariance
-%
-\begin{align}
-    \label{eq:norm:ycov}
-    \boldsymbol{\Sigma}_\mathbf{\hat{y}_1} & =
-    \left(
-    \left(\bvec{D}\bvec{S_1} - \bvec{C}\right)^\top
-    {\boldsymbol{\Sigma}_\mathbf{f}}^{-1}
-    \left(\bvec{D}\bvec{S_1} - \bvec{C}\right)
-    +
-    {\boldsymbol{\Lambda}_{\mathbf{y}_1}}^{-1}
-    \right)^{-1}
-    \quad.
-\end{align}
-%
-Note, importantly, that these equations are valid only in the limit that the change in the total flux from the star is small. 
-Nevertheless, even in the general case, we find that solving this linear problem yields a good starting point for a nonlinear optimization, which we revisit in more detail below.
+Unfortunately, this equation does not admit a closed form solution for $\mathbf{y}$. 
+One can, however, still solve for the maximum a posteriori value of $\mathbf{y}$ in an efficient manner by iteratively solving for the baseline and then for the spherical harmonic coefficients.
+We describe a procedure for this in \S\ref{sec:spotstar} below.
 
 \subsection{Limb darkening}
 \label{sec:ld}
@@ -939,7 +845,7 @@ For a polynomial limb darkening law of the form
     \quad,
 \end{align}
 %
-where $\mu = z = \sqrt{1 - x^2 - y^2}$ is the radial coordinate on the projected disk and $u_n$ is a limb darkening coefficient, the effect of limb darkening on the stellar map can be expressed exactly as a linear operation on the spherical harmonic coefficient vector \citep{Luger2019,Agol2019}. 
+where $\mu = z = \sqrt{1 - x^2 - y^2}$ is the radial coordinate on the projected disk and $u_n$ is a limb darkening coefficient, the effect of limb darkening on the stellar map can be expressed exactly as a linear operation on the spherical harmonic coefficient vector \citep{Luger2019,Agol2020}. 
 This can be understood by noting that all terms in Equation~(\ref{eq:ld:I}) are strictly polynomials in $x$, $y$, and $z$, all of which can be expressed exactly as sums of spherical harmonics \citep{Luger2019}. 
 When weighting the surface intensity by the limb darkening profile, the resulting intensity is simply a product of spherical harmonics, which is itself a sum of spherical harmonics. 
 Given a limb darkening law of degree $n_\mathrm{max}$, we can always construct a matrix $\bvec{L}$ that transforms a spherical harmonic vector $\bvec{y}$ of degree $l_\mathrm{max}$ to a limb-darkened spherical harmonic vector $\bvec{y'}$ of degree $l_\mathrm{max} + n_\mathrm{max}$. 
@@ -1096,7 +1002,7 @@ In this case, the map vector $\alm$ may be written as the sum over $J$ spectra $
 where $\boldsymbol{\mathbb{S}}$ is the $(K' \times J)$ matrix whose columns are the $J$ spectral components and $\boldsymbol{\mathbb{Y}}^\top$ is the $(J \times N)$ matrix whose rows are the corresponding $J$ spherical harmonic coefficient vectors.
 
 The model remains linear in both the spherical harmonic coefficients and the spectral components, and the procedures outlined in \S\ref{sec:inverse} may still be followed to solve the inverse problem, provided we unroll these matrices into vectors, letting $\mathbf{s} = \mathrm{vec}(\boldsymbol{\mathbb{S}})$ and $\mathbf{y} = \mathrm{vec}(\boldsymbol{\mathbb{Y}})$.
-A detailed discussion of this general case is deferred to future work, but we present an example of a two-component stellar spectrum in \S\ref{sec:eigen}
+We present an example of inference on a two-component stellar spectrum in \S\ref{sec:twospec}
 below.
 
 \section{Application to a spotted star}
@@ -1116,38 +1022,37 @@ The spectra were computed at 16 equally spaced rotational phases and downsampled
             Each point on the surface is given the same spectrum, composed of a sum of synthetic Gaussian absorption lines (blue curve in the bottom panel).
             The specific intensity at each point on the surface is equal to this spectrum weighted by the intensity of the map, which is close to zero within the spot (point labeled \texttt{B}) and close ot unity outside the spot (point labeled \texttt{A}).
             To generate the synthetic dataset (orange curves in the bottom panel), the star is inclined at $40^\circ$ with respect to the line of sight and the disk-integrated spectrum is computed at 16 equally-spaced phases between $-180^\circ$ and $180^\circ$ (middle panel).
-            The grey regions indicate wavelength regions outside the observation window, but whose features still contribute to the observed spectrum due to rotational broadening.
+            The grey regions indicate wavelength regions outside the observation window, but whose features can still contribute to the observed spectrum due to rotational broadening.
         }
         \label{fig:spot_setup}
     \end{centering}
 \end{figure}
 
 We repeat the same experiment here using our new formalism, except we instead generate a stellar surface with the word ``SPOT'' written across the northern hemisphere (top left panel of Figure~\ref{fig:spot_setup}).
-We do this by computing the $l_\mathrm{max} = 15$ spherical harmonic decomposition of an image of the word, generating a set of $N = (l_\mathrm{max} + 1)^2 = 256$ spherical harmonic coefficients $\bvec{y} = (1 \quadquad \bvec{y_1})$.
+We do this by computing the $l_\mathrm{max} = 15$ spherical harmonic decomposition of an image of the word, generating a set of $N = (l_\mathrm{max} + 1)^2 = 256$ spherical harmonic coefficients $\bvec{y}$. 
+We assume an equatorial velocity $v = 60$ km/s and an inclination $i = 40^\circ$, such that $v \sin i = 38.6$~km/s (compare to $i = 40^\circ$ and $v \sin i = 40$~km/s in \citealt{Vogt1987}).
 
-Our input spectrum $\bvec{s}$ was generated at high resolution ($R \equiv \frac{\lambda}{\Delta\lambda} = 300,000$) centered at a reference wavelength $\lambda_\mathrm{r} = 6430$ nm (blue curve in the bottom panel of Figure~\ref{fig:spot_setup}).
-The spectrum consists of a Gaussian absorption line in log-wavelength ($\lnlam$) space with amplitude $0.5$ and standard deviation $\sigma_{\lnlam} = 1.4\times 10^{-5}$. 
-This corresponds to a FWHM of about $2.355~\sigma_{\lnlam}~\lambda_\mathrm{r}~\approx~0.2$ nm or, in velocity space, $2.355~\sigma_{\lnlam}~c~\approx~10$~km/s, equal to the value used in \citet{Vogt1987}. 
+Our input spectrum $\bvec{s}$ was generated at high resolution ($R \equiv \frac{\lambda}{\Delta\lambda} = 430,000$) centered on the Fe I $\lambda 6430$ absorption line (blue curve in the bottom panel of Figure~\ref{fig:spot_setup}).
+%
+The spectrum consists of a (purely synthetic) Gaussian absorption line of fractional depth 50\% centered at $\lambda = 643$~nm with FWHM of $0.02$~nm, or, in velocity space, $\Delta v = \mathrm{FWHM} \times c / \lambda \approx~10$~km/s, equal to the value used in \citet{Vogt1987}. 
+%
 Unlike \citet{Vogt1987}, we add 20 additional small absorption lines at random positions throughout the spectrum, all of the same FWHM but of varying depths, including some line blends. 
-In total, the rest frame spectrum $\bvec{s}$ consists of $K = 201$ log-wavelength bins in the range $-\Delta\lnlam < \lnlam < \Delta\lnlam$ for $\Delta\lnlam = 3.3\times 10^{-4}$ plus an additional
+In total, the rest frame spectrum $\bvec{s}$ consists of $K = 200$ wavelength bins in the range $642.85~\mathrm{nm} \leq \lambda \leq 643.15~\mathrm{nm}$ plus an additional
 %
 \begin{align}
-    W - 1 & = \frac{v\sin i}{c} \frac{K}{\Delta\lnlam} - 1 \nonumber           \\
-          & = \left(\frac{40~\mathrm{km/s}}{3\times 10^5~\mathrm{km/s}}\right)
-    \left(\frac{201}{3.3 \times 10^{-4}}\right)  - 1 \nonumber                 \\
-          & = 80
+    W & = 2 \bigg\lceil \frac{(v\sin i)_\mathrm{max}R}{c} \bigg\rceil \nonumber  \\
+      & = 144
 \end{align}
 %
-log-wavelength bins of padding (40 on either side) to eliminate edge effects due to the convolution, for a total of $K' = 281$ wavelength bins. 
-As in \citet{Vogt1987}, we assume a projected velocity of $v\sin i = 40$ km/s and an inclination $i = 40^\circ$.
+bins of padding (72 on either side) to eliminate edge effects due to the convolution, for a total of $K' = 344$ wavelength bins. 
+In the expression above, $(v\sin i)_\mathrm{max}$ is the maximum value of $v\sin i$ we can model with a given value of $W$; for this experiment, we set $(v\sin i)_\mathrm{max}=50$~km/s, which is larger than the actual value of $v\sin i$ we used to generate the data (see above).
+Finally, we linearly interpolate this spectrum to a wavelength grid uniform in log space to obtain the vector $\bvec{s}$ evaluated at each $\lnlam$.
 
-Given $\bvec{y_1}$ and $\bvec{s}$, we use Equations~(\ref{eq:deconv:F}) and~%
-(\ref{eq:inverse:alm}) to compute the data vector $\bvec{f}$ at $M = 16$ equally spaced rotational phases; these phases are shown in orthographic projection (as an observer would see the star) in the center panel of Figure~\ref{fig:spot_setup}. 
+Given $\bvec{y}$ and $\bvec{s}$, we use Equations~(\ref{eq:deconv:F}) and~(\ref{eq:inverse:alm}) to compute the data vector $\bvec{f}$ at $M = 16$ equally spaced rotational phases; these phases are shown in orthographic projection (as an observer would see the star) in the center panel of Figure~\ref{fig:spot_setup}. 
 The synthetic spectra for each phase are shown as the orange curves in the bottom panel of the figure (note the different scaling, as all spectral lines become shallower due to the broadening). 
 We assume a wavelength-independent, quadratic limb darkening law with $u_1 = 0.5$ and $u_2 = 0.25$. 
-Finally, we divide the flux by the baseline at each epoch (Equation~\ref{eq:norm:b})
-and add random Gaussian noise with amplitude $\sigma_\bvec{f} = 10^{-4}$ to simulate a very high signal-to-noise ratio (SNR) spectrum. 
-The mean standard deviation in each wavelength bin across all 16 epochs in the noiseless data vector is about $10^{-2}$, so our choice of $\sigma_\bvec{f}$ corresponds to SNR $\sim$ 100 in each of the 201 wavelength bins of $\bvec{f}$.
+Finally, we divide the flux by the baseline at each epoch (Equation~\ref{eq:norm:f}) and add random Gaussian noise with amplitude $\sigma_\bvec{f} = 10^{-4}$ to simulate a very high signal-to-noise ratio (SNR) spectrum. 
+The mean standard deviation in each wavelength bin across all 16 epochs in the noiseless data vector is about $10^{-2}$, so our choice of $\sigma_\bvec{f}$ corresponds to SNR $\sim$ 100 in each of the 200 wavelength bins of $\bvec{f}$.
 
 %For reference, \citet{Vogt1987} report SNRs per 60 m\AA\, pixel, while our
 %resolution elements are approximately $\lambda_r\Delta\lnlam/K \approx 100$ m\AA\,
@@ -1158,13 +1063,28 @@ The mean standard deviation in each wavelength bin across all 16 epochs in the n
 % We Recover images with an effective resolution of $12^\circ$.
 
 In the following sections we discuss various approaches to solving the Doppler imaging problem for this dataset.
-Unless otherwise noted, in all experiments we adopt a Gaussian prior for the spherical harmonic coefficients $\bvec{y_1}$ with mean $\boldsymbol{\mu}_\bvec{y_1} = \bvec{0}$ and covariance $\boldsymbol{\Lambda}_\bvec{y_1} = (10^{-2})^2\bvec{I}$, corresponding to a flat power spectrum prior.
-We place a Gaussian process prior on the spectrum $\bvec{s}$ with mean $\boldsymbol{\mu}_\bvec{s} = \bvec{1}$ and a covariance matrix $\boldsymbol{\Lambda}_\bvec{s}$ computed from a Mat\'ern-3/2 kernel with amplitude $\sigma_\bvec{s} = 0.3$ and lengthscale $\rho_\bvec{s} = 3\times 10^{-5}$.
+Unless otherwise noted, in all experiments we adopt a Gaussian prior for the spherical harmonic coefficients $\bvec{y}$ with mean $\boldsymbol{\mu}_\bvec{y} = \bvec{0}$ and covariance $\boldsymbol{\Lambda}_\bvec{y}$, with
+%
+\begin{align}
+    {\Lambda_\bvec{y}}_{i, j} 
+    =
+    \begin{cases}
+        1 & \quad\quad\quad\quad i = j = 0
+        \\
+        10^{-4}\delta_{ij} & \quad\quad\quad\quad \mathrm{otherwise}
+        \quad,
+    \end{cases}
+\end{align}
+%
+corresponding to a flat power spectrum prior.
+We also place a Gaussian prior on the spectrum $\bvec{s}$ with unit mean and covariance $\boldsymbol{\Lambda}_\bvec{s} = (10^{-1})^2\bvec{I}$.
+
+\xxx{WORK IN PROGRESS BELOW THIS LINE}
 
 \subsection{Known baseline and spectrum}
 \label{sec:spot_y1}
 %
-In our first experiment, we attempt to infer the stellar map assuming we have perfect knowledge of the rest frame spectrum $\bvec{s}$ and the baseline $\bvec{b}$ (Equation~\ref{eq:norm:b}).
+In our first experiment, we attempt to infer the stellar map assuming we have perfect knowledge of the rest frame spectrum $\bvec{s}$ and the baseline.
 This is analogous to the case where a good physical model exists for the stellar spectrum and simultaneous photometry is available to constrain the baseline variations.
 As we showed in \S\ref{sec:solve_y}, the posterior distribution for the map coefficients $\bvec{y_1}$ is analytic in this case, with mean given by Equation~(\ref{eq:inverse:y1hat})
 and covariance given by Equation~(\ref{eq:inverse:y1cov}). 
@@ -1718,11 +1638,10 @@ The terms of the convolution kernel $\kT$ are then obtained by dotting this vect
         \midrule
         %
         $a_{lm}$                                            & spectral spherical harmonic coefficient                      & Equation~(\ref{eq:deconv:Ixi0})            \\
-        $\almt$                                              & vector of spectral spherical harmonic coefficients           & Equation~(\ref{eq:deconv:almt})             \\
-        $\bvec{a}$                                        & $\almt$ at reference time $t = t_0$                           & Equation~(\ref{eq:deconv:R})               \\
-        $\bvec{A}$                                        & matrix form of $\bvec{a}$                                  & Equation~(\ref{eq:inverse:alm})          \\
-        $\bvec{b}$                                          & flux baseline vector                                         & Equation~(\ref{eq:norm:b})                 \\
-        $\bvec{B}$                                          & block matrix representation of $\bvec{b}$                    & Equation~(\ref{eq:norm:b})                 \\
+        $\almt$                                              & vector of spectral spherical harmonic coefficients          & Equation~(\ref{eq:deconv:almt})             \\
+        $\bvec{a}$                                          & $\almt$ at reference time $t = t_0$                          & Equation~(\ref{eq:deconv:R})               \\
+        $\bvec{A}$                                          & matrix form of $\bvec{a}$                                    & Equation~(\ref{eq:inverse:alm})          \\
+        $\bvec{B}$                                          & baseline design matrix                                       & \S\ref{sec:norm}                 \\
         $c$                                                 & speed of light                                               & Equation~(\ref{eq:kT:beta})                \\
         $\Curve$                                            & curve of constant radial velocity                            & Equation~(\ref{eq:deconv:kT})              \\
         $\D$                                                & logarithmic Doppler shift                                    & Equation~(\ref{eq:the_problem:D})          \\
@@ -1765,8 +1684,8 @@ The terms of the convolution kernel $\kT$ are then obtained by dotting this vect
         $\kT$                                               & convolution kernel basis vector                              & Equation~(\ref{eq:deconv:kT})              \\
         $\lambda$                                           & wavelength                                                   & \S\ref{sec:the_problem}                    \\
         $\lambda_\mathrm{r}$                                & reference wavelength                                         & \S\ref{sec:the_problem}                    \\
-        $\lnlam$                                            & $\ln\frac{\lambda}{\lambda_\mathrm{r}}$ (observer frame) & \S\ref{sec:the_problem}                    \\
-        $\lnlam_0$                                          & $\ln\frac{\lambda}{\lambda_\mathrm{r}}$ (rest frame)     & \S\ref{sec:the_problem}                    \\
+        $\lnlam$                                            & $\ln\frac{\lambda}{\lambda_\mathrm{r}}$ (observer frame)     & \S\ref{sec:the_problem}                    \\
+        $\lnlam_0$                                          & $\ln\frac{\lambda}{\lambda_\mathrm{r}}$ (rest frame)         & \S\ref{sec:the_problem}                    \\
         $\boldsymbol{\Lambda}$                              & prior covariance matrix                                      &                                            \\
         $\boldsymbol{\mu}$                                  & prior mean vector                                            &                                            \\
         $\ylmbasis$                                         & spherical harmonic basis vector                              & Equation~(\ref{eq:deconv:ylmbasis})        \\
@@ -1792,7 +1711,7 @@ The terms of the convolution kernel $\kT$ are then obtained by dotting this vect
         $\mathrm{diag}$                                     & diagonal matricization                                       & Equation~(\ref{eq:ld:Dmwav})               \\
         $\mathrm{vec}$                                      & vectorization                                                & Equation~(\ref{eq:inverse:alm})          \\
         $*$                                                 & convolution                                                  & Equation~(\ref{eq:deconv:convolution_def}) \\
-        $\circ$                                             & element-wise product                                         & Equation~(\ref{eq:norm:fapprox})           \\
+        $\circ$                                             & element-wise product                                         & \S\ref{sec:norm}           \\
         $\otimes$                                           & Kronecker product                                            & Equation~(\ref{eq:linear:Dm})              \\
         $\ceil*{\,}$                                        & ceiling                                                      & Equation~(\ref{eq:kT:lm})                  \\
         $\floor*{\,}$                                       & floor                                                        & Equation~(\ref{eq:kT:lm})                  \\

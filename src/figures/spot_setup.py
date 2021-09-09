@@ -17,6 +17,7 @@ nc = 1
 nt = 16
 inc = 40
 veq = 60000
+vsini_max = 50000
 wav = np.linspace(642.85, 643.15, 200)
 theta = np.linspace(-180, 180, nt, endpoint=False)
 u = [0.5, 0.25]
@@ -27,6 +28,7 @@ map, _, _ = generate_data(
     nt=nt,
     inc=inc,
     veq=veq,
+    vsini_max=vsini_max,
     wav=wav,
     theta=theta,
     u=u,
@@ -125,7 +127,7 @@ for lon, lat in zip(lons, lats):
 # Tweak
 ax[1].set_ylabel(r"intensity", fontsize=10)
 ax[1].set_xlabel(r"$\lambda$ [nm]", fontsize=10)
-ax[1].set_aspect(0.7)
+ax[1].set_aspect(0.4)
 for tick in ax[1].xaxis.get_major_ticks() + ax[1].yaxis.get_major_ticks():
     tick.label.set_fontsize(10)
 ax[1].margins(0, 0.2)

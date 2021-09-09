@@ -10,6 +10,7 @@ def generate_data(
     nt=16,
     inc=40,
     veq=60000,
+    vsini_max=50000,
     smoothing=0.075,
     theta=None,
     wav=np.linspace(642.85, 643.15, 200),
@@ -24,6 +25,7 @@ def generate_data(
         nc=nc,
         veq=veq,
         inc=inc,
+        vsini_max=vsini_max,
         nt=nt,
         wav=wav,
     )
