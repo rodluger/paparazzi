@@ -1066,6 +1066,7 @@ In the following sections we discuss various approaches to solving the Doppler i
 Unless otherwise noted, in all experiments we adopt a Gaussian prior for the spherical harmonic coefficients $\bvec{y}$ with mean $\boldsymbol{\mu}_\bvec{y} = \bvec{0}$ and covariance $\boldsymbol{\Lambda}_\bvec{y}$, with
 %
 \begin{align}
+    \label{eq:Lambday}
     {\Lambda_\bvec{y}}_{i, j} 
     =
     \begin{cases}
@@ -1079,34 +1080,32 @@ Unless otherwise noted, in all experiments we adopt a Gaussian prior for the sph
 corresponding to a flat power spectrum prior.
 We also place a Gaussian prior on the spectrum $\bvec{s}$ with unit mean and covariance $\boldsymbol{\Lambda}_\bvec{s} = (10^{-1})^2\bvec{I}$.
 
-\xxx{WORK IN PROGRESS BELOW THIS LINE}
-
 \subsection{Known baseline and spectrum}
 \label{sec:spot_y1}
 %
 In our first experiment, we attempt to infer the stellar map assuming we have perfect knowledge of the rest frame spectrum $\bvec{s}$ and the baseline.
 This is analogous to the case where a good physical model exists for the stellar spectrum and simultaneous photometry is available to constrain the baseline variations.
-As we showed in \S\ref{sec:solve_y}, the posterior distribution for the map coefficients $\bvec{y_1}$ is analytic in this case, with mean given by Equation~(\ref{eq:inverse:y1hat})
+As we showed in \S\ref{sec:solve_y}, the posterior distribution for the map coefficients $\bvec{y}$ is analytic in this case, with mean given by Equation~(\ref{eq:inverse:y1hat})
 and covariance given by Equation~(\ref{eq:inverse:y1cov}). 
-Note that we must first scale the data vector $\bvec{f}$ by $\bvec{b}$ (which in this case is known).
+Note that we must first scale the data vector $\fnorm$ by the baseline (which in this case is known) to obtain $\bvec{f}$.
 
-% \begin{figure}[p!]
-%     \begin{centering}
-%         \includegraphics[width=0.49\linewidth]{figures/spot_y1_timeseries.pdf}
-%         \includegraphics[width=0.49\linewidth]{figures/spot_y1_rect.pdf}
-%         \caption{%
-%             The solution to the \spot problem at high SNR when both the rest frame spectrum and the baseline are known.
-%             The panel on the left shows the inferred map at each of the 16
-%             epochs, alongside the observed spectrum (black points) and the best-fit model (orange lines). 
-%             The rectangular projection of the original map is shown at the top right; the inferred map is displayed below it. 
-%             The bottom panel shows the posterior uncertainty as a function of latitude and longitude, ranging from close to zero in the northern hemisphere to $\sigma_\mathrm{prior} \approx 10\%$ below a latitude of $-30^\circ$. 
-%             The latter is the uncertainty associated with our particular choice of prior, as the southernmost latitudes of the star are never visible to the observer.
-%         }
-%         \label{fig:spot_y1}
-%     \end{centering}
-% \end{figure}
+\begin{figure}[p!]
+    \begin{centering}
+        \includegraphics[width=0.39\linewidth]{figures/spot_infer_y_timeseries.pdf}
+        \includegraphics[width=0.59\linewidth]{figures/spot_infer_y_maps.pdf}
+        \caption{%
+            The solution to the \spot problem at high SNR when both the rest frame spectrum and the baseline are known.
+            The panel on the left shows the inferred map at each of the 16
+            epochs, alongside the observed spectrum (black points) and the best-fit model (orange lines). 
+            The Mollweide projection of the original map is shown at the top right; the inferred map is displayed below it. 
+            The bottom panel shows the posterior uncertainty on the inferred intensity, ranging from close to zero in the northern hemisphere to $\sigma_\mathrm{prior} \approx 13\%$ below a latitude of $-30^\circ$. 
+            The latter is the uncertainty associated with our particular choice of prior, as the southernmost latitudes of the star are never visible to the observer.
+        }
+        \label{fig:spot_infer_y}
+    \end{centering}
+\end{figure}
 
-The results are shown in Figure~\ref{fig:spot_y1}. 
+The results are shown in Figure~\ref{fig:spot_infer_y}. 
 The left hand panel shows the inferred map alongside the data (black points) and best fit model (orange curves) at each of the 16 epochs.
 The panels on the right show the true map (top), the inferred map (center)
 and the posterior pointwise uncertainty (bottom) on a rectangular latitude-longitude grid. 
@@ -1114,15 +1113,17 @@ The uncertainty on the vector of pixels $\bvec{p}$ where we evaluate the map is 
 %
 \begin{align}
     \label{eq:spotstar:uncert}
-    \boldsymbol{\Sigma}_\bvec{p} = \bvec{P} \boldsymbol{\Sigma}_\bvec{\hat{y}_1}^{-1} \bvec{P}^\top
+    \boldsymbol{\Sigma}_\bvec{p} = \bvec{P} \boldsymbol{\Sigma}_\bvec{\hat{y}}\bvec{P}^\top
 \end{align}
 %
 where $\bvec{P}$ is the change-of-basis matrix from spherical harmonic coefficients to pixels on the grid.
 
 The inferred map is nearly indistinguishable from the true map, save for a few small differences, particularly below the stellar equator. 
-This is captured by the uncertainty, which increases south of $+30^\circ$ latitude, reaching a maximum at $-30^\circ$, below which the uncertainty is constant at about 10\%. 
+This is captured by the uncertainty, which increases south of $+30^\circ$ latitude, reaching a maximum at $-30^\circ$, below which the uncertainty is constant at about 13\%. 
 This is due to the fact that regions below $-40^\circ$ latitude are never in view from the observer's perspective, while regions between about $-30^\circ$ and $-40^\circ$ are so strongly limb-darkened that the data contains little information about them. 
-The particular value of the uncertainty in this region---10\%---is the uncertainty associated with the prior, which can be computed by replacing $\boldsymbol{\Sigma}_\bvec{\hat{y}_1}$ with $\boldsymbol{\Lambda}_\bvec{y_1}$ in Equation~(\ref{eq:spotstar:uncert}).
+The particular value of the uncertainty in this region---13\%---is the uncertainty associated with our choice of prior (Equation~\ref{eq:Lambday}).
+
+\xxx{WORK IN PROGRESS BELOW THIS LINE}
 
 \subsection{Known spectrum, unknown baseline}
 \label{sec:spot_y1b}

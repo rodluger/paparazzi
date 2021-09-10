@@ -14,8 +14,11 @@ def generate_data(
     smoothing=0.075,
     theta=None,
     wav=np.linspace(642.85, 643.15, 200),
+    seed=0,
     **kwargs
 ):
+    # Set the seed
+    np.random.seed(seed)
 
     # Instantiate the Doppler map
     map = starry.DopplerMap(
@@ -66,6 +69,10 @@ def generate_data(
     # Load the component maps
     map.load(maps=images, spectra=spectra, smoothing=smoothing)
 
+    # Get rotational phases
+    if theta is None:
+        theta = np.linspace(-180, 180, nt, endpoint=False)
+
     # Generate unnormalized data
     flux0 = map.flux(theta=theta, normalize=False)
     flux0 += flux_err * np.random.randn(*flux0.shape)
@@ -74,15 +81,12 @@ def generate_data(
     flux = map.flux(theta=theta, normalize=True)
     flux += flux_err * np.random.randn(*flux.shape)
 
-    # Reset the map
-    def reset_spectrum():
-        map._spectrum = np.ones((map.nc, map.nw0_))
-
-    def reset_map():
-        map._y = np.zeros((map.Ny, map.nc))
-        map._y[0] = 1.0
-
-    map.reset_spectrum = reset_spectrum
-    map.reset_map = reset_map
-
-    return map, flux0, flux
+    return dict(
+        map=map,
+        y=map.y,
+        spectrum=map.spectrum,
+        theta=theta,
+        flux_err=flux_err,
+        flux0=flux0,
+        flux=flux,
+    )

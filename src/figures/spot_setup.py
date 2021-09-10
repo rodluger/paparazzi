@@ -3,37 +3,16 @@
 Setup for the SPOT problem.
 
 """
-from generate import generate_data
+from utils.generate import generate_data
 import numpy as np
 import matplotlib.pyplot as plt
 import starry
 
-# Generate the data
-np.random.seed(13)
 
 # Instantiate the Doppler map
-ydeg = 15
-nc = 1
-nt = 16
-inc = 40
-veq = 60000
-vsini_max = 50000
-wav = np.linspace(642.85, 643.15, 200)
-theta = np.linspace(-180, 180, nt, endpoint=False)
-u = [0.5, 0.25]
-smoothing = 0.075
-map, _, _ = generate_data(
-    ydeg=ydeg,
-    nc=nc,
-    nt=nt,
-    inc=inc,
-    veq=veq,
-    vsini_max=vsini_max,
-    wav=wav,
-    theta=theta,
-    u=u,
-    smoothing=smoothing,
-)
+data = generate_data()
+map = data["map"]
+theta = data["theta"]
 
 # Set up the plot
 fig = plt.figure(figsize=(11, 9))
@@ -67,6 +46,7 @@ for n in range(16):
         fontsize=6,
         color="k",
     )
+    ax_ortho[n].set_rasterization_zorder(100)
 
 # Points where we'll evaluate the spectrum. One corresponds to
 # a place within the spot; the other is outside the spot.
@@ -141,7 +121,11 @@ ax_data_twin = ax_data.twinx()
 label = "observed"
 for n in range(len(flux)):
     ax_data_twin.plot(
-        map.wav, flux[n] / flux[n].max(), color="C1", alpha=0.3, label=label,
+        map.wav,
+        flux[n] / flux[n].max(),
+        color="C1",
+        alpha=0.3,
+        label=label,
     )
     label = None
 ax_data.axvspan(map.wav0[0], map.wav[0], color="k", alpha=0.3)
