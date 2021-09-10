@@ -13,39 +13,48 @@ module showyourwork:
 use rule * from showyourwork
 
 
-# Generate inline figure
-use rule figure from showyourwork as kT00 with:
+# Inline figures that need user-defined rules
+inline_figures = ["kT00", "Y1m1"]
+
+
+# Figures that depend on the scripts in `src/figures/utils`
+figures_with_deps = ["spot_setup", "spot_infer_y"]
+
+
+# Generate inline figures
+use rule figure from showyourwork as inline_figure with:
     input:
-        "src/figures/kT00.py",
+        "src/figures/{figure_name}.py",
         "environment.yml"
+    wildcard_constraints:
+        figure_name="|".join(inline_figures)
     output:
-        report("src/figures/kT00.pdf", category="Figure")
+        report("src/figures/{figure_name}.pdf", category="Figure")
 
 
-# Generate inline figure
-use rule figure from showyourwork as Y1m1 with:
-    input:
-        "src/figures/Y1m1.py",
-        "environment.yml"
-    output:
-        report("src/figures/Y1m1.pdf", category="Figure")
+def figure_script_with_deps(wildcards):
+    """
+    If the input to the current rule is one of the scripts in the
+    list `figures_with_depths`, returns the path to that script,
+    otherwise raises an error. This is used to dynamically
+    enable the rule `figure_with_deps` below.
 
-
-#
-scripts_with_deps = ["spot_setup.py", "spot_infer_y.py"]
-
-
-
-def figure_script_with_deps():
-    script = showyourwork.figure_script
-    if Path(script).name in scripts_with_deps:
+    """
+    script = showyourwork.figure_script(wildcards)
+    if Path(script).stem in figures_with_deps:
         return script
     else:
         raise NotImplementedError()
 
 
+# Generate figures w/ extra dependencies
 use rule figure from showyourwork as figure_with_deps with:
     input:
         figure_script_with_deps,
-        directory("src/figures/utils"),
+        "src/figures/utils/generate.py",
+        "src/figures/utils/plot.py",
         "environment.yml"
+
+
+# Resolve rule ambiguity: always prefer our custom rule
+ruleorder: figure_with_deps > figure
