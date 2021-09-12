@@ -46,9 +46,36 @@
 % Algorithms
 \usepackage{algcompatible}
 \usepackage{newfloat}
+\usepackage{etoolbox}
+\let\singlespace\undefined
+\let\doublespace\undefined
+\usepackage{setspace}
+\usepackage{bold-extra}
+
 \DeclareFloatingEnvironment[
     fileext=loa,
     listname=List of Algorithms,
     name=Algorithm,
     placement=tbhp,
 ]{algorithm}
+\algnewcommand\algorithmicfunction{\texttt{\textbf{function}}}
+\makeatletter
+\algdef{SE}[FUNCTION]{FUNCTION}{ENDFUNCTION}%
+   [2][default]{\algorithmicfunction\ \texttt{\textbf{#2}}\ \ALG@compatcomm{#1}}%
+   {\algorithmicend\ \algorithmicfunction}%
+\newcommand{\RETURN}[1]{\STATE \texttt{\textbf{return}}\ #1}
+\makeatother
+
+\newsavebox{\fminipagebox}
+\NewDocumentEnvironment{fminipage}{m O{\fboxsep}}
+ {\par\kern#2\noindent\begin{lrbox}{\fminipagebox}
+  \begin{minipage}{#1}\ignorespaces}
+ {\end{minipage}\end{lrbox}%
+  \makebox[#1]{%
+    \kern\dimexpr-\fboxsep-\fboxrule\relax
+    \fbox{\usebox{\fminipagebox}}%
+    \kern\dimexpr-\fboxsep-\fboxrule\relax
+  }\par\kern#2
+ }
+
+ \algrenewcommand\algorithmicindent{2.5em}%

@@ -1089,6 +1089,51 @@ As we showed in \S\ref{sec:solve_y}, the posterior distribution for the map coef
 and covariance given by Equation~(\ref{eq:inverse:y1cov}). 
 Note that we must first scale the data vector $\fnorm$ by the baseline (which in this case is known) to obtain $\bvec{f}$.
 
+\begin{algorithm}
+    \begin{spacing}{1.25}
+        \begin{fminipage}{0.98\textwidth}
+            \vspace{1em}
+            \begin{algorithmic}
+                \FUNCTION{solve1}($\bvec{f}$, $\boldsymbol{\Sigma}_\mathbf{f}$, $\boldsymbol{\mu}_\bvec{y}$, $\boldsymbol{\Lambda}_\bvec{y}$, $\bvec{s}$)
+                \STATE
+                $
+                \bvec{S} \gets \mathrm{blockDiag}(\bvec{s})
+                $
+                \STATE 
+                $
+                \boldsymbol{\Sigma}_\bvec{\hat{y}}
+                \gets
+                \left(
+                \bvec{S}^\top\Doppler^\top
+                {\boldsymbol{\Sigma}_\bvec{f}}^{-1}
+                \Doppler\bvec{S}
+                +
+                {\boldsymbol{\Lambda}_\bvec{y}}^{-1}
+                \right)^{-1}
+                $
+                \STATE 
+                $
+                \bvec{\hat{y}} 
+                \gets 
+                \boldsymbol{\Sigma}_\mathbf{\hat{y}}
+                \left(
+                \bvec{S}^\top\Doppler^\top
+                {\boldsymbol{\Sigma}_\mathbf{f}}^{-1}
+                \bvec{f}
+                +
+                {\boldsymbol{\Lambda}_\bvec{y}}^{-1} \boldsymbol{\mu}_\bvec{y}
+                \right)
+                $
+                \RETURN ($\bvec{\hat{y}}$, $\boldsymbol{\Sigma}_\mathbf{\hat{y}}$)
+                \ENDFUNCTION
+            \end{algorithmic}
+            \vspace{1em}
+        \end{fminipage}
+    \end{spacing}
+    \label{alg:solve1}
+    \caption{Solution to the L2 linear least squares problem for the spherical harmonic representation $\bvec{y}$ of the stellar surface map. Given an unnormalized spectral timeseries $\bvec{f}$, its covariance matrix $\boldsymbol{\Sigma}_\mathbf{f}$, a Gaussian prior on the map (mean $\boldsymbol{\mu}_\bvec{y}$, covariance $\boldsymbol{\Lambda}_\bvec{y}$), and the rest frame spectrum $\bvec{s}$, this function returns the maximum a posteriori (MAP) solution $\bvec{\hat{y}}$ to the surface map as well as its covariance $\boldsymbol{\Sigma}_\mathbf{\hat{y}}$. The $\mathrm{blockDiag}$ operation on the second line is given by Equation~(\ref{eq:inverse:S}).}
+\end{algorithm}
+
 \begin{figure}[p!]
     \begin{centering}
         \includegraphics[width=0.39\linewidth]{figures/spot_infer_y_timeseries.pdf}
@@ -1131,6 +1176,50 @@ The particular value of the uncertainty in this region---13\%---is the uncertain
 We next investigate the case where the spectrum is known exactly, but the baseline is not. 
 This corresponds to the case discussed in
 \S\ref{sec:norm}. 
+
+\begin{algorithm}
+    \begin{spacing}{1.25}
+        \begin{fminipage}{0.98\textwidth}
+            \vspace{1em}
+            \begin{algorithmic}
+                \FUNCTION{solve2}($\fnorm$, $\boldsymbol{\sigma}_{\fnorm}$, $\boldsymbol{\mu}_\bvec{y}$, $\boldsymbol{\Lambda}_\bvec{y}$, $\bvec{s}$, $\sigma_b$, $\ln T_0$, $\Delta \ln T$)
+                \STATE $\bvec{b} \gets \bvec{1}$
+                \STATE $\ln T \gets \ln T_0$
+                \WHILE{$T > 1$}
+                    \STATE $
+                    \bvec{f} 
+                    \gets 
+                    \fnorm \circ \bvec{b}
+                    $
+                    \STATE $
+                    \boldsymbol{\sigma}_\mathbf{f} 
+                    \gets 
+                    \boldsymbol{\sigma}_{\fnorm} \circ \bvec{b}
+                    $
+                    \STATE $
+                    \boldsymbol{\Sigma}_\mathbf{f} 
+                    \gets 
+                    e^{\ln T} \mathrm{diag}(\boldsymbol{\sigma}_\mathbf{f} ) + \sigma_b^2
+                    $
+                    \STATE 
+                    $
+                    (\bvec{\hat{y}}, \boldsymbol{\Sigma}_\bvec{\hat{y}})
+                    \gets
+                    $
+                    \texttt{\textbf{solve1}}($\bvec{f}$, $\boldsymbol{\Sigma}_\mathbf{f}$, $\boldsymbol{\mu}_\bvec{y}$, $\boldsymbol{\Lambda}_\bvec{y}$, $\bvec{s}$)
+                    \STATE $\bvec{b} \gets \bvec{B} \, \bvec{S} \, \bvec{\hat{y}} $
+                    \STATE $\ln T \gets \ln T - \Delta \ln T$
+                \ENDWHILE
+                \RETURN ($\bvec{\hat{y}}$, $\boldsymbol{\Sigma}_\mathbf{\hat{y}}$)
+                \ENDFUNCTION
+            \end{algorithmic}
+            \vspace{1em}
+        \end{fminipage}
+    \end{spacing}
+    \label{alg:solve2}
+    \caption{Solution to the tempered, iterative problem for the spherical harmonic representation of the stellar surface map when the observed spectra $\fnorm$ have been normalized to the continuum. In addition to the data, priors, and model spectrum, this function accepts a baseline standard deviation $\sigma_b$, an initial temperature $\ln T_0$, and a temperature decrement $\Delta \ln T$; see text for details.}
+\end{algorithm}
+
 We use the solution to the linearized problem, Equation~(\ref{eq:norm:yhat}), to obtain an initial guess for $\bvec{y_1}$. 
 We then repeatedly solve Equation~(\ref{eq:inverse:y1hat}) for $\bvec{y_1}$, given the baseline computed from the previous value of $\bvec{y_1}$ from Equation~(\ref{eq:norm:b}).
 Because of the high SNR of our data, we find that it is necessary to employ a simple tempering procedure to avoid getting stuck in local minima. 
@@ -1138,39 +1227,18 @@ We introduce an artificial temperature $T$ that decreases every iteration in equ
 This temperature is used to scale the data covariance $\boldsymbol{\Sigma}_\bvec{f}$; in practice, we simply replace $\boldsymbol{\Sigma}_\bvec{f}$ with $T \boldsymbol{\Sigma}_\bvec{f}$ in Equation~(\ref{eq:inverse:y1hat}). 
 This has the effect of smoothing out the likelihood space, reducing the likelihood that the solver will get stuck in a local minimum. 
 For this particular experiment, we set $T_0 = 100$ and $\Delta \log T = -0.25$, for a total of $9$ steps of the bilinear solver.
-%
-In a final step, we run a gradient-descent optimizer, initializing it at the solution obtained with the bilinear solver. 
-We use the \texttt{Keras} \citep{Keras} implementation of the Nesterov momentum-enhanced Adam solver \citep[\texttt{NAdam};][]{NAdam}, running it for $N_\mathrm{nadam} = 80$ iterations at a learning rate $L_\mathrm{nadam} = 10^{-4}$. 
-Our loss function is simply the (negative) log probability, equal to the sum of the log likelihood and log prior:
-%
-\begin{align}
-    \label{eq:spotstar:logP}
-    -\ln P & =
-    \frac{1}{2}
-    \Big(
-    \bvec{r}^\top \boldsymbol{\Sigma}_\bvec{f}^{-1} \bvec{r} \, + \,
-    \bvec{y_1}^\top \boldsymbol{\Lambda}_\bvec{y_1}^{-1} \bvec{y_1} \, + \, (\bvec{b - 1})^\top \boldsymbol{\Lambda}_\bvec{b}^{-1} (\bvec{b - 1})
-    \Big)
-\end{align}
-%
-where $\bvec{r}$ is the residual (data minus model) vector and the last term is a prior we include on the baseline $\bvec{b}$, which we force to be close to a mean of unity with covariance $\boldsymbol{\Lambda}_\bvec{b} = (0.1)^2\bvec{I}$.
 
-% \begin{figure}[p!]
-%     \begin{centering}
-%         \includegraphics[width=0.49\linewidth]{figures/spot_y1b_timeseries.pdf.pdf}
-%         \includegraphics[width=0.49\linewidth]{figures/spot_y1b_rect.pdf}
-%         \\[0.5em]
-%         \includegraphics[width=0.405\linewidth]{figures/spot_y1b_baseline.pdf}
-%         \includegraphics[width=0.575\linewidth]{figures/spot_y1b_coeffs.pdf}
-%         \caption{%
-%             Similar to Figure~\ref{fig:spot_y1}, but assuming the baseline is not known. 
-%             The panel at the bottom left shows the true baseline (blue) and the inferred baseline (orange), along with its $1\sigma$ uncertainty. 
-%             The large offset between the two highlights one of the fundamental degeneracies of the problem: since most of the southern hemisphere of the star is never visible, the coefficient of the $Y_{1,-1}$ (\raisebox{-0.2em}{\includegraphics[width=1em]{Y1m1.pdf}}) spherical harmonic is not constrained by the data, resulting in an unknowable additive offset in the baseline.
-%             This effect can be seen also in (\emph{a}) the inferred map, where the background intensity in the northern hemisphere is significantly larger than that in the southern hemisphere, and (\emph{b}) the spherical harmonic coefficients (bottom right), where a large discrepancy is visible between the true and inferred values of the first two coefficients.
-%         }
-%         \label{fig:spot_y1b}
-%     \end{centering}
-% \end{figure}
+
+\begin{figure}[p!]
+    \begin{centering}
+        \includegraphics[width=0.39\linewidth]{figures/spot_infer_yb_timeseries.pdf}
+        \includegraphics[width=0.59\linewidth]{figures/spot_infer_yb_maps.pdf}
+        \caption{%
+            Similar to Figure~\ref{fig:spot_infer_y}, but assuming the baseline is not known.
+        }
+        \label{fig:spot_infer_yb}
+    \end{centering}
+\end{figure}
 
 Our results are shown in Figure~\ref{fig:spot_y1b}. 
 The panels at the top are the same as those in Figure~\ref{fig:spot_y1}, but now we also plot the inferred baseline (lower left) and spherical harmonic coefficients (lower right) next to the true values. 

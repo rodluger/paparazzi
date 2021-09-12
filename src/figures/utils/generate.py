@@ -73,9 +73,13 @@ def generate_data(
     if theta is None:
         theta = np.linspace(-180, 180, nt, endpoint=False)
 
-    # Generate unnormalized data
+    # Generate unnormalized data. Scale the error so it's
+    # the same magnitude relative to the baseline as the
+    # error in the normalized dataset so we can more easily
+    # compare the inference results in both cases
     flux0 = map.flux(theta=theta, normalize=False)
-    flux0 += flux_err * np.random.randn(*flux0.shape)
+    flux0_err = flux_err * np.median(flux0)
+    flux0 += flux0_err * np.random.randn(*flux0.shape)
 
     # Generate normalized data
     flux = map.flux(theta=theta, normalize=True)
@@ -86,6 +90,7 @@ def generate_data(
         y=map.y,
         spectrum=map.spectrum,
         theta=theta,
+        flux0_err=flux0_err,
         flux_err=flux_err,
         flux0=flux0,
         flux=flux,
