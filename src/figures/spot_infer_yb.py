@@ -12,6 +12,7 @@ import numpy as np
 # Generate the synthetic dataset
 data = generate_data()
 y_true = data["truths"]["y"]
+spectrum_true = data["truths"]["spectrum"]
 theta = data["data"]["theta"]
 flux = data["data"]["flux"]
 flux_err = data["data"]["flux_err"]
@@ -42,5 +43,7 @@ fig = plot_maps(y_true, y_inferred, y_uncert)
 fig.savefig("spot_infer_yb_maps.pdf", bbox_inches="tight", dpi=300)
 
 # Plot the timeseries
-fig = plot_timeseries(data, normalized=True, overlap=5)
+fig = plot_timeseries(
+    data, y_inferred, spectrum_true, normalized=True, overlap=5
+)
 fig.savefig("spot_infer_yb_timeseries.pdf", bbox_inches="tight", dpi=300)

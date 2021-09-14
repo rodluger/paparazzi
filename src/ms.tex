@@ -1293,32 +1293,27 @@ We must follow the iterative procedure presented in
     \begin{centering}
         \includegraphics[width=0.39\linewidth]{figures/spot_infer_ybs_timeseries.pdf}
         \includegraphics[width=0.59\linewidth]{figures/spot_infer_ybs_maps.pdf}
-        %\\[0.5em]
         \includegraphics[width=\linewidth]{figures/spot_infer_ybs_spectra.pdf}
         \caption{%
-        Similar to Figure~\ref{fig:spot_y1}, but assuming we have no information about either the spectrum, the baseline, or the map coefficients. 
-        The bottommost panel now shows the true rest frame spectrum (blue line), the initial guess based on a deconvolution (dashed orange line), and the inferred spectrum (orange line, with shaded $1\sigma$ uncertainty).
+            Similar to Figure~\ref{fig:spot_y1}, but assuming we have no information about either the spectrum, the baseline, or the map coefficients. 
+            The bottommost panel now shows the true rest frame spectrum (blue line), the initial guess based on a deconvolution (dashed orange line), and the inferred spectrum (orange line, with shaded $1\sigma$ uncertainty).
         }
         \label{fig:spot_infer_ybs}
     \end{centering}
 \end{figure}
 
-% \begin{figure}[p!]
-%     \begin{centering}
-%         \includegraphics[width=0.49\linewidth]{figures/spot_y1bs_low_snr_timeseries.pdf}
-%         \includegraphics[width=0.49\linewidth]{figures/spot_y1bs_low_snr_rect.pdf}
-%         \\[0.5em]
-%         \includegraphics[width=0.405\linewidth]{figures/spot_y1bs_low_snr_baseline.pdf}
-%         \includegraphics[width=0.575\linewidth]{figures/spot_y1bs_low_snr_coeffs.pdf}
-%         \\[0.5em]
-%         \includegraphics[width=0.98\linewidth]{figures/spot_y1bs_low_snr_spectrum.pdf}
-%         \caption{%
-%             Same as Figure~\ref{fig:spot_y1bs}, but for $10\times$ lower SNR.
-%             We still recover the \spot map and the input spectrum, albeit with higher uncertainty, as expected.
-%         }
-%         \label{fig:spot_y1bs_low_snr}
-%     \end{centering}
-% \end{figure}
+\begin{figure}[p!]
+    \begin{centering}
+        \includegraphics[width=0.39\linewidth]{figures/spot_infer_ybs_low_snr_timeseries.pdf}
+        \includegraphics[width=0.59\linewidth]{figures/spot_infer_ybs_low_snr_maps.pdf}
+        \includegraphics[width=\linewidth]{figures/spot_infer_ybs_low_snr_spectra.pdf}
+        \caption{%
+            Same as Figure~\ref{fig:spot_y1bs}, but for $10\times$ lower SNR.
+             We still recover the \spot map and the input spectrum, albeit with higher uncertainty, as expected.
+        }
+        \label{fig:spot_infer_ybs_low_snr}
+    \end{centering}
+\end{figure}
 
 Because the problem is generally not convex, we need a good starting guess for either the spectrum or the map coefficients. 
 We note that we can very crudely approximate the rest frame spectrum by deconvolving the average observed spectrum with the first term of the convolution kernel $\kT$ (\raisebox{-0.1em}{\includegraphics[width=2em]{figures/kT00.pdf}}).

@@ -10,7 +10,7 @@ import numpy as np
 
 
 # Generate the synthetic dataset
-data = generate_data()
+data = generate_data(flux_err=2e-3)
 y_true = data["truths"]["y"]
 spectrum_true = data["truths"]["spectrum"].reshape(-1)
 theta = data["data"]["theta"]
@@ -23,7 +23,14 @@ for n in range(map.udeg):
     map[1 + n] = data["props"]["u"][n]
 
 # Solve for the Ylm coeffs and the spectrum
-soln = map.solve(flux, theta=theta, normalized=True, flux_err=flux_err)
+soln = map.solve(
+    flux,
+    theta=theta,
+    normalized=True,
+    flux_err=flux_err,
+    spectral_cov=5e-3,
+    spatial_cov=2.5e-4,
+)
 
 # Get the inferred map and spectrum
 y_inferred = map.y
@@ -45,16 +52,18 @@ spectrum_uncert = (np.sqrt(np.diag(L @ L.T)) @ M).reshape(-1)
 
 # Plot the maps
 fig = plot_maps(y_true, y_inferred, y_uncert)
-fig.savefig("spot_infer_ybs_maps.pdf", bbox_inches="tight", dpi=300)
+fig.savefig("spot_infer_ybs_low_snr_maps.pdf", bbox_inches="tight", dpi=300)
 
 # Plot the spectra
 fig = plot_spectra(
     wav0, spectrum_true, spectrum_guess, spectrum_inferred, spectrum_uncert
 )
-fig.savefig("spot_infer_ybs_spectra.pdf", bbox_inches="tight", dpi=300)
+fig.savefig("spot_infer_ybs_low_snr_spectra.pdf", bbox_inches="tight", dpi=300)
 
 # Plot the timeseries
 fig = plot_timeseries(
     data, y_inferred, spectrum_inferred, normalized=True, overlap=5
 )
-fig.savefig("spot_infer_ybs_timeseries.pdf", bbox_inches="tight", dpi=300)
+fig.savefig(
+    "spot_infer_ybs_low_snr_timeseries.pdf", bbox_inches="tight", dpi=300
+)

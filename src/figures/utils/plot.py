@@ -10,7 +10,9 @@ from matplotlib.ticker import FormatStrFormatter
 import starry
 
 
-def plot_timeseries(data, normalized=False, overlap=8.0):
+def plot_timeseries(
+    data, y_inferred, spectrum_inferred, normalized=False, overlap=8.0
+):
     # Get the data
     theta = data["data"]["theta"]
     if normalized:
@@ -21,8 +23,8 @@ def plot_timeseries(data, normalized=False, overlap=8.0):
 
     # Instantiate the map
     map = starry.DopplerMap(lazy=False, **data["kwargs"])
-    map[:, :] = data["truths"]["y"]
-    map.spectrum = data["truths"]["spectrum"]
+    map[:, :] = y_inferred
+    map.spectrum = spectrum_inferred
     for n in range(map.udeg):
         map[1 + n] = data["props"]["u"][n]
     model = map.flux(theta, normalize=normalized).reshape(map.nt, -1)

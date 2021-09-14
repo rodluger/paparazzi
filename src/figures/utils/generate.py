@@ -4,7 +4,7 @@ import starry
 
 def generate_data(
     nc=1,
-    flux_err=5e-4,
+    flux_err=2e-4,
     ydeg=15,
     u=[0.5, 0.25],
     nt=16,

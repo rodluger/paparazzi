@@ -18,7 +18,13 @@ inline_figures = ["kT00", "Y1m1"]
 
 
 # Figures that depend on the scripts in `src/figures/utils`
-figures_with_deps = ["spot_setup", "spot_infer_y", "spot_infer_yb"]
+figures_with_deps = [
+    "spot_setup", 
+    "spot_infer_y", 
+    "spot_infer_yb", 
+    "spot_infer_ybs", 
+    "spot_infer_ybs_low_snr"
+]
 
 
 # Generate inline figures
