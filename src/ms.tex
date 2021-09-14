@@ -494,7 +494,7 @@ Figure~\ref{fig:linalg} shows an example of $\Doppler$.
 In the previous section we showed how to express the data vector $\bvec{f}$, a series of spectra obtained at different epochs, as a purely linear operation on the map vector $\alm$, the spherical harmonic decomposition of the specific intensity on the surface of the star. 
 The advantage of this linearity is that, given suitable priors, it allows one to compute both the maximum likelihood solution for $\alm$ and its uncertainty \emph{analytically}. 
 In particular, if one places a (multidimensional) Gaussian prior on $\alm$ with mean $\boldsymbol{\mu}_\mathbf{a}$ and covariance $\boldsymbol{\Lambda}_\mathbf{a}$, the maximum \emph{a posteriori} (MAP)
-solution for $\alm$ is
+solution for $\alm$ is given by the solution to the L2 regularization problem:
 %
 \begin{align}
     \label{eq:inverse:ahat}
@@ -1051,7 +1051,7 @@ Finally, we linearly interpolate this spectrum to a wavelength grid uniform in l
 Given $\bvec{y}$ and $\bvec{s}$, we use Equations~(\ref{eq:deconv:F}) and~(\ref{eq:inverse:alm}) to compute the data vector $\bvec{f}$ at $M = 16$ equally spaced rotational phases; these phases are shown in orthographic projection (as an observer would see the star) in the center panel of Figure~\ref{fig:spot_setup}. 
 The synthetic spectra for each phase are shown as the orange curves in the bottom panel of the figure (note the different scaling, as all spectral lines become shallower due to the broadening). 
 We assume a wavelength-independent, quadratic limb darkening law with $u_1 = 0.5$ and $u_2 = 0.25$. 
-Finally, we divide the flux by the baseline at each epoch (Equation~\ref{eq:norm:f}) and add random Gaussian noise with amplitude $\sigma_\bvec{f} = 10^{-4}$ to simulate a very high signal-to-noise ratio (SNR) spectrum. 
+Finally, we divide the flux by the baseline at each epoch (Equation~\ref{eq:norm:f}) and add random Gaussian noise with covariance matrix $\bvec{\Sigma}_\bvec{f} = \sigma_\bvec{f}^2 \mathbf{I}$, with $\sigma_\bvec{f} = 10^{-4}$ to simulate a very high signal-to-noise ratio (SNR) spectrum. 
 The mean standard deviation in each wavelength bin across all 16 epochs in the noiseless data vector is about $10^{-2}$, so our choice of $\sigma_\bvec{f}$ corresponds to SNR $\sim$ 100 in each of the 200 wavelength bins of $\bvec{f}$.
 
 %For reference, \citet{Vogt1987} report SNRs per 60 m\AA\, pixel, while our
@@ -1088,6 +1088,7 @@ This is analogous to the case where a good physical model exists for the stellar
 As we showed in \S\ref{sec:solve_y}, the posterior distribution for the map coefficients $\bvec{y}$ is analytic in this case, with mean given by Equation~(\ref{eq:inverse:y1hat})
 and covariance given by Equation~(\ref{eq:inverse:y1cov}). 
 Note that we must first scale the data vector $\fnorm$ by the baseline (which in this case is known) to obtain $\bvec{f}$.
+The pseudocode for computing the maximum a posteriori (MAP) solution for $\bvec{y}$ and its covariance is given in Algorithm~\ref{alg:solve1}.
 
 \begin{algorithm}
     \begin{spacing}{1.25}
@@ -1130,8 +1131,9 @@ Note that we must first scale the data vector $\fnorm$ by the baseline (which in
             \vspace{1em}
         \end{fminipage}
     \end{spacing}
-    \label{alg:solve1}
-    \caption{Solution to the L2 linear least squares problem for the spherical harmonic representation $\bvec{y}$ of the stellar surface map. Given an unnormalized spectral timeseries $\bvec{f}$, its covariance matrix $\boldsymbol{\Sigma}_\mathbf{f}$, a Gaussian prior on the map (mean $\boldsymbol{\mu}_\bvec{y}$, covariance $\boldsymbol{\Lambda}_\bvec{y}$), and the rest frame spectrum $\bvec{s}$, this function returns the maximum a posteriori (MAP) solution $\bvec{\hat{y}}$ to the surface map as well as its covariance $\boldsymbol{\Sigma}_\mathbf{\hat{y}}$. The $\mathrm{blockDiag}$ operation on the second line is given by Equation~(\ref{eq:inverse:S}).}
+    \caption{Solution to the L2 linear least squares problem for the spherical harmonic representation $\bvec{\hat{y}}$ of the stellar surface map when the unnormalized spectral timeseries $\bvec{f}$ is known.
+    The $\mathrm{blockDiag}$ operation on the second line is given by Equation~(\ref{eq:inverse:S}).
+    \label{alg:solve1}}
 \end{algorithm}
 
 \begin{figure}[p!]
@@ -1150,10 +1152,10 @@ Note that we must first scale the data vector $\fnorm$ by the baseline (which in
     \end{centering}
 \end{figure}
 
-The results are shown in Figure~\ref{fig:spot_infer_y}. 
+Figure~\ref{fig:spot_infer_y} shows the results.
 The left hand panel shows the inferred map alongside the data (black points) and best fit model (orange curves) at each of the 16 epochs.
 The panels on the right show the true map (top), the inferred map (center)
-and the posterior pointwise uncertainty (bottom) on a rectangular latitude-longitude grid. 
+and the posterior pointwise uncertainty (bottom) on a Mollweide grid. 
 The uncertainty on the vector of pixels $\bvec{p}$ where we evaluate the map is equal to the square root of the diagonal of the posterior covariance matrix for the pixel values, computed from
 %
 \begin{align}
@@ -1163,19 +1165,15 @@ The uncertainty on the vector of pixels $\bvec{p}$ where we evaluate the map is 
 %
 where $\bvec{P}$ is the change-of-basis matrix from spherical harmonic coefficients to pixels on the grid.
 
-The inferred map is nearly indistinguishable from the true map, save for a few small differences, particularly below the stellar equator. 
-This is captured by the uncertainty, which increases south of $+30^\circ$ latitude, reaching a maximum at $-30^\circ$, below which the uncertainty is constant at about 13\%. 
-This is due to the fact that regions below $-40^\circ$ latitude are never in view from the observer's perspective, while regions between about $-30^\circ$ and $-40^\circ$ are so strongly limb-darkened that the data contains little information about them. 
-The particular value of the uncertainty in this region---13\%---is the uncertainty associated with our choice of prior (Equation~\ref{eq:Lambday}).
-
-\xxx{WORK IN PROGRESS BELOW THIS LINE}
+The inferred map is nearly indistinguishable from the true map north of the equator. Regions south of the equator are almost never in view to the observer (below $-40^\circ$, they are \emph{never} in view); our inferred map is therefore informed primarily by our prior in southern latitudes.
+This is well captured by the uncertainty (bottom panel), which increases south of the equator, reaching a maximum at $-30^\circ$, below which the uncertainty is constant at about 13\%, a value associated with our particular choice of prior (Equation~\ref{eq:Lambday}).
 
 \subsection{Known spectrum, unknown baseline}
 \label{sec:spot_y1b}
 %
 We next investigate the case where the spectrum is known exactly, but the baseline is not. 
 This corresponds to the case discussed in
-\S\ref{sec:norm}. 
+\S\ref{sec:norm}, and is likely to be the most common application of the methodology presented in this work.
 
 \begin{algorithm}
     \begin{spacing}{1.25}
@@ -1199,7 +1197,7 @@ This corresponds to the case discussed in
                     \STATE $
                     \boldsymbol{\Sigma}_\mathbf{f} 
                     \gets 
-                    e^{\ln T} \mathrm{diag}(\boldsymbol{\sigma}_\mathbf{f} ) + \sigma_b^2
+                    e^{\ln T} \mathrm{diag}(\boldsymbol{\sigma}_\mathbf{f}^2) + \sigma_b^2
                     $
                     \STATE 
                     $
@@ -1216,43 +1214,65 @@ This corresponds to the case discussed in
             \vspace{1em}
         \end{fminipage}
     \end{spacing}
-    \label{alg:solve2}
-    \caption{Solution to the tempered, iterative problem for the spherical harmonic representation of the stellar surface map when the observed spectra $\fnorm$ have been normalized to the continuum. In addition to the data, priors, and model spectrum, this function accepts a baseline standard deviation $\sigma_b$, an initial temperature $\ln T_0$, and a temperature decrement $\Delta \ln T$; see text for details.}
+    \caption{Solution to the tempered, iterative problem for the spherical harmonic representation of the stellar surface map when the observed spectra $\fnorm$ have been normalized to the continuum. In addition to the data, priors, and model spectrum, this function accepts a baseline standard deviation $\sigma_b$, an initial temperature $\ln T_0$, and a temperature decrement $\Delta \ln T$; see text for details.
+    \label{alg:solve2}}
 \end{algorithm}
 
-We use the solution to the linearized problem, Equation~(\ref{eq:norm:yhat}), to obtain an initial guess for $\bvec{y_1}$. 
-We then repeatedly solve Equation~(\ref{eq:inverse:y1hat}) for $\bvec{y_1}$, given the baseline computed from the previous value of $\bvec{y_1}$ from Equation~(\ref{eq:norm:b}).
-Because of the high SNR of our data, we find that it is necessary to employ a simple tempering procedure to avoid getting stuck in local minima. 
-We introduce an artificial temperature $T$ that decreases every iteration in equally spaced logarithmic steps $\Delta \log T$ from an initial temperature $T=T_0$ to $T=1$. 
-This temperature is used to scale the data covariance $\boldsymbol{\Sigma}_\bvec{f}$; in practice, we simply replace $\boldsymbol{\Sigma}_\bvec{f}$ with $T \boldsymbol{\Sigma}_\bvec{f}$ in Equation~(\ref{eq:inverse:y1hat}). 
-This has the effect of smoothing out the likelihood space, reducing the likelihood that the solver will get stuck in a local minimum. 
-For this particular experiment, we set $T_0 = 100$ and $\Delta \log T = -0.25$, for a total of $9$ steps of the bilinear solver.
-
+Our approach is to iteratively solve Equation~(\ref{eq:norm:fy}) by re-expressing it as
+%
+\begin{align}
+    \fnorm
+     & =
+    \frac{
+        \bvec{D}
+        \,
+        \bvec{S}
+        \,
+        \bvec{y}
+    }{
+        \bvec{b}
+    }
+    \quad.
+\end{align}
+%
+where the baseline $\bvec{b}$ is given by
+%
+\begin{align}
+    \bvec{b}
+    =
+    \bvec{B}
+    \,
+    \bvec{S}
+    \,
+    \bvec{y}
+    \quad.
+\end{align}
+%
+We adopt a simple iterative scheme where we solve the L2 problem for $\bvec{y}$ with $\bvec{b}$ fixed, then update the value of $\bvec{b}$ and repeat.
+Because of the high SNR of our data, we find that it is necessary to employ a simple tempering procedure, in which we artificially inflate the variance of the data by a factor $T$, which we slowly decrease with each step until $T = 1$. 
+This has the effect of smoothing out the likelihood surface, effectively preventing the solver from getting stuck in local minima.
+For this particular experiment, we set $\ln T_0 = 2$ and $\Delta \log T = -0.04$, for a total of $50$ steps of the bilinear solver.
+We also add a small variance term $\sigma_b^2 = 10^{-2}$ to all entries of the data covariance $\boldsymbol{\Sigma}_{\bvec{f}}$; this has the effect of marginalizing over an additive model term, which we find improves the convergence of the algorithm.
+The pseudocode for this procedure is presented in Algorithm~\ref{alg:solve2}.
 
 \begin{figure}[p!]
     \begin{centering}
         \includegraphics[width=0.39\linewidth]{figures/spot_infer_yb_timeseries.pdf}
         \includegraphics[width=0.59\linewidth]{figures/spot_infer_yb_maps.pdf}
         \caption{%
-            Similar to Figure~\ref{fig:spot_infer_y}, but assuming the baseline is not known.
+            Similar to Figure~\ref{fig:spot_infer_y}, but assuming the input spectra are continuum-normalized.
+            We are able to infer the surface map just as
+            well as in the case where the true continuum level
+            is known (Figure~\ref{fig:spot_infer_y}). As before,
+            regions south of the equator are almost never in view, so that portion of our inferred map is dominated by the prior.
         }
         \label{fig:spot_infer_yb}
     \end{centering}
 \end{figure}
 
-Our results are shown in Figure~\ref{fig:spot_y1b}. 
-The panels at the top are the same as those in Figure~\ref{fig:spot_y1}, but now we also plot the inferred baseline (lower left) and spherical harmonic coefficients (lower right) next to the true values. 
-We recover the \texttt{SPOT} map just as well as before, except for the presence of a strong dipolar artifact; the background intensity level is higher in the northern hemisphere and lower in the southern hemisphere. 
-This effect is closely related to the fact that we do not know the true baseline. 
-While we are able to infer the shape of the baseline exceedingly well (lower left panel), there is a large offset between the true value and our inferred value. 
-This is due to a fundamental degeneracy involving the $Y_{1,-1}$ (\raisebox{-0.2em}{\includegraphics[width=1em]{figures/Y1m1.pdf}}) spherical harmonic coefficient, which, because a large portion of the southern hemisphere is never in view, cannot be constrained by the data. 
-The magnitude of the true value of the coefficient is quite large (lower right panel), since the northern hemisphere \emph{is} significantly darker than the southern hemisphere; however, the data do not constrain this, and our prior shrinks all coefficients toward zero. 
-The net effect is that the region surrounding the spot in the northern hemisphere gets brighter to even out the difference between the two hemispheres. 
-This causes the visible portion of the star to get brighter, raising the baseline relative to the true value.
+Our results are shown in Figure~\ref{fig:spot_infer_yb}; compare to Figure~\ref{fig:spot_infer_y}.
 
-Note, importantly, that even in cases where the baseline is known (from, say, simultaneous photometry), it is typically only known in a \emph{relative} sense. 
-This degeneracy will typically apply in that case as well, so in principle the dipole term will always be unconstrained for stars at similar inclinations. 
-For inclinations closer to $90^\circ$ this is much less of an issue, although (as we will see below) other degeneracies show up.
+\xxx{WORK IN PROGRESS BELOW HERE}
 
 Finally, we note that the pixelwise uncertainty shown is a strict \emph{lower bound} on the map uncertainty, since it is the uncertainty conditioned on the inferred value of the baseline. 
 Sampling methods such as MCMC are required to obtain the \emph{true} uncertainty on the map. 
@@ -1269,22 +1289,19 @@ Given the same data as before, we now try to learn both the stellar map and the 
 We must follow the iterative procedure presented in
 \S\ref{sec:full_solve}, adjusting for the fact that we do not know the true baseline, either (\S\ref{sec:norm}).
 
-% \begin{figure}[p!]
-%     \begin{centering}
-%         \includegraphics[width=0.49\linewidth]{figures/spot_y1bs_timeseries.pdf}
-%         \includegraphics[width=0.49\linewidth]{figures/spot_y1bs_rect.pdf}
-%         \\[0.5em]
-%         \includegraphics[width=0.405\linewidth]{figures/spot_y1bs_baseline.pdf}
-%         \includegraphics[width=0.575\linewidth]{figures/spot_y1bs_coeffs.pdf}
-%         \\[0.5em]
-%         \includegraphics[width=0.98\linewidth]{figures/spot_y1bs_spectrum.pdf}
-%         \caption{%
-%             Similar to Figure~\ref{fig:spot_y1}, but assuming we have no information about either the spectrum, the baseline, or the map coefficients. 
-%             The bottommost panel now shows the true rest frame spectrum (blue line), the initial guess based on a deconvolution (dashed orange line), and the inferred spectrum (orange line, with shaded $1\sigma$ uncertainty).
-%         }
-%         \label{fig:spot_y1bs}
-%     \end{centering}
-% \end{figure}
+\begin{figure}[p!]
+    \begin{centering}
+        \includegraphics[width=0.39\linewidth]{figures/spot_infer_ybs_timeseries.pdf}
+        \includegraphics[width=0.59\linewidth]{figures/spot_infer_ybs_maps.pdf}
+        %\\[0.5em]
+        \includegraphics[width=\linewidth]{figures/spot_infer_ybs_spectra.pdf}
+        \caption{%
+        Similar to Figure~\ref{fig:spot_y1}, but assuming we have no information about either the spectrum, the baseline, or the map coefficients. 
+        The bottommost panel now shows the true rest frame spectrum (blue line), the initial guess based on a deconvolution (dashed orange line), and the inferred spectrum (orange line, with shaded $1\sigma$ uncertainty).
+        }
+        \label{fig:spot_infer_ybs}
+    \end{centering}
+\end{figure}
 
 % \begin{figure}[p!]
 %     \begin{centering}

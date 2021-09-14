@@ -11,8 +11,12 @@ import starry
 
 # Instantiate the Doppler map
 data = generate_data()
-map = data["map"]
-theta = data["theta"]
+map = starry.DopplerMap(lazy=False, **data["kwargs"])
+map[:, :] = data["truths"]["y"]
+map.spectrum = data["truths"]["spectrum"]
+for n in range(map.udeg):
+    map[1 + n] = data["props"]["u"][n]
+theta = data["data"]["theta"]
 
 # Set up the plot
 fig = plt.figure(figsize=(11, 9))
@@ -140,8 +144,8 @@ for axis in [ax_data, ax_data_twin]:
         tick.label1.set_fontsize(10)
         tick.label2.set_fontsize(10)
 ax_data.margins(0, None)
-ax_data.set_ylim(0.35, 1.05)
-ax_data_twin.set_ylim(0.835, 1.0125)
+ax_data.set_ylim(0.05, 1.05)
+ax_data_twin.set_ylim(0.700, 1.0155)
 
 # We're done!
 fig.savefig("spot_setup.pdf", bbox_inches="tight", dpi=300)

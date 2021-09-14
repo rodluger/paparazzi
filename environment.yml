@@ -10,4 +10,4 @@ dependencies:
   - pip:
       - matplotlib>=3.3.3
       - tqdm>=4.56.0
-      - git+https://github.com/rodluger/starry.git@f29f16ab40c099fe6111da02979982aa14e4cd2d#egg=starry
+      - git+https://github.com/rodluger/starry.git@56b0553b420957bacadd6f8801111f24c8be5152#egg=starry

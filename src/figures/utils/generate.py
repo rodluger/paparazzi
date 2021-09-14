@@ -4,7 +4,7 @@ import starry
 
 def generate_data(
     nc=1,
-    flux_err=1e-4,
+    flux_err=5e-4,
     ydeg=15,
     u=[0.5, 0.25],
     nt=16,
@@ -21,10 +21,11 @@ def generate_data(
     np.random.seed(seed)
 
     # Instantiate the Doppler map
+    udeg = len(u)
     map = starry.DopplerMap(
         lazy=False,
         ydeg=ydeg,
-        udeg=len(u),
+        udeg=udeg,
         nc=nc,
         veq=veq,
         inc=inc,
@@ -33,8 +34,9 @@ def generate_data(
         wav=wav,
     )
 
-    # Limb darkening (TODO: fix __setitem__)
-    map._u = np.append([-1.0], u)
+    # Limb darkening
+    for n in range(len(u)):
+        map[1 + n] = u[n]
 
     # Component surface images
     if nc == 1:
@@ -48,16 +50,9 @@ def generate_data(
     if nc == 1:
         spectra = (
             1.0
-            - 0.55 * np.exp(-0.5 * (map.wav0 - 643.0) ** 2 / 0.0085 ** 2)
-            - 0.02 * np.exp(-0.5 * (map.wav0 - 642.895) ** 2 / 0.0085 ** 2)
-            - 0.10 * np.exp(-0.5 * (map.wav0 - 642.97) ** 2 / 0.0085 ** 2)
-            - 0.04 * np.exp(-0.5 * (map.wav0 - 643.1) ** 2 / 0.0085 ** 2)
-            - 0.12 * np.exp(-0.5 * (map.wav0 - 643.4) ** 2 / 0.0085 ** 2)
-            - 0.08 * np.exp(-0.5 * (map.wav0 - 643.25) ** 2 / 0.0085 ** 2)
-            - 0.06 * np.exp(-0.5 * (map.wav0 - 642.79) ** 2 / 0.0085 ** 2)
-            - 0.03 * np.exp(-0.5 * (map.wav0 - 642.81) ** 2 / 0.0085 ** 2)
-            - 0.18 * np.exp(-0.5 * (map.wav0 - 642.63) ** 2 / 0.0085 ** 2)
-            - 0.04 * np.exp(-0.5 * (map.wav0 - 642.60) ** 2 / 0.0085 ** 2)
+            - 0.85 * np.exp(-0.5 * (map.wav0 - 643.0) ** 2 / 0.0085 ** 2)
+            - 0.40 * np.exp(-0.5 * (map.wav0 - 642.97) ** 2 / 0.0085 ** 2)
+            - 0.20 * np.exp(-0.5 * (map.wav0 - 643.1) ** 2 / 0.0085 ** 2)
         )
     elif nc == 2:
         mu = np.array([643.025, 642.975])
@@ -86,12 +81,23 @@ def generate_data(
     flux += flux_err * np.random.randn(*flux.shape)
 
     return dict(
-        map=map,
-        y=map.y,
-        spectrum=map.spectrum,
-        theta=theta,
-        flux0_err=flux0_err,
-        flux_err=flux_err,
-        flux0=flux0,
-        flux=flux,
+        kwargs=dict(
+            ydeg=ydeg,
+            udeg=udeg,
+            nc=nc,
+            veq=veq,
+            inc=inc,
+            vsini_max=vsini_max,
+            nt=nt,
+            wav=wav,
+        ),
+        props=dict(u=u),
+        truths=dict(y=map.y, spectrum=map.spectrum),
+        data=dict(
+            theta=theta,
+            flux0_err=flux0_err,
+            flux_err=flux_err,
+            flux0=flux0,
+            flux=flux,
+        ),
     )
