@@ -10,6 +10,15 @@ from matplotlib.ticker import FormatStrFormatter
 import starry
 
 
+def maxq(x, quantile=None):
+    if quantile is None:
+        return np.nanmax(x)
+    else:
+        x_ = np.reshape(x, -1)
+        x_ = x_[~np.isnan(x_)]
+        return np.sort(x_)[int(quantile * len(x_))]
+
+
 def plot_timeseries(
     data, y_inferred, spectrum_inferred, normalized=False, overlap=8.0
 ):
@@ -77,7 +86,7 @@ def plot_timeseries(
     return fig
 
 
-def plot_maps(y_true, y_inferred, y_uncert, y_uncert_max=0.15):
+def plot_maps(y_true, y_inferred, y_uncert, y_uncert_max=0.15, quantile=0.995):
     # Set up the plot
     fig, ax = plt.subplots(3, figsize=(8, 11.5))
     fig.subplots_adjust(hspace=0.3)
@@ -90,7 +99,7 @@ def plot_maps(y_true, y_inferred, y_uncert, y_uncert_max=0.15):
     # Plot the true image
     map[:, :] = y_true
     image = map.render(projection="moll")
-    max_true = np.nanmax(image)
+    max_true = maxq(image, quantile=quantile)
     image /= max_true
     map.show(
         ax=ax[0],
@@ -115,7 +124,7 @@ def plot_maps(y_true, y_inferred, y_uncert, y_uncert_max=0.15):
     # Plot the inferred image
     map[:, :] = y_inferred
     image = map.render(projection="moll")
-    max_inf = np.nanmax(image)
+    max_inf = maxq(image, quantile=quantile)
     image /= max_inf
     map.show(
         ax=ax[1],
@@ -166,8 +175,8 @@ def plot_maps(y_true, y_inferred, y_uncert, y_uncert_max=0.15):
     return fig
 
 
-def plot_spectra(wav0, s_true, s_guess, s_inferred, s_uncert):
-    fig, ax = plt.subplots(1, figsize=(8, 3))
+def plot_spectra(wav, wav0, s_true, s_guess, s_inferred, s_uncert):
+    fig, ax = plt.subplots(1, figsize=(8, 2.5))
 
     ax.plot(wav0, s_true, "C0-", label="true")
     ax.plot(wav0, s_guess, "C1--", lw=1, label="guess")
@@ -180,8 +189,13 @@ def plot_spectra(wav0, s_true, s_guess, s_inferred, s_uncert):
         alpha=0.25,
     )
 
-    ax.set_xlabel(r"$\lambda$ [nm]", fontsize=18)
-    ax.set_ylabel("rest frame spectrum", fontsize=18)
-    ax.legend(loc="lower left", fontsize=12)
+    ax.axvspan(wav0[0], wav[0], color="k", alpha=0.3)
+    ax.axvspan(wav[-1], wav0[-1], color="k", alpha=0.3)
+    ax.set_xlabel(r"$\lambda$ [nm]", fontsize=12)
+    ax.set_ylabel("rest frame spectrum", fontsize=12)
+    for tick in ax.get_xticklabels() + ax.get_yticklabels():
+        tick.set_fontsize(10)
+    ax.legend(loc="lower left", fontsize=10)
+    ax.margins(0, None)
 
     return fig

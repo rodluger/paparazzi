@@ -28,6 +28,7 @@ soln = map.solve(flux, theta=theta, normalized=True, flux_err=flux_err)
 # Get the inferred map and spectrum
 y_inferred = map.y
 wav0 = map.wav0
+wav = map.wav
 spectrum_inferred = map.spectrum.reshape(-1)
 
 # Compute the Ylm expansion of the posterior standard deviation field
@@ -49,7 +50,12 @@ fig.savefig("spot_infer_ybs_maps.pdf", bbox_inches="tight", dpi=300)
 
 # Plot the spectra
 fig = plot_spectra(
-    wav0, spectrum_true, spectrum_guess, spectrum_inferred, spectrum_uncert
+    wav,
+    wav0,
+    spectrum_true,
+    spectrum_guess,
+    spectrum_inferred,
+    spectrum_uncert,
 )
 fig.savefig("spot_infer_ybs_spectra.pdf", bbox_inches="tight", dpi=300)
 

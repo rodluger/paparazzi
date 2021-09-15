@@ -3,7 +3,6 @@ import starry
 
 
 def generate_data(
-    nc=1,
     flux_err=2e-4,
     ydeg=15,
     u=[0.5, 0.25],
@@ -15,6 +14,7 @@ def generate_data(
     theta=None,
     wav=np.linspace(642.85, 643.15, 200),
     seed=0,
+    image="spot",
     **kwargs
 ):
     # Set the seed
@@ -26,7 +26,7 @@ def generate_data(
         lazy=False,
         ydeg=ydeg,
         udeg=udeg,
-        nc=nc,
+        nc=1,
         veq=veq,
         inc=inc,
         vsini_max=vsini_max,
@@ -38,31 +38,16 @@ def generate_data(
     for n in range(len(u)):
         map[1 + n] = u[n]
 
-    # Component surface images
-    if nc == 1:
-        images = ["spot"]
-    elif nc == 2:
-        images = ["star", "spot"]
-    else:
-        raise NotImplementedError("")
-
-    # Component spectra
-    if nc == 1:
-        spectra = (
-            1.0
-            - 0.85 * np.exp(-0.5 * (map.wav0 - 643.0) ** 2 / 0.0085 ** 2)
-            - 0.40 * np.exp(-0.5 * (map.wav0 - 642.97) ** 2 / 0.0085 ** 2)
-            - 0.20 * np.exp(-0.5 * (map.wav0 - 643.1) ** 2 / 0.0085 ** 2)
-        )
-    elif nc == 2:
-        mu = np.array([643.025, 642.975])
-        amp = np.array([0.550, 0.550])
-        raise NotImplementedError("TODO")
-    else:
-        raise NotImplementedError("")
+    # Rest frame spectrum
+    spectrum = (
+        1.0
+        - 0.85 * np.exp(-0.5 * (map.wav0 - 643.0) ** 2 / 0.0085 ** 2)
+        - 0.40 * np.exp(-0.5 * (map.wav0 - 642.97) ** 2 / 0.0085 ** 2)
+        - 0.20 * np.exp(-0.5 * (map.wav0 - 643.1) ** 2 / 0.0085 ** 2)
+    )
 
     # Load the component maps
-    map.load(maps=images, spectra=spectra, smoothing=smoothing)
+    map.load(maps=[image], spectra=spectrum, smoothing=smoothing)
 
     # Get rotational phases
     if theta is None:
@@ -84,7 +69,7 @@ def generate_data(
         kwargs=dict(
             ydeg=ydeg,
             udeg=udeg,
-            nc=nc,
+            nc=1,
             veq=veq,
             inc=inc,
             vsini_max=vsini_max,

@@ -23,7 +23,9 @@ figures_with_deps = [
     "spot_infer_y", 
     "spot_infer_yb", 
     "spot_infer_ybs", 
-    "spot_infer_ybs_low_snr"
+    "spot_infer_ybs_low_snr",
+    "snr",
+    "inclinations"
 ]
 
 

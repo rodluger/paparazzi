@@ -327,7 +327,7 @@ The integral in Equation~(\ref{eq:deconv:kT}) is therefore just the line integra
     \quad .
 \end{align}
 %
-In the Appendix we derive an analytic solution to this integral and show how to recursively solve it for all terms in the spherical harmonic basis.
+In Appendix~\ref{app:kT} we derive an analytic solution to this integral and show how to recursively solve it for all terms in the spherical harmonic basis.
 Figure~\ref{fig:kT} shows the $\kT$ basis computed from the formulae above and Equation~(\ref{eq:kT:kT}) up to spherical harmonic degree $l_\mathrm{max}=10$.
 
 This completes our derivation of the analytic expression for the observed spectrum (Equation~\ref{eq:deconv:F}).
@@ -1036,7 +1036,7 @@ Our input spectrum $\bvec{s}$ was generated at high resolution ($R \equiv \frac{
 %
 The spectrum consists of a (purely synthetic) Gaussian absorption line of fractional depth 50\% centered at $\lambda = 643$~nm with FWHM of $0.02$~nm, or, in velocity space, $\Delta v = \mathrm{FWHM} \times c / \lambda \approx~10$~km/s, equal to the value used in \citet{Vogt1987}. 
 %
-Unlike \citet{Vogt1987}, we add 20 additional small absorption lines at random positions throughout the spectrum, all of the same FWHM but of varying depths, including some line blends. 
+Unlike \citet{Vogt1987}, we add two additional small absorption lines, one of which is blended with the central absorption line.
 In total, the rest frame spectrum $\bvec{s}$ consists of $K = 200$ wavelength bins in the range $642.85~\mathrm{nm} \leq \lambda \leq 643.15~\mathrm{nm}$ plus an additional
 %
 \begin{align}
@@ -1051,8 +1051,8 @@ Finally, we linearly interpolate this spectrum to a wavelength grid uniform in l
 Given $\bvec{y}$ and $\bvec{s}$, we use Equations~(\ref{eq:deconv:F}) and~(\ref{eq:inverse:alm}) to compute the data vector $\bvec{f}$ at $M = 16$ equally spaced rotational phases; these phases are shown in orthographic projection (as an observer would see the star) in the center panel of Figure~\ref{fig:spot_setup}. 
 The synthetic spectra for each phase are shown as the orange curves in the bottom panel of the figure (note the different scaling, as all spectral lines become shallower due to the broadening). 
 We assume a wavelength-independent, quadratic limb darkening law with $u_1 = 0.5$ and $u_2 = 0.25$. 
-Finally, we divide the flux by the baseline at each epoch (Equation~\ref{eq:norm:f}) and add random Gaussian noise with covariance matrix $\bvec{\Sigma}_\bvec{f} = \sigma_\bvec{f}^2 \mathbf{I}$, with $\sigma_\bvec{f} = 10^{-4}$ to simulate a very high signal-to-noise ratio (SNR) spectrum. 
-The mean standard deviation in each wavelength bin across all 16 epochs in the noiseless data vector is about $10^{-2}$, so our choice of $\sigma_\bvec{f}$ corresponds to SNR $\sim$ 100 in each of the 200 wavelength bins of $\bvec{f}$.
+Finally, we divide the flux by the baseline at each epoch (Equation~\ref{eq:norm:f}) and add random Gaussian noise with covariance matrix $\boldsymbol{\Sigma}_\bvec{f} = \sigma_\bvec{f}^2 \mathbf{I}$, with $\sigma_\bvec{f} = 2\times 10^{-4}$ to simulate a very high signal-to-noise ratio (SNR) spectrum. 
+The mean standard deviation in each wavelength bin across all 16 epochs in the noiseless data vector is about $2\times 10^{-2}$, so our choice of $\sigma_\bvec{f}$ corresponds to SNR $\sim$ 100 in each of the 200 wavelength bins of $\bvec{f}$.
 
 %For reference, \citet{Vogt1987} report SNRs per 60 m\AA\, pixel, while our
 %resolution elements are approximately $\lambda_r\Delta\lnlam/K \approx 100$ m\AA\,
@@ -1063,22 +1063,8 @@ The mean standard deviation in each wavelength bin across all 16 epochs in the n
 % We Recover images with an effective resolution of $12^\circ$.
 
 In the following sections we discuss various approaches to solving the Doppler imaging problem for this dataset.
-Unless otherwise noted, in all experiments we adopt a Gaussian prior for the spherical harmonic coefficients $\bvec{y}$ with mean $\boldsymbol{\mu}_\bvec{y} = \bvec{0}$ and covariance $\boldsymbol{\Lambda}_\bvec{y}$, with
-%
-\begin{align}
-    \label{eq:Lambday}
-    {\Lambda_\bvec{y}}_{i, j} 
-    =
-    \begin{cases}
-        1 & \quad\quad\quad\quad i = j = 0
-        \\
-        10^{-4}\delta_{ij} & \quad\quad\quad\quad \mathrm{otherwise}
-        \quad,
-    \end{cases}
-\end{align}
-%
-corresponding to a flat power spectrum prior.
-We also place a Gaussian prior on the spectrum $\bvec{s}$ with unit mean and covariance $\boldsymbol{\Lambda}_\bvec{s} = (10^{-1})^2\bvec{I}$.
+Unless otherwise noted, in all experiments we adopt a Gaussian prior for the spherical harmonic coefficients $\bvec{y}$ with mean $\boldsymbol{\mu}_\bvec{y} = \left(1 \quad\quad \bvec{0}\right)$ and covariance $\boldsymbol{\Lambda}_\bvec{y} = 10^{-4} \bvec{I}$, corresponding to a flat power spectrum prior.
+When solving for the rest frame spectrum, we also place a Gaussian prior on $\bvec{s}$ with unit mean and covariance $\boldsymbol{\Lambda}_\bvec{s} = 10^{-3}\bvec{I}$.
 
 \subsection{Known baseline and spectrum}
 \label{sec:spot_y1}
@@ -1088,53 +1074,6 @@ This is analogous to the case where a good physical model exists for the stellar
 As we showed in \S\ref{sec:solve_y}, the posterior distribution for the map coefficients $\bvec{y}$ is analytic in this case, with mean given by Equation~(\ref{eq:inverse:y1hat})
 and covariance given by Equation~(\ref{eq:inverse:y1cov}). 
 Note that we must first scale the data vector $\fnorm$ by the baseline (which in this case is known) to obtain $\bvec{f}$.
-The pseudocode for computing the maximum a posteriori (MAP) solution for $\bvec{y}$ and its covariance is given in Algorithm~\ref{alg:solve1}.
-
-\begin{algorithm}
-    \begin{spacing}{1.25}
-        \begin{fminipage}{0.98\textwidth}
-            \vspace{1em}
-            \begin{algorithmic}
-                \FUNCTION{solve1}($\bvec{f}$, $\boldsymbol{\Sigma}_\mathbf{f}$, $\boldsymbol{\mu}_\bvec{y}$, $\boldsymbol{\Lambda}_\bvec{y}$, $\bvec{s}$)
-                \STATE
-                $
-                \bvec{S} \gets \mathrm{blockDiag}(\bvec{s})
-                $
-                \STATE 
-                $
-                \boldsymbol{\Sigma}_\bvec{\hat{y}}
-                \gets
-                \left(
-                \bvec{S}^\top\Doppler^\top
-                {\boldsymbol{\Sigma}_\bvec{f}}^{-1}
-                \Doppler\bvec{S}
-                +
-                {\boldsymbol{\Lambda}_\bvec{y}}^{-1}
-                \right)^{-1}
-                $
-                \STATE 
-                $
-                \bvec{\hat{y}} 
-                \gets 
-                \boldsymbol{\Sigma}_\mathbf{\hat{y}}
-                \left(
-                \bvec{S}^\top\Doppler^\top
-                {\boldsymbol{\Sigma}_\mathbf{f}}^{-1}
-                \bvec{f}
-                +
-                {\boldsymbol{\Lambda}_\bvec{y}}^{-1} \boldsymbol{\mu}_\bvec{y}
-                \right)
-                $
-                \RETURN ($\bvec{\hat{y}}$, $\boldsymbol{\Sigma}_\mathbf{\hat{y}}$)
-                \ENDFUNCTION
-            \end{algorithmic}
-            \vspace{1em}
-        \end{fminipage}
-    \end{spacing}
-    \caption{Solution to the L2 linear least squares problem for the spherical harmonic representation $\bvec{\hat{y}}$ of the stellar surface map when the unnormalized spectral timeseries $\bvec{f}$ is known.
-    The $\mathrm{blockDiag}$ operation on the second line is given by Equation~(\ref{eq:inverse:S}).
-    \label{alg:solve1}}
-\end{algorithm}
 
 \begin{figure}[p!]
     \begin{centering}
@@ -1147,6 +1086,7 @@ The pseudocode for computing the maximum a posteriori (MAP) solution for $\bvec{
             The Mollweide projection of the original map is shown at the top right; the inferred map is displayed below it. 
             The bottom panel shows the posterior uncertainty on the inferred intensity, ranging from close to zero in the northern hemisphere to $\sigma_\mathrm{prior} \approx 13\%$ below a latitude of $-30^\circ$. 
             The latter is the uncertainty associated with our particular choice of prior, as the southernmost latitudes of the star are never visible to the observer.
+            The optimization step in this experiment ran in under 1 second.
         }
         \label{fig:spot_infer_y}
     \end{centering}
@@ -1165,58 +1105,16 @@ The uncertainty on the vector of pixels $\bvec{p}$ where we evaluate the map is 
 %
 where $\bvec{P}$ is the change-of-basis matrix from spherical harmonic coefficients to pixels on the grid.
 
-The inferred map is nearly indistinguishable from the true map north of the equator. Regions south of the equator are almost never in view to the observer (below $-40^\circ$, they are \emph{never} in view); our inferred map is therefore informed primarily by our prior in southern latitudes.
-This is well captured by the uncertainty (bottom panel), which increases south of the equator, reaching a maximum at $-30^\circ$, below which the uncertainty is constant at about 13\%, a value associated with our particular choice of prior (Equation~\ref{eq:Lambday}).
+The inferred map very closely matches the true map, aside from a few small artifacts in the southern hemisphere. Note, importantly, that regions south of the equator are almost never in view to the observer (below $-40^\circ$, they are \emph{never} in view); our inferred map is therefore informed primarily by our prior in southern latitudes.
+This is well captured by the uncertainty (bottom panel), which increases south of the equator, reaching a maximum at $-30^\circ$, below which the uncertainty is constant at about 13\%, a value associated with our particular choice of prior.
 
 \subsection{Known spectrum, unknown baseline}
 \label{sec:spot_y1b}
 %
 We next investigate the case where the spectrum is known exactly, but the baseline is not. 
 This corresponds to the case discussed in
-\S\ref{sec:norm}, and is likely to be the most common application of the methodology presented in this work.
-
-\begin{algorithm}
-    \begin{spacing}{1.25}
-        \begin{fminipage}{0.98\textwidth}
-            \vspace{1em}
-            \begin{algorithmic}
-                \FUNCTION{solve2}($\fnorm$, $\boldsymbol{\sigma}_{\fnorm}$, $\boldsymbol{\mu}_\bvec{y}$, $\boldsymbol{\Lambda}_\bvec{y}$, $\bvec{s}$, $\sigma_b$, $\ln T_0$, $\Delta \ln T$)
-                \STATE $\bvec{b} \gets \bvec{1}$
-                \STATE $\ln T \gets \ln T_0$
-                \WHILE{$T > 1$}
-                    \STATE $
-                    \bvec{f} 
-                    \gets 
-                    \fnorm \circ \bvec{b}
-                    $
-                    \STATE $
-                    \boldsymbol{\sigma}_\mathbf{f} 
-                    \gets 
-                    \boldsymbol{\sigma}_{\fnorm} \circ \bvec{b}
-                    $
-                    \STATE $
-                    \boldsymbol{\Sigma}_\mathbf{f} 
-                    \gets 
-                    e^{\ln T} \mathrm{diag}(\boldsymbol{\sigma}_\mathbf{f}^2) + \sigma_b^2
-                    $
-                    \STATE 
-                    $
-                    (\bvec{\hat{y}}, \boldsymbol{\Sigma}_\bvec{\hat{y}})
-                    \gets
-                    $
-                    \texttt{\textbf{solve1}}($\bvec{f}$, $\boldsymbol{\Sigma}_\mathbf{f}$, $\boldsymbol{\mu}_\bvec{y}$, $\boldsymbol{\Lambda}_\bvec{y}$, $\bvec{s}$)
-                    \STATE $\bvec{b} \gets \bvec{B} \, \bvec{S} \, \bvec{\hat{y}} $
-                    \STATE $\ln T \gets \ln T - \Delta \ln T$
-                \ENDWHILE
-                \RETURN ($\bvec{\hat{y}}$, $\boldsymbol{\Sigma}_\mathbf{\hat{y}}$)
-                \ENDFUNCTION
-            \end{algorithmic}
-            \vspace{1em}
-        \end{fminipage}
-    \end{spacing}
-    \caption{Solution to the tempered, iterative problem for the spherical harmonic representation of the stellar surface map when the observed spectra $\fnorm$ have been normalized to the continuum. In addition to the data, priors, and model spectrum, this function accepts a baseline standard deviation $\sigma_b$, an initial temperature $\ln T_0$, and a temperature decrement $\Delta \ln T$; see text for details.
-    \label{alg:solve2}}
-\end{algorithm}
+\S\ref{sec:norm}, in which each spectrum is normalized to its continuum, and the true difference in continuum levels across spectral epochs is not precisely known.
+This is likely to be the most common application of the methodology presented in this work.
 
 Our approach is to iteratively solve Equation~(\ref{eq:norm:fy}) by re-expressing it as
 %
@@ -1252,8 +1150,7 @@ We adopt a simple iterative scheme where we solve the L2 problem for $\bvec{y}$ 
 Because of the high SNR of our data, we find that it is necessary to employ a simple tempering procedure, in which we artificially inflate the variance of the data by a factor $T$, which we slowly decrease with each step until $T = 1$. 
 This has the effect of smoothing out the likelihood surface, effectively preventing the solver from getting stuck in local minima.
 For this particular experiment, we set $\ln T_0 = 2$ and $\Delta \log T = -0.04$, for a total of $50$ steps of the bilinear solver.
-We also add a small variance term $\sigma_b^2 = 10^{-2}$ to all entries of the data covariance $\boldsymbol{\Sigma}_{\bvec{f}}$; this has the effect of marginalizing over an additive model term, which we find improves the convergence of the algorithm.
-The pseudocode for this procedure is presented in Algorithm~\ref{alg:solve2}.
+We also add a small variance term $\sigma_b^2 = 10^{-2}$ to all entries of the data covariance $\boldsymbol{\Sigma}_{\bvec{f}}$; this has the effect of marginalizing over a small additive model term, which we find improves the convergence of the algorithm.
 
 \begin{figure}[p!]
     \begin{centering}
@@ -1265,17 +1162,17 @@ The pseudocode for this procedure is presented in Algorithm~\ref{alg:solve2}.
             well as in the case where the true continuum level
             is known (Figure~\ref{fig:spot_infer_y}). As before,
             regions south of the equator are almost never in view, so that portion of our inferred map is dominated by the prior.
+            Note that the uncertainty shown (lower panel) is a strict lower bound on the true uncertainty, as it is conditioned on our point estimate of the baseline level.
+            The optimization step in this experiment ran in about 5 seconds.
         }
         \label{fig:spot_infer_yb}
     \end{centering}
 \end{figure}
 
-Our results are shown in Figure~\ref{fig:spot_infer_yb}; compare to Figure~\ref{fig:spot_infer_y}.
+Our results are shown in Figure~\ref{fig:spot_infer_yb}. As in the case where the continuum level was known exactly (Figure~\ref{fig:spot_infer_y}), we recover the stellar surface map with high fidelity in the northern hemisphere. However, there is now a strong dipolar artifact; the background intensity level is higher in the northern hemisphere than in the southern hemisphere. This is due to a degeneracy involving the $Y_{1,-1}$ spherical harmonic (\raisebox{-0.2em}{\includegraphics[width=1em]{figures/Y1m1.pdf}}), which, because a large portion of the southern hemisphere is never in view, cannot be constrained by the data.
 
-\xxx{WORK IN PROGRESS BELOW HERE}
-
-Finally, we note that the pixelwise uncertainty shown is a strict \emph{lower bound} on the map uncertainty, since it is the uncertainty conditioned on the inferred value of the baseline. 
-Sampling methods such as MCMC are required to obtain the \emph{true} uncertainty on the map. 
+Interestingly, while the map uncertainty still increases toward the south pole (bottom panel), its magnitude is smaller than that in Figure~\ref{fig:spot_infer_y}. This is counter-intuitive, since the continuum-normalized spectrum should contain \emph{less} information than the unnormalized one. Indeed, the uncertainties shown in the figure are conditioned on our estimate of the baseline, so they are actually a strict \emph{lower bound} on the map uncertainty.
+In order to constrain the true uncertainty on the solution to this bilinear problem, we must resort to approximate sampling methods such as MCMC. 
 We discuss this further in \S\ref{sec:discussion}.
 
 \subsection{Unknown spectrum, unknown baseline}
@@ -1293,10 +1190,12 @@ We must follow the iterative procedure presented in
     \begin{centering}
         \includegraphics[width=0.39\linewidth]{figures/spot_infer_ybs_timeseries.pdf}
         \includegraphics[width=0.59\linewidth]{figures/spot_infer_ybs_maps.pdf}
+        \vspace{1em}
         \includegraphics[width=\linewidth]{figures/spot_infer_ybs_spectra.pdf}
         \caption{%
-            Similar to Figure~\ref{fig:spot_y1}, but assuming we have no information about either the spectrum, the baseline, or the map coefficients. 
+            Similar to Figure~\ref{fig:spot_infer_y}, but assuming we have no information about either the spectrum, the baseline, or the map coefficients. 
             The bottommost panel now shows the true rest frame spectrum (blue line), the initial guess based on a deconvolution (dashed orange line), and the inferred spectrum (orange line, with shaded $1\sigma$ uncertainty).
+            The optimization step in this experiment ran in about 30 seconds.
         }
         \label{fig:spot_infer_ybs}
     \end{centering}
@@ -1308,8 +1207,9 @@ We must follow the iterative procedure presented in
         \includegraphics[width=0.59\linewidth]{figures/spot_infer_ybs_low_snr_maps.pdf}
         \includegraphics[width=\linewidth]{figures/spot_infer_ybs_low_snr_spectra.pdf}
         \caption{%
-            Same as Figure~\ref{fig:spot_y1bs}, but for $10\times$ lower SNR.
+            Same as Figure~\ref{fig:spot_infer_ybs}, but for $10\times$ lower SNR.
              We still recover the \spot map and the input spectrum, albeit with higher uncertainty, as expected.
+             Once again, the optimization step in this experiment ran in about 30 seconds.
         }
         \label{fig:spot_infer_ybs_low_snr}
     \end{centering}
@@ -1318,24 +1218,20 @@ We must follow the iterative procedure presented in
 Because the problem is generally not convex, we need a good starting guess for either the spectrum or the map coefficients. 
 We note that we can very crudely approximate the rest frame spectrum by deconvolving the average observed spectrum with the first term of the convolution kernel $\kT$ (\raisebox{-0.1em}{\includegraphics[width=2em]{figures/kT00.pdf}}).
 In practice, this is a fairly poor approximation, but we find that it suffices as an initial guess. 
-Given this starting value of $\bvec{s}$, we compute an initial guess for $\bvec{y_1}$ using the linear baseline approximation. 
-We then iterate between solving for $\bvec{s}$ and solving for $\bvec{y_1}$, always using the previous value of the baseline to compute $\bvec{y_1}$. 
-As in the previous section, we find it necessary to implement a tempering scheme, except with a much higher starting temperature $T_0 = 5,000$ and a slower decay $\Delta\log T = -0.04$.
-We again refine our solution with \texttt{NAdam}, this time setting $N_\mathrm{nadam} = 3,000$ and $L_\mathrm{nadam} = 2.5\times 10^{-5}$. 
-Since we are now solving for the spectrum as well, we include the negative log prior term for the spectrum, $\frac{1}{2}(\bvec{s - 1})^\top \boldsymbol{\Lambda}_\bvec{s}^{-1}(\bvec{s - 1})$, in Equation~(\ref{eq:spotstar:logP}).
+We then iterate between solving for $\bvec{y}$ (\S\ref{sec:solve_y}) and solving for $\bvec{s}$ (\S\ref{sec:solve_s}), followed by a step in which we update our estimate of the baseline. We adopt the same tempering scheme discussed above.
 
-Figure~\ref{fig:spot_y1bs} shows the results. 
-The top portion of the figure is the same as before. 
-A panel at the bottom has been added showing the true rest frame spectrum (blue), the initial guess based on the deconvolution (dashed orange), and the inferred spectrum (orange). 
-We recover the \spot feature as before, albeit with more noise, particularly south of about $+30^\circ$ latitude. 
-Our uncertainties are somewhat underestimated, as expected, since they are computed conditioned on the optimum value of the spectrum. 
+Figure~\ref{fig:spot_infer_ybs} shows the results; 
+the top portion of the figure is the same as in Figure~\ref{fig:spot_infer_yb}.
+A panel has been added at the bottom showing the true rest frame spectrum (blue), the initial guess based on the deconvolution (dashed orange), and the inferred spectrum with 1-$\sigma$ uncertainty shading (orange). 
+We recover the \spot feature as before, albeit with more noise, particularly south of the equator. 
+Once again, our map uncertainties are somewhat underestimated, as expected, since they are computed conditioned on the optimum value of the baseline and the spectrum. 
 On the other hand, we recover the spectrum exceedingly well, with low uncertainty and virtually no bias anywhere.
 
-To test our technique on more realistic data, in Figure~\ref{fig:spot_y1bs_low_snr} we repeat the experiment on data with $10$ times higher uncertainty, setting $\sigma_\bvec{f} = 10^{-3}$. 
-Because the higher uncertainty increases the volume of the region surrounding the global optimum, it is actually significantly \emph{easier} for the algorithm to converge on the best solution, so we set $T_0 = 500$, $\Delta\log T = -0.05$, $N_\mathrm{nadam} = 500$, and $R_\mathrm{nadam} = 10^{-4}$. 
-Interestingly, while the uncertainty on the spectrum increased, the quality of the recovered \spot map did not noticeably degrade. 
-This suggests we did not quite find the global optimum in Figure~\ref{fig:spot_y1bs}. 
-We discuss this further in \S\ref{sec:discussion}.
+To test our technique on more realistic data, we repeat the experiment on data with $10$ times higher uncertainty, setting $\sigma_\bvec{f} = 2\times 10^{-3}$.
+%
+After some tuning, we find it necessary to increase our prior variances slightly to get good fits to the data: we set $\boldsymbol{\Lambda}_\bvec{y} = 2.5\times 10^{-4} \bvec{I}$ and $\boldsymbol{\Lambda}_\bvec{s} = 5\times 10^{-3}\bvec{I}$.
+%
+Figure~\ref{fig:spot_infer_ybs_low_snr} shows the results. We again correctly infer the \spot feature and the rest frame spectrum, although the surface map is considerably degraded, particularly at high spatial frequencies.
 
 \subsection{Spatially-variable spectrum}
 \label{sec:twospec}
@@ -1424,7 +1320,7 @@ We recover the single spectral line at \texttt{A} and the two lines at \texttt{B
 %
 Most of the examples in this paper considered very high SNR spectra.
 Figure~\ref{fig:snr} shows the effect of different SNR on the quality of the inferred map. 
-As before, the SNR we report is the ratio of the standard deviation of the true model in each wavelength bin across all epochs, averaged over all wavelength bins (i.e., the ``signal'') to the standard deviation of the added noise term, $\sigma_\bvec{f}$ (the ``noise'').
+As before, the SNR we report is the ratio of the standard deviation of the true model in each wavelength bin across all epochs, averaged over all wavelength bins (i.e., the ``signal''), to the standard deviation of the added noise term, $\sigma_\bvec{f}$ (the ``noise'').
 The panels in Figure~\ref{fig:snr} show the inferred map for SNR in the range 1---1000, where SNR $\sim 100$ is the fiducial case considered in the examples so far. 
 The setup is the same as that in \S\ref{sec:spot_y1b}, where the spectrum is known exactly but the map coefficients and the baseline are not.
 
@@ -1432,36 +1328,35 @@ As may be expected, the quality of the map decreases with lower SNR, but a reduc
 In general, as the SNR decreases further, two things happen: the \spot contrast decreases, and the features begin to blur out, especially south of about $+30^\circ$ latitude, where features are more limb-darkened at this inclination and in view for a smaller fraction of the time.
 
 As the SNR incraeses, however, the quality of the \spot feature does not improve appreciably, since a SNR of 100 is more than sufficient to recover a $l_\mathrm{max} = 15$ band-limited map. 
-Interestingly, south of the equator, the map quality actually begins to degrade with higher SNR. 
-This is due to the fact that finding the global optimum becomes exponentially more difficult with higher SNR, as the posterior volume becomes ever smaller. 
-Even with aggressive tempering, we were unable to converge on the best solution for SNR $\gtrsim 500$ given our standard, conservative priors and initial guesses (\S\ref{sec:spotstar}).
+Interestingly, at constant spatial prior variance ($\boldsymbol{\Lambda}_\bvec{y} = 10^{-4}\bvec{I}$), the map quality actually begins to degrade with higher SNR south of the equator due to overfitting.
+To circumvent this, we decrease the prior variance by a factor of 10--100 for the highest SNR cases, which penalizes excessive complexity in the solution.
+
 %
-% \begin{figure}[p!]
-%     \begin{centering}
-%         \includegraphics[width=0.98\linewidth]{figures/snr.pdf}
-%         \caption{%
-%             Recovered \spot map as a function of SNR per resolution element.
-%             The quality of the inferred map in the northern hemisphere improves with SNR, but at very high SNR the region surrounding the global optimum becomes so small that our optimization methods struggle to converge on the correct solution.
-%         }
-%         \label{fig:snr}
-%     \end{centering}
-% \end{figure}
+\begin{figure}[p!]
+    \begin{centering}
+        \includegraphics[width=0.98\linewidth]{figures/snr.pdf}
+        \caption{%
+            Recovered \spot map as a function of SNR per resolution element. The observed spectra are continuum-normalized and the rest frame spectrum is assumed to be known exactly.
+        }
+        \label{fig:snr}
+    \end{centering}
+\end{figure}
 
 
 \subsection{Dependence on inclination}
 \label{sec:inc}
 %
-% \begin{figure}[p!]
-%     \begin{centering}
-%         \includegraphics[width=0.98\linewidth]{figures/inclinations.pdf} % 
-%         \caption{%
-%             Recovered \spot map as a function of stellar inclination. 
-%             The rest frame spectrum is assumed to be known exactly, but the baseline is not. 
-%             At very low inclinations, the small projected velocities begin to degrade the spatial resolution of the inferred map, while at inclinations close to $90^\circ$ there is a degeneracy between the northern and southern hemispheres.    
-%         }
-%         \label{fig:inclinations}
-%     \end{centering}
-% \end{figure}
+\begin{figure}[p!]
+    \begin{centering}
+        \includegraphics[width=0.98\linewidth]{figures/inclinations.pdf} % 
+        \caption{%
+            Recovered \texttt{STAR SPOT} map as a function of stellar inclination. 
+            The observed spectra are continuum-normalized and the rest frame spectrum is assumed to be known exactly.
+            In general, it is very difficult to infer features in the hemisphere facing away from the observer (in this case, the southern hemisphere). At low inclinations, those features are never in view, while at inclinations close to 90$^\circ$, it becomes difficult to differentiate between features above and below the equator.
+        }
+        \label{fig:inclinations}
+    \end{centering}
+\end{figure}
 %
 As in \citet{Vogt1987}, we also investigate the dependence of the solution on the inclination of the star.
 Figure~\ref{fig:inclinations} shows the inferred map for the same problem setup as before (with SNR $\sim 100$), but this time varying the inclination between $10^\circ$ (nearly face-on) and $90^\circ$ (perfectly edge-on). 
@@ -1502,6 +1397,7 @@ These results are broadly consistent with those of \citet{Vogt1987}.
 %
 
 \section{Solving the $\kT$ integral}
+\label{app:kT}
 %
 In this section we will show how to compute the integral in Equation~(\ref{eq:kT:kT}), yielding the terms of the convolution kernel $\kT$. 
 It is convenient to first change basis from spherical harmonics to polynomials on the sphere:
