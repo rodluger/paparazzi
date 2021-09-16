@@ -28,7 +28,7 @@ F0 = flux[0]
 F = flux[1:]
 
 # Render the images
-img = spot_map.render(theta=theta[1:], res=300)
+img = map.render(theta=theta[1:], res=300)
 assert np.nanmin(img) > 0
 
 # Set up the plot

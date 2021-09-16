@@ -25,7 +25,8 @@ figures_with_deps = [
     "spot_infer_ybs", 
     "spot_infer_ybs_low_snr",
     "snr",
-    "inclinations"
+    "inclinations",
+    "twospec"
 ]
 
 

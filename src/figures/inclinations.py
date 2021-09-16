@@ -10,19 +10,19 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 
 # Settings
-ydeg = 15  # TODO: 20
+ydeg = 15
 smoothing = 0
 
 # Array of inclinations
 incs = np.array([10, 20, 30, 40, 50, 60, 70, 80, 90])
-vsini = 40000.0  # m/s
+veq = 60000.0  # m/s
 
 # Plot the true map
 fig, ax = plt.subplots(4, 3, figsize=(15, 10))
 ax[0, 0].set_visible(False)
 ax[0, 2].set_visible(False)
 map = starry.Map(ydeg=ydeg)
-map.load("starspot", smoothing=smoothing)
+map.load("spotdots", smoothing=smoothing)
 map.show(ax=ax[0, 1], projection="moll")
 ax[0, 1].annotate(
     r"true",
@@ -43,17 +43,15 @@ ax = ax[1:].flatten()
 map = None
 for i, inc in enumerate(incs):
 
-    # Maintain constant vsini
-    veq = vsini / np.sin(inc * np.pi / 180)
-
     # Generate the data
     data = generate_data(
         inc=inc,
         veq=veq,
-        image="starspot",
+        image="spotdots",
         flux_err=1e-4,
         ydeg=ydeg,
         smoothing=smoothing,
+        vsini_max=veq,
     )
     theta = data["data"]["theta"]
     flux = data["data"]["flux"]

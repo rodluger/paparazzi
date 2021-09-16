@@ -1,21 +1,18 @@
+from utils.plot import plot_timeseries, plot_maps, plot_spectra
 import starry
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 import starry
-import george
 import pymc3 as pm
 import pymc3_ext as pmx
 import theano.tensor as tt
 from tqdm.auto import tqdm
 import json
-import sys
 
-# Pass `--clobber` when running this script to force rerun
-if "--clobber" in sys.argv:
-    clobber = True
-else:
-    clobber = False
+
+np.random.seed(0)
+
 
 # Dataset settings
 flux_err = 1e-4
@@ -25,7 +22,9 @@ inc = 40
 veq = 60000
 wav = np.linspace(642.85, 643.15, 200)
 wav0 = np.linspace(642.75, 643.25, 200)
+theta = np.linspace(-180, 180, nt, endpoint=False)
 u = [0.5, 0.25]
+
 
 # True maps
 starry_path = Path(starry.__file__).parents[0]
@@ -35,8 +34,10 @@ image1 = np.mean(
 )
 image2 = 1 - image1
 
+
 # True intensity ratio (spot / photosphere)
 ratio = 0.5
+
 
 # True spectra (photosphere and spot)
 spectrum1 = 1.0 - 0.925 * np.exp(-0.5 * (wav0 - 643.0) ** 2 / 0.0085 ** 2)
@@ -46,15 +47,12 @@ spectrum2 = (
     - 0.6 * np.exp(-0.5 * (wav0 - 643.08) ** 2 / 0.0085 ** 2)
 )
 
-# Optimization settings
-niter = 100000
-lr = 1e-4
 
-# Prior on the spectra
-spectral_mean1 = np.ones_like(wav0)
-spectral_mean2 = np.ones_like(wav0)
-spectral_cov1 = 1e-3 * np.ones_like(wav0)
-spectral_cov2 = 1e-3 * np.ones_like(wav0)
+# Optimization settings
+niter = 10000
+lr = 1e-2
+sb = 1e-3
+
 
 # Instantiate the map
 map = starry.DopplerMap(
@@ -77,9 +75,34 @@ map.load(
 for n in range(len(u)):
     map[1 + n] = u[n]
 
+
 # Generate the dataset
-flux = map.flux(normalize=True)
+flux = map.flux(theta=theta)
 flux += flux_err * np.random.randn(*flux.shape)
+
+
+# Save it to a dict for later
+data = dict(
+    kwargs=dict(
+        ydeg=ydeg,
+        udeg=len(u),
+        nc=2,
+        veq=veq,
+        inc=inc,
+        vsini_max=40000,
+        nt=nt,
+        wav=wav,
+        wav0=wav0,
+    ),
+    props=dict(u=u),
+    truths=dict(y=map.y, spectrum=map.spectrum),
+    data=dict(
+        theta=theta,
+        flux_err=flux_err,
+        flux=flux,
+    ),
+)
+
 
 # Set up a pymc3 model so we can optimize
 with pm.Model() as model:
@@ -117,19 +140,19 @@ with pm.Model() as model:
 
     # Prior on the spectra
     np.random.seed(0)
-    spectrum1 = pm.Bound(pm.Normal, upper=1.0)(
+    spectrum1 = pm.Bound(pm.Laplace, lower=0.0, upper=1.0 + 1e-4)(
         "spectrum1",
-        mu=spectral_mean1,
-        sigma=np.sqrt(spectral_cov1),
+        mu=1.0,
+        b=sb,
         shape=(map.nw0,),
-        testval=1 - np.sqrt(spectral_cov1) * np.abs(np.random.randn(map.nw0)),
+        testval=1 - 1e-2 * np.abs(np.random.randn(map.nw0)),
     )
-    spectrum2 = pm.Bound(pm.Normal, upper=1.0)(
+    spectrum2 = pm.Bound(pm.Laplace, lower=0.0, upper=1.0 + 1e-4)(
         "spectrum2",
-        mu=spectral_mean2,
-        sigma=np.sqrt(spectral_cov2),
+        mu=1.0,
+        b=sb,
         shape=(map.nw0,),
-        testval=1 - np.sqrt(spectral_cov1) * np.abs(np.random.randn(map.nw0)),
+        testval=1 - 1e-2 * np.abs(np.random.randn(map.nw0)),
     )
     map.spectrum = tt.concatenate(
         (
@@ -140,7 +163,7 @@ with pm.Model() as model:
     )
 
     # Compute the model
-    flux_model = map.flux()
+    flux_model = map.flux(theta=theta)
 
     # Likelihood term
     pm.Normal(
@@ -152,8 +175,11 @@ with pm.Model() as model:
         ),
     )
 
+
+# TODO: Get rid of this
 # Run the optimizer or load the saved MAP solution
-if clobber or not Path("twospec_map_soln.json").exists():
+file = Path("twospec_map_soln.json")
+if True:
 
     # Optimize!
     loss = []
@@ -171,18 +197,66 @@ if clobber or not Path("twospec_map_soln.json").exists():
                 best_loss = obj
                 map_soln = point
 
+    # Plot the loss
+    loss = np.array(loss)
+    logloss = np.log10(loss)
+    logloss[loss < 0] = -np.log10(-loss[loss < 0])
+    fig, ax = plt.subplots(1)
+    ax.plot(np.arange(len(loss)), logloss, lw=1)
+    ax.set_ylabel("log loss")
+    ax.set_xlabel("iteration")
+    fig.savefig("twospec_loss.pdf", bbox_inches="tight")
+
     # Save to JSON
     map_soln_json = {}
     for key, value in map_soln.items():
         map_soln_json[key] = value.tolist()
-    with open("twospec_map_soln.json", "w") as f:
+    with open(file, "w") as f:
         json.dump(map_soln_json, f)
 
 else:
 
     # Load JSON
     map_soln = {}
-    with open("twospec_map_soln.json", "r") as f:
+    with open(file, "r") as f:
         map_soln_json = json.load(f)
-    for key, value in map_soln.items():
+    for key, value in map_soln_json.items():
         map_soln[key] = np.array(value)
+
+
+# Get the solution
+with model:
+    y_inferred = pmx.eval_in_model(map.y, point=map_soln)
+    spectrum_inferred = pmx.eval_in_model(map.spectrum, point=map_soln)
+
+# Plot the maps
+fig = plot_maps(data["truths"]["y"][:, 0], y_inferred[:, 0], None)
+fig.savefig("twospec_maps.pdf", bbox_inches="tight", dpi=300)
+
+# Plot spectrum 1
+fig = plot_spectra(
+    wav,
+    wav0,
+    data["truths"]["spectrum"][0],
+    spectrum1.tag.test_value,
+    spectrum_inferred[0],
+    None,
+)
+fig.savefig("twospec_spectra1.pdf", bbox_inches="tight", dpi=300)
+
+# Plot spectrum 2
+fig = plot_spectra(
+    wav,
+    wav0,
+    data["truths"]["spectrum"][1],
+    r.tag.test_value * spectrum2.tag.test_value,
+    spectrum_inferred[1],
+    None,
+)
+fig.savefig("twospec_spectra2.pdf", bbox_inches="tight", dpi=300)
+
+# Plot the timeseries
+fig = plot_timeseries(
+    data, y_inferred, spectrum_inferred, normalized=True, overlap=5
+)
+fig.savefig("twospec_timeseries.pdf", bbox_inches="tight", dpi=300)

@@ -1245,18 +1245,18 @@ For simplicity, in this experiment we consider only $J = 2$ spectral components 
 The second row of $\mathbb{Y}^\top$ is the vector $(1 \quadquad \bvec{y_1}^\top)$, where $\bvec{y_1}$ is the (unknown) spherical harmonic expansion of the spot. 
 The two columns of $\mathbb{S}$ are $\bvec{s_1}$ and $\bvec{s_2}$, the unknown spectral components.
 
-% \begin{figure}[t!]
-%     \begin{centering}
-%         \includegraphics[width=\linewidth]{figures/twospec.pdf}
-%         \caption{%
-%             An example of a star whose spectrum is different within the spot (\texttt{B}) and outside of the spot (\texttt{A}). 
-%             Everywhere on the surface, the spectrum is a linear combination of two spectral components ($s_1$ and $s_2$).
-%             As in Figure~\ref{fig:spot_y1bs}, we assume we do not know the map, the baseline, or either of the spectra.
-%             The top row shows the true values for the map and the spectra, and the bottom row shows our inferred values. 
-%         }
-%         \label{fig:twospec}
-%     \end{centering}
-% \end{figure}
+\begin{figure}[t!]
+    \begin{centering}
+        \includegraphics[width=0.39\linewidth]{figures/twospec_timeseries.pdf}
+        \includegraphics[width=0.59\linewidth]{figures/twospec_maps.pdf}
+        \includegraphics[width=\linewidth]{figures/twospec_spectra1.pdf}
+        \includegraphics[width=\linewidth]{figures/twospec_spectra2.pdf}
+        \caption{%
+            An example of a star whose spectrum is different within the spot and outside of the spot.
+        }
+        \label{fig:twospec}
+    \end{centering}
+\end{figure}
 
 We set \bvec{s_1} equal to a flat spectrum with two absorption lines of different depths, and \bvec{s_2} to the same spectrum, except we make the second line an emission feature. 
 The local rest-frame spectrum everywhere on the surface is a linear combination of these two spectra. 
@@ -1359,9 +1359,9 @@ To circumvent this, we decrease the prior variance by a factor of 10--100 for th
 \end{figure}
 %
 As in \citet{Vogt1987}, we also investigate the dependence of the solution on the inclination of the star.
-Figure~\ref{fig:inclinations} shows the inferred map for the same problem setup as before (with SNR $\sim 100$), but this time varying the inclination between $10^\circ$ (nearly face-on) and $90^\circ$ (perfectly edge-on). 
+Figure~\ref{fig:inclinations} shows the inferred map for the same problem setup as before, but this time varying the inclination between $10^\circ$ (nearly face-on) and $90^\circ$ (perfectly edge-on). We also use a different surface map, this time with the word \texttt{STAR} in the northern hemisphere and the word \texttt{SPOT} in the southern hemisphere, to assess our ability to infer information across the entire stellar surface. \xxx{Given the added complexity of the map, we increase the spherical harmonic degree to} $l_\mathrm{max} = 20$, increase the SNR of our data to 200, and set the covariance of the spatial prior to $\boldsymbol{\Lambda}_\bvec{y} = 3\times 10^{-5}\bvec{I}$.
 As before, the inclination is assumed to be known exactly. 
-We further keep the true equatorial velocity of the star constant across all panels, so that the figure corresponds to the same star viewed at different orientations. 
+\xxx{We further keep the true equatorial velocity of the star constant} across all panels, so that the figure corresponds to the same star viewed at different orientations. 
 Because of this, decreasing the inclination decreases $v\sin i$, reducing the width of the convolution kernel and therefore the spatial resolution of our inferred map. 
 Increasing the inclination does not result in appreciable changes until an inclination of $\sim 80^\circ$, above which it becomes difficult to differentiate between features in the northern and southern hemispheres, whose projected velocities are nearly equal. 
 At $i = 90^\circ$, there is a formal degeneracy between the two hemispheres, which can be seen from the mirror-image symmetry in the inferred map. 
