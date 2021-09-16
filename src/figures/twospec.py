@@ -49,7 +49,7 @@ spectrum2 = (
 
 
 # Optimization settings
-niter = 10000
+niter = 20000
 lr = 1e-2
 sb = 1e-3
 
