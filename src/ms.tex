@@ -1241,11 +1241,10 @@ This is the case for, say, chemically peculiar Ap stars, whose abundance of cert
 It is also the case in general for spots that are significantly cooler than the rest of the photosphere, where the relative abundance of different ionization states or molecular features may be different than in the hotter, unspotted regions.
 
 The problem setup is the same as that discussed in \S\ref{sec:eigen}, where our full map vector $\bvec{a}$ is the outer product of a spectral matrix $\mathbb{S}$, whose $J$ columns are the different spectral components, and a spherical harmonic coefficient matrix $\mathbb{Y}^\top$, whose $J$ rows are the corresponding coefficient vectors. 
-For simplicity, in this experiment we consider only $J = 2$ spectral components and further require that the first component is spatially constant, i.e., the first row of $\mathbb{Y}^\top$ is the vector $(1 \quadquad \bvec{0}^\top)$. 
-The second row of $\mathbb{Y}^\top$ is the vector $(1 \quadquad \bvec{y_1}^\top)$, where $\bvec{y_1}$ is the (unknown) spherical harmonic expansion of the spot. 
-The two columns of $\mathbb{S}$ are $\bvec{s_1}$ and $\bvec{s_2}$, the unknown spectral components.
-
-\begin{figure}[t!]
+For simplicity, in this experiment we consider only $J = 2$ map components and further require that the surface map for the second component is the complement of the surface map for the first component. Specifically, the first component map ($\bvec{y_0}$, the first row of $\mathbb{Y}^\top$) corresponds to the background photosphere, whose value is unity everywhere except within the \texttt{SPOT} feature, where the value is zero. The second component map ($\bvec{y_1}$, the second row of $\mathbb{Y}^\top$) corresponds to the spot and is zero in the photosphere and unity within the spot.
+The two columns of $\mathbb{S}$ are $\bvec{s_0}$ and $\bvec{s_1}$, the unknown spectral components corresponding to the photosphere and the spot, repsectively.
+%
+\begin{figure}[p!]
     \begin{centering}
         \includegraphics[width=0.39\linewidth]{figures/twospec_timeseries.pdf}
         \includegraphics[width=0.59\linewidth]{figures/twospec_maps.pdf}
@@ -1253,33 +1252,33 @@ The two columns of $\mathbb{S}$ are $\bvec{s_1}$ and $\bvec{s_2}$, the unknown s
         \includegraphics[width=\linewidth]{figures/twospec_spectra2.pdf}
         \caption{%
             An example of a star whose spectrum is different within the spot and outside of the spot.
+            We are able to infer both the surface map of the star (upper right) and the two component spectra (lower two panels), assuming virtually no prior knowledge of either.
         }
         \label{fig:twospec}
     \end{centering}
 \end{figure}
+%
+We set $\bvec{s_0}$ to unity everywhere, with an absorption feature at $643$~nm similar to the one in the previous experiments. The spot spectrum $\bvec{s_1}$ corresponds to two absorption lines on either side of this feature, and the baseline intensity is set to half that of the photospheric background.
+%
+The rest frame spectrum at any point on the surface of the star is then a linear combination of $\bvec{s_0}$ and $\bvec{s_1}$, weighted by the respective surface maps $\bvec{y_0}$ and $\bvec{y_1}$.
+%
+We generate the synthetic dataset in the same way as in \S\ref{sec:spot_y1}: 16 spectra, each with 200 wavelength bins observed with SNR$\sim$100.
 
-We set \bvec{s_1} equal to a flat spectrum with two absorption lines of different depths, and \bvec{s_2} to the same spectrum, except we make the second line an emission feature. 
-The local rest-frame spectrum everywhere on the surface is a linear combination of these two spectra. 
-In our simple problem, the weight given to the first spectrum is the same everywhere (encoded in the first row of $\mathbb{Y}^\top$), and the weight given to the second spectrum is large outside of the spot and small within the spot (encoded in the second row of $\mathbb{Y}^\top$, which we set equal to the spherical harmonic expansion of the \spot feature).
-The first row of Figure ~\ref{fig:twospec} shows the problem setup. 
-The two spectral components are shown as the blue ($\bvec{s_1}$) and green ($\bvec{s_2}$) curves at the right. 
-Point \texttt{A} on the map (left panel) is outside the spot feature, so its local spectrum has nearly equal contributions from $\bvec{s_1}$ and $\bvec{s_2}$, and the second spectral line is absent (center panel). 
-Point \texttt{B} is inside the spot, so it receives a contribution from $\bvec{s_1}$ only.
+In our inference step, we again assume we have no knowledge of the map, the baseline, or either of the spectral components. While our bilinear method (\S\ref{sec:spot_y1bs}) could in principle work here, we find that in practice it is very difficult to converge on the global optimum without either good priors or a good initial guess.
+We therefore optimize our model using the nonlinear gradient-descent \texttt{Adam} optimizer \citep{Adam} within the \texttt{pymc3} probabilistic modeling framework \citep{Salvatier2016}. Since we are no longer restricted to using Gaussian priors on the variables (a requirement of our bilinear method), we place a unit-mean Laplacian (sparsity) prior on the two spectra with scale parameter $b = 10^{-3}$ and bounded to the range $[0, 1]$.
+%
+We further place a Gaussian Process prior on the spectra to enforce smoothness, adopting a squared exponential kernel with amplitude $10^{-1}$ and lengthscale $10^{-2}$~nm.
+%
+We also solve for a single scale parameter $r \sim \mathrm{Uniform}(0, 1)$, equal to the ratio of the continuum levels of the two spectra (whose true value is 0.5).
+Finally, in order to enforce that the two component surface maps sum to unity (as described above), we optimize for the actual \emph{pixel} intensities of the photosphere map, on which we place a simple uniform prior on $[0, 1]$; the spot map is then simply the complement. The spherical harmonic coefficients are then computed via a fast, linear spherical harmonic transform (SHT) operation at each step. In order to satisfy the Nyquist criterion, our pixel grid consists of twice as many pixels as spherical harmonic coefficients.
 
-In our inference step, we again assume we have no knowledge of the map, the baseline, or either of the spectral components. 
-As before, we initialize $\bvec{s_1}$ to the deconvolved mean spectrum and $\bvec{s_2}$ to the deconvolved mean spectrum after subtracting $\bvec{s_1}$. 
-In practice this leads to a decent approximation to $\bvec{s_1}$ but a rather featureless guess for $\bvec{s_2}$. 
-We use the same priors as before, except we set $\sigma_\bvec{s_1} = \sigma_\bvec{s_2} = 0.01$ to force the continuum to be flatter. 
-We run our bilinear solver with $T_0 = 5,000$ and $\Delta\log T = -0.025$ followed by the nonlinear solver with $N_\mathrm{nadam} = 2,000$ and $L_\mathrm{nadam} = 3\times 10^{-4}$.
+We initialize our two maps with uniform intensities and initialize our two spectra at unity, with small random negative deviations to break the symmetry.
+We then take 20,000 steps of the optimizer with a learning rate of $10^{-2}$.
 
 The results are shown in the bottom panel of Figure~\ref{fig:twospec}.
-We recover the \spot feature reasonably well, although with more artifacts than in the previous experiments. 
-We also recover the two spectral components, although our solution for $\bvec{s_2}$ is significantly better than that for $\bvec{s_1}$. 
-This is due to the fact that the only information about $\bvec{s_1}$ that makes it into our dataset is the convolution of $\bvec{s_1}$ with the first term of the convolution kernel $\kT$ (\raisebox{-0.1em}{\includegraphics[width=2em]{figures/kT00.pdf}}), since this spectral component has no spatial variability.
-Since the deconvolution operation is in general ill-posed, there is no unique solution for $\bvec{s_1}$. 
-On the other hand, the other spectral component projects into the data via convolutions with all other terms of the kernel and is therefore very well constrained.
-Finally, we can estimate the spectra at points \texttt{A} and \texttt{B} as before (center panel). 
-We recover the single spectral line at \texttt{A} and the two lines at \texttt{B}, albeit rather noisily due to the uncertainty in $\bvec{s_1}$.
+Even though we assume no knowledge of the surface map---except its intensity is bounded in $[0, 1]$---we are able to recover the \spot feature just as well as in the previous experiments.
+We also recover the two spectral components quite well. Our solution for the photospheric component, however, is noticeably better than that for the spot component, simply because effective SNR of the former is larger due to its greater surface area and higher baseline intensity. We also slightly overestimate the baseline level of the spot spectrum, but we correctly recover the locations, shapes, and depths of the two absorption lines.
+
 
 
 \section{Discussion}

@@ -20,7 +20,12 @@ def maxq(x, quantile=None):
 
 
 def plot_timeseries(
-    data, y_inferred, spectrum_inferred, normalized=False, overlap=8.0
+    data,
+    y_inferred,
+    spectrum_inferred,
+    normalized=False,
+    overlap=8.0,
+    figsize=(5, 11.5),
 ):
     # Get the data
     theta = data["data"]["theta"]
@@ -39,7 +44,7 @@ def plot_timeseries(
     model = map.flux(theta, normalize=normalized).reshape(map.nt, -1)
 
     # Plot the "Joy Division" graph
-    fig = plt.figure(figsize=(5, 11.5))
+    fig = plt.figure(figsize=figsize)
     ax_img = [
         plt.subplot2grid((map.nt, 8), (n, 0), rowspan=1, colspan=1)
         for n in range(map.nt)
@@ -87,10 +92,19 @@ def plot_timeseries(
 
 
 def plot_maps(
-    y_true, y_inferred, y_uncert=None, y_uncert_max=0.15, quantile=0.995
+    y_true,
+    y_inferred,
+    y_uncert=None,
+    y_uncert_max=0.15,
+    quantile=0.995,
+    figsize=(8, 11.5),
 ):
     # Set up the plot
-    fig, ax = plt.subplots(3, figsize=(8, 11.5))
+    if y_uncert is None:
+        nrows = 2
+    else:
+        nrows = 3
+    fig, ax = plt.subplots(nrows, figsize=figsize)
     fig.subplots_adjust(hspace=0.3)
     norm01 = Normalize(vmin=0, vmax=1)
 
@@ -149,9 +163,7 @@ def plot_maps(
     )
 
     # Plot the pixel uncertainty image
-    if y_uncert is None:
-        ax[2].axis("off")
-    else:
+    if y_uncert is not None:
         map[:, :] = y_uncert
         image = map.render(projection="moll")
         image /= max_inf
@@ -180,8 +192,10 @@ def plot_maps(
     return fig
 
 
-def plot_spectra(wav, wav0, s_true, s_guess, s_inferred, s_uncert=None):
-    fig, ax = plt.subplots(1, figsize=(8, 2.5))
+def plot_spectra(
+    wav, wav0, s_true, s_guess, s_inferred, s_uncert=None, figsize=(8, 2.5)
+):
+    fig, ax = plt.subplots(1, figsize=figsize)
 
     ax.plot(wav0, s_true, "C0-", label="true")
     ax.plot(wav0, s_guess, "C1--", lw=1, label="guess")

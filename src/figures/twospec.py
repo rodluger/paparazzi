@@ -8,7 +8,6 @@ import pymc3 as pm
 import pymc3_ext as pmx
 import theano.tensor as tt
 from tqdm.auto import tqdm
-import json
 
 
 np.random.seed(0)
@@ -49,9 +48,11 @@ spectrum2 = (
 
 
 # Optimization settings
-niter = 20000
-lr = 1e-2
-sb = 1e-3
+niter = 20000  # Number of iterations
+lr = 1e-2  # Adam learning rate
+sb = 1e-3  # Laplacian regularization strength for the spectrum
+wl = 1e-2  # GP lengthscale for the spectrum (nm)
+wa = 1e-1  # GP amplitude for the spectrum
 
 
 # Instantiate the map
@@ -162,6 +163,18 @@ with pm.Model() as model:
         axis=0,
     )
 
+    # Enforce smoothness with a Squared Exponential GP on the spectra
+    kernel = wa ** 2 * pm.gp.cov.ExpQuad(1, wl)
+    cov = kernel(wav0[:, None]).eval() + 1e-6 * np.eye(map.nw0)
+    smoothness1 = pm.Potential(
+        "smoothness1",
+        pm.MvNormal.dist(mu=np.ones(map.nw0), cov=cov).logp(spectrum1),
+    )
+    smoothness2 = pm.Potential(
+        "smoothness2",
+        pm.MvNormal.dist(mu=np.ones(map.nw0), cov=cov).logp(spectrum2),
+    )
+
     # Compute the model
     flux_model = map.flux(theta=theta)
 
@@ -176,52 +189,34 @@ with pm.Model() as model:
     )
 
 
-# TODO: Get rid of this
-# Run the optimizer or load the saved MAP solution
-file = Path("twospec_map_soln.json")
-if True:
+# Optimize!
+loss = []
+best_loss = np.inf
+map_soln = model.test_point
+iterator = tqdm(
+    pmx.optim.optimize_iterator(pmx.optim.Adam(lr=lr), niter, start=map_soln),
+    total=niter,
+)
+with model:
+    for obj, point in iterator:
+        iterator.set_description(
+            "loss: {:.3e} / {:.3e}".format(obj, best_loss)
+        )
+        loss.append(obj)
+        if obj < best_loss:
+            best_loss = obj
+            map_soln = point
 
-    # Optimize!
-    loss = []
-    best_loss = np.inf
-    map_soln = model.test_point
-    with model:
-        for obj, point in tqdm(
-            pmx.optim.optimize_iterator(
-                pmx.optim.Adam(lr=lr), niter, start=map_soln
-            ),
-            total=niter,
-        ):
-            loss.append(obj)
-            if obj < best_loss:
-                best_loss = obj
-                map_soln = point
 
-    # Plot the loss
-    loss = np.array(loss)
-    logloss = np.log10(loss)
-    logloss[loss < 0] = -np.log10(-loss[loss < 0])
-    fig, ax = plt.subplots(1)
-    ax.plot(np.arange(len(loss)), logloss, lw=1)
-    ax.set_ylabel("log loss")
-    ax.set_xlabel("iteration")
-    fig.savefig("twospec_loss.pdf", bbox_inches="tight")
-
-    # Save to JSON
-    map_soln_json = {}
-    for key, value in map_soln.items():
-        map_soln_json[key] = value.tolist()
-    with open(file, "w") as f:
-        json.dump(map_soln_json, f)
-
-else:
-
-    # Load JSON
-    map_soln = {}
-    with open(file, "r") as f:
-        map_soln_json = json.load(f)
-    for key, value in map_soln_json.items():
-        map_soln[key] = np.array(value)
+# Plot the loss
+loss = np.array(loss)
+logloss = np.log10(loss)
+logloss[loss < 0] = -np.log10(-loss[loss < 0])
+fig, ax = plt.subplots(1)
+ax.plot(np.arange(len(loss)), logloss, lw=1)
+ax.set_ylabel("log-ish loss")
+ax.set_xlabel("iteration")
+fig.savefig("twospec_loss.pdf", bbox_inches="tight")
 
 
 # Get the solution
@@ -229,9 +224,11 @@ with model:
     y_inferred = pmx.eval_in_model(map.y, point=map_soln)
     spectrum_inferred = pmx.eval_in_model(map.spectrum, point=map_soln)
 
+
 # Plot the maps
-fig = plot_maps(data["truths"]["y"][:, 0], y_inferred[:, 0], None)
+fig = plot_maps(data["truths"]["y"][:, 0], y_inferred[:, 0], figsize=(8, 7.5))
 fig.savefig("twospec_maps.pdf", bbox_inches="tight", dpi=300)
+
 
 # Plot spectrum 1
 fig = plot_spectra(
@@ -240,9 +237,11 @@ fig = plot_spectra(
     data["truths"]["spectrum"][0],
     spectrum1.tag.test_value,
     spectrum_inferred[0],
-    None,
+    figsize=(8, 2),
 )
+fig.gca().set_ylabel("background spectrum", fontsize=12)
 fig.savefig("twospec_spectra1.pdf", bbox_inches="tight", dpi=300)
+
 
 # Plot spectrum 2
 fig = plot_spectra(
@@ -251,12 +250,19 @@ fig = plot_spectra(
     data["truths"]["spectrum"][1],
     r.tag.test_value * spectrum2.tag.test_value,
     spectrum_inferred[1],
-    None,
+    figsize=(8, 2),
 )
+fig.gca().set_ylabel("spot spectrum", fontsize=12)
 fig.savefig("twospec_spectra2.pdf", bbox_inches="tight", dpi=300)
+
 
 # Plot the timeseries
 fig = plot_timeseries(
-    data, y_inferred, spectrum_inferred, normalized=True, overlap=5
+    data,
+    y_inferred,
+    spectrum_inferred,
+    normalized=True,
+    overlap=5,
+    figsize=(5, 7.5),
 )
 fig.savefig("twospec_timeseries.pdf", bbox_inches="tight", dpi=300)
