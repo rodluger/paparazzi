@@ -98,7 +98,7 @@ Depending on the resolution of the grid, this is either numerically inaccurate o
 
 \subsection{Doppler Deconvolution}
 
-The observed spectrum is a complex function of spatial, spectral, temporal, and velocity terms. 
+The observed spectrum is an intricate function of spatial, spectral, temporal, and velocity terms. 
 The goal in this section is to deconvolve each of these terms to make solving the integral in Equation~(\ref{eq:the_problem:F}) easier.
 %
 The first thing we will do is to express Equation~(\ref{eq:the_problem:Ixi})
@@ -281,7 +281,7 @@ Without loss of generality, if we assume the axis of rotation lies along the $y-
 %
 \begin{align}
     \label{eq:kT:beta}
-    \beta(\x) = \frac{\omega \sin i \, x}{c}
+    \beta(\x) = \frac{\omega \, x}{c} \sin i
 \end{align}
 %
 and
@@ -290,8 +290,8 @@ and
     \label{eq:kT:D}
     \D(\x) & =
     \frac{1}{2}\ln\left(
-    \dfrac{1 + \dfrac{\omega \sin i \, x}{c}}
-    {1 - \dfrac{\omega \sin i \, x}{c}}
+    \dfrac{1 + \dfrac{\omega \, x}{c} \sin i}
+    {1 - \dfrac{\omega \, x}{c} \sin i}
     \right)
     \quad ,
 \end{align}
@@ -311,7 +311,7 @@ where $\omega$ is the stellar angular velocity and $i$ is the stellar inclinatio
     \end{centering}
 \end{figure}
 
-If we assume the star is unocculted, the region of integration $\Surf(\x)$ in Equation~(\ref{eq:deconv:kT}) is simply the unit disk, so $\Curve(\lnlam, \x)$ is the set of all points that satisfy both $\lnlam_0 + \D(\x) = 0$ and $x^2 + y^2 \le 1$.
+The region of integration $\Surf(\x)$ in Equation~(\ref{eq:deconv:kT}) is simply the unit disk, so $\Curve(\lnlam, \x)$ is the set of all points that satisfy both $\lnlam_0 + \D(\x) = 0$ and $x^2 + y^2 \le 1$.
 Solving Equation~(\ref{eq:kT:D}) for $x$, we find that the curves $\Curve(\lnlam, \x)$ are simply vertical lines on the unit disk given by
 %
 \begin{align}
@@ -344,13 +344,13 @@ This completes our derivation of the analytic expression for the observed spectr
 \subsection{Example}
 %
 Figure~\ref{fig:spot} shows an example application of the formulae derived in this section. 
-We used \starry to generate a synthetic stellar surface with a single large Gaussian spot at a latitude of $30^\circ$, yielding a vector of spherical harmonic coefficients $\bvec{y}$.
+We generated a synthetic stellar surface with a large, circular spot at a latitude of $30^\circ$ and computed its spherical harmonic expansion up to $l_\mathrm{max}=20$ in the form of the vector of coefficients $\bvec{y}$.
 The stellar rest frame spectrum $I(\lnlam_0)$ is taken to be a single Gaussian absorption line that is spatially constant everywhere save for a multiplicative factor equal to the local spot intensity.
 This corresponds to a spectral/spatial expansion vector $\alm(\lnlam_0)$ whose coefficient at degree $l$ and order $m$ is equal to $y_{lm} I(\lnlam_0)$.
 In the Figure, we rotated the star about an axis perpendicular to the line of sight (left panel) and computed the observed spectrum using Equation~(\ref{eq:deconv:F}) (center panel). 
 The right panel shows the difference between the observed spectrum and the spectrum when the spot is not in view.
 The effect of the spot on the absorption line is evident: a ``bump'' that travels from the blueshifted side of to the redshifted side of the line in sync with the change in longitude of the spot. 
-This correspondence between line shape residuals and spot location is the cornerstone of the Doppler imaging technique \citep[compare to, e.g., Figures 1 and 4 in][]{Vogt1983}.
+This correspondence between line shape and spot location is the cornerstone of the Doppler imaging technique \citep[compare to, e.g., Figures 1 and 4 in][]{Vogt1983}.
 
 \begin{figure}[p!]
     \begin{centering}
@@ -381,7 +381,7 @@ We show the residuals in the lower panel, where it is clear that as the number o
         \includegraphics[width=0.65\linewidth]{figures/compare.pdf}
         \caption{%
             The observed spectrum when the spot is in view computed with
-            \starry (blue) and numerically (orange). 
+            our algorithm (blue) and numerically (orange). 
             The problem setup is the same as that in Figure~\ref{fig:spot}. 
             The bottom panel shows the absolute value of the difference between the two spectra for different number of grid points in the numerical solution.
             As the number of grid points increases, the numerical solution approaches the \starry solution.
@@ -390,7 +390,7 @@ We show the residuals in the lower panel, where it is clear that as the number o
     \end{centering}
 \end{figure}
 
-\section{Linearization}
+\section{The forward problem}
 \label{sec:linear}
 
 \begin{figure}[ht!]
@@ -1029,7 +1029,7 @@ The spectra were computed at 16 equally spaced rotational phases and downsampled
             The basic setup for the \spot problem. 
             We compute the $l_\mathrm{max} = 15$ spherical harmonic expansion of a map where the word ``SPOT'' has been placed across the northern hemisphere (top left). 
             Each point on the surface is given the same spectrum, composed of a sum of synthetic Gaussian absorption lines (blue curve in the bottom panel).
-            The specific intensity at each point on the surface is equal to this spectrum weighted by the intensity of the map, which is close to zero within the spot (point labeled \texttt{B}) and close ot unity outside the spot (point labeled \texttt{A}).
+            The specific intensity at each point on the surface is equal to this spectrum weighted by the intensity of the map, which is close to zero within the spot (point labeled \texttt{B}) and close to unity outside the spot (point labeled \texttt{A}).
             To generate the synthetic dataset (orange curves in the bottom panel), the star is inclined at $40^\circ$ with respect to the line of sight and the disk-integrated spectrum is computed at 16 equally-spaced phases between $-180^\circ$ and $180^\circ$ (middle panel).
             The grey regions indicate wavelength regions outside the observation window, but whose features can still contribute to the observed spectrum due to rotational broadening.
         }
