@@ -14,3 +14,7 @@
 <img src="https://img.shields.io/badge/article-pdf-blue.svg?style=flat" alt="Read the article"/>
 </a>
 </p>
+<br/>
+
+This is the repository for **Luger et al. in prep**: *A Closed-Form Solution to the Doppler Imaging Problem*. The paper is under active development, and is autocompiled using the [showyourwork](https://github.com/rodluger/showyourwork) open source article workflow.
+Please click [here](https://github.com/rodluger/paparazzi/raw/main-pdf/ms.pdf) to read the latest draft of the paper.
