@@ -4,6 +4,13 @@
 % Custom defs
 \include{style}
 
+% TIMING RESULTS
+\def\timeInferY{under 1 second}
+\def\timeInferYB{about 5 seconds}
+\def\timeInferYBS{about 30 seconds}
+\def\timeInferYBSLOSNR{about 30 seconds}
+\def\timeInferTwoSpec{about 20 minutes}
+
 % Begin!
 \begin{document}
 
@@ -21,8 +28,10 @@
 \author{Daniel Foreman-Mackey}
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 %
-\author{David W. 
-Hogg}
+\author{Lily Zhao}
+\affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
+%
+\author{David W. Hogg}
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 
 \begin{abstract}
@@ -1086,7 +1095,7 @@ Note that we must first scale the data vector $\fnorm$ by the baseline (which in
             The Mollweide projection of the original map is shown at the top right; the inferred map is displayed below it. 
             The bottom panel shows the posterior uncertainty on the inferred intensity, ranging from close to zero in the northern hemisphere to $\sigma_\mathrm{prior} \approx 13\%$ below a latitude of $-30^\circ$. 
             The latter is the uncertainty associated with our particular choice of prior, as the southernmost latitudes of the star are never visible to the observer.
-            The optimization step in this experiment ran in under 1 second.
+            The optimization step in this experiment ran in \timeInferY.
         }
         \label{fig:spot_infer_y}
     \end{centering}
@@ -1163,7 +1172,7 @@ We also add a small variance term $\sigma_b^2 = 10^{-2}$ to all entries of the d
             is known (Figure~\ref{fig:spot_infer_y}). As before,
             regions south of the equator are almost never in view, so that portion of our inferred map is dominated by the prior.
             Note that the uncertainty shown (lower panel) is a strict lower bound on the true uncertainty, as it is conditioned on our point estimate of the baseline level.
-            The optimization step in this experiment ran in about 5 seconds.
+            The optimization step in this experiment ran in \timeInferYB.
         }
         \label{fig:spot_infer_yb}
     \end{centering}
@@ -1195,7 +1204,7 @@ We must follow the iterative procedure presented in
         \caption{%
             Similar to Figure~\ref{fig:spot_infer_y}, but assuming we have no information about either the spectrum, the baseline, or the map coefficients. 
             The bottommost panel now shows the true rest frame spectrum (blue line), the initial guess based on a deconvolution (dashed orange line), and the inferred spectrum (orange line, with shaded $1\sigma$ uncertainty).
-            The optimization step in this experiment ran in about 30 seconds.
+            The optimization step in this experiment ran in \timeInferYBS.
         }
         \label{fig:spot_infer_ybs}
     \end{centering}
@@ -1209,7 +1218,7 @@ We must follow the iterative procedure presented in
         \caption{%
             Same as Figure~\ref{fig:spot_infer_ybs}, but for $10\times$ lower SNR.
              We still recover the \spot map and the input spectrum, albeit with higher uncertainty, as expected.
-             Once again, the optimization step in this experiment ran in about 30 seconds.
+             Once again, the optimization step in this experiment ran in \timeInferYBSLOSNR.
         }
         \label{fig:spot_infer_ybs_low_snr}
     \end{centering}
@@ -1253,6 +1262,7 @@ The two columns of $\mathbb{S}$ are $\bvec{s_0}$ and $\bvec{s_1}$, the unknown s
         \caption{%
             An example of a star whose spectrum is different within the spot and outside of the spot.
             We are able to infer both the surface map of the star (upper right) and the two component spectra (lower two panels), assuming virtually no prior knowledge of either.
+            The optimization step in this experiment ran in \timeInferTwoSpec.
         }
         \label{fig:twospec}
     \end{centering}
@@ -1277,7 +1287,7 @@ We then take 20,000 steps of the optimizer with a learning rate of $10^{-2}$.
 
 The results are shown in the bottom panel of Figure~\ref{fig:twospec}.
 Even though we assume no knowledge of the surface map---except its intensity is bounded in $[0, 1]$---we are able to recover the \spot feature just as well as in the previous experiments.
-We also recover the two spectral components quite well. Our solution for the photospheric component, however, is noticeably better than that for the spot component, simply because effective SNR of the former is larger due to its greater surface area and higher baseline intensity. We also slightly overestimate the baseline level of the spot spectrum, but we correctly recover the locations, shapes, and depths of the two absorption lines.
+We also recover the two spectral components quite well. Our solution for the photospheric component, however, is noticeably better than that for the spot component, simply because effective SNR of the former is larger due to its greater surface area and higher baseline intensity. We also slightly overestimate the baseline level of the spot spectrum, but we correctly recover the locations, shapes, and depths of the two absorption lines. Note, importantly, that the nonlinear optimization step does not yield uncertainties (or lower bounds, like the bilinear solver); for this, we must resort to MCMC sampling (see \S\ref{sec:discussion}).
 
 
 
@@ -1324,14 +1334,14 @@ The panels in Figure~\ref{fig:snr} show the inferred map for SNR in the range 1-
 The setup is the same as that in \S\ref{sec:spot_y1b}, where the spectrum is known exactly but the map coefficients and the baseline are not.
 
 As may be expected, the quality of the map decreases with lower SNR, but a reduction of the SNR by $\sim 20\times$ still allows for reasonable recovery of the \spot feature. 
-In general, as the SNR decreases further, two things happen: the \spot contrast decreases, and the features begin to blur out, especially south of about $+30^\circ$ latitude, where features are more limb-darkened at this inclination and in view for a smaller fraction of the time.
+In general, as the SNR decreases further, the features begin to blur out, especially south of about $+30^\circ$ latitude, where features are more limb-darkened at this inclination and in view for a smaller fraction of the time.
 
 As the SNR incraeses, however, the quality of the \spot feature does not improve appreciably, since a SNR of 100 is more than sufficient to recover a $l_\mathrm{max} = 15$ band-limited map. 
 Interestingly, at constant spatial prior variance ($\boldsymbol{\Lambda}_\bvec{y} = 10^{-4}\bvec{I}$), the map quality actually begins to degrade with higher SNR south of the equator due to overfitting.
 To circumvent this, we decrease the prior variance by a factor of 10--100 for the highest SNR cases, which penalizes excessive complexity in the solution.
 
 %
-\begin{figure}[p!]
+\begin{figure}[t!]
     \begin{centering}
         \includegraphics[width=0.98\linewidth]{figures/snr.pdf}
         \caption{%
@@ -1345,11 +1355,11 @@ To circumvent this, we decrease the prior variance by a factor of 10--100 for th
 \subsection{Dependence on inclination}
 \label{sec:inc}
 %
-\begin{figure}[p!]
+\begin{figure}[t!]
     \begin{centering}
         \includegraphics[width=0.98\linewidth]{figures/inclinations.pdf} % 
         \caption{%
-            Recovered \texttt{STAR SPOT} map as a function of stellar inclination. 
+            Recovered \texttt{SPOT} map as a function of stellar inclination. 
             The observed spectra are continuum-normalized and the rest frame spectrum is assumed to be known exactly.
             In general, it is very difficult to infer features in the hemisphere facing away from the observer (in this case, the southern hemisphere). At low inclinations, those features are never in view, while at inclinations close to 90$^\circ$, it becomes difficult to differentiate between features above and below the equator.
         }
@@ -1358,12 +1368,14 @@ To circumvent this, we decrease the prior variance by a factor of 10--100 for th
 \end{figure}
 %
 As in \citet{Vogt1987}, we also investigate the dependence of the solution on the inclination of the star.
-Figure~\ref{fig:inclinations} shows the inferred map for the same problem setup as before, but this time varying the inclination between $10^\circ$ (nearly face-on) and $90^\circ$ (perfectly edge-on). We also use a different surface map, this time with the word \texttt{STAR} in the northern hemisphere and the word \texttt{SPOT} in the southern hemisphere, to assess our ability to infer information across the entire stellar surface. \xxx{Given the added complexity of the map, we increase the spherical harmonic degree to} $l_\mathrm{max} = 20$, increase the SNR of our data to 200, and set the covariance of the spatial prior to $\boldsymbol{\Lambda}_\bvec{y} = 3\times 10^{-5}\bvec{I}$.
-As before, the inclination is assumed to be known exactly. 
-\xxx{We further keep the true equatorial velocity of the star constant} across all panels, so that the figure corresponds to the same star viewed at different orientations. 
-Because of this, decreasing the inclination decreases $v\sin i$, reducing the width of the convolution kernel and therefore the spatial resolution of our inferred map. 
+Figure~\ref{fig:inclinations} shows the inferred map for the same problem setup as before, but this time varying the inclination between $10^\circ$ (nearly face-on) and $90^\circ$ (perfectly edge-on). 
+We also add four small circular features at $-45^\circ$ latitude to test our ability to infer features in the southern hemisphere (i.e., the side of the star facing away from the observer).
+We set the covariance of the spatial prior to $\boldsymbol{\Lambda}_\bvec{y} = 3\times 10^{-5}\bvec{I}$ and, as before, assume the inclination to be known exactly. 
+We further keep the true equatorial velocity of the star constant at $60$~km/s across all panels, so that the figure corresponds to the same star viewed at different orientations. 
+Because of this, decreasing the inclination decreases $v\sin i$, reducing the width of the convolution kernel and therefore the spatial resolution of our inferred map.
 Increasing the inclination does not result in appreciable changes until an inclination of $\sim 80^\circ$, above which it becomes difficult to differentiate between features in the northern and southern hemispheres, whose projected velocities are nearly equal. 
 At $i = 90^\circ$, there is a formal degeneracy between the two hemispheres, which can be seen from the mirror-image symmetry in the inferred map. 
+Finally, as expected, the features in the southern hemisphere are not recovered below inclinations of about $60^\circ$, as they are never actually in view. At an inclination of $80^\circ$m tge spots are recovered fairly well, but never with as high fidelity as features in the observer-facing hemisphere.
 These results are broadly consistent with those of \citet{Vogt1987}.
 
 \section{Conclusions}
@@ -1615,7 +1627,6 @@ The terms of the convolution kernel $\kT$ are then obtained by dotting this vect
         %
         $a_{lm}$                                            & spectral spherical harmonic coefficient                      & Equation~(\ref{eq:deconv:Ixi0})            \\
         $\almt$                                              & vector of spectral spherical harmonic coefficients          & Equation~(\ref{eq:deconv:almt})             \\
-        $\bvec{a}$                                          & $\almt$ at reference time $t = t_0$                          & Equation~(\ref{eq:deconv:R})               \\
         $\bvec{A}$                                          & matrix form of $\bvec{a}$                                    & Equation~(\ref{eq:inverse:alm})          \\
         $\bvec{B}$                                          & baseline design matrix                                       & \S\ref{sec:norm}                 \\
         $c$                                                 & speed of light                                               & Equation~(\ref{eq:kT:beta})                \\
@@ -1628,10 +1639,8 @@ The terms of the convolution kernel $\kT$ are then obtained by dotting this vect
         $I$                                                 & specific intensity                                           & Equation~(\ref{eq:the_problem:Ixi})        \\
         $\bvec{I}$                                          & identity matrix                                              &                                            \\
         $l$                                                 & spherical harmonic degree                                    &                                            \\
-        $L_\mathrm{nadam}$                                  & \texttt{NAdam} learning rate                                 & \S\ref{sec:spotstar}                       \\
         $\bvec{L}$                                          & limb darkening operator                                      & Equation~(\ref{eq:ld:L})                   \\
         $m$                                                 & spherical harmonic order                                     &                                            \\
-        $N_\mathrm{nadam}$                                  & number of \texttt{NAdam} iterations                          & \S\ref{sec:spotstar}                       \\
         $\bvec{P}$                                          & Change of basis matrix from $Y_{lm}$ to pixels               & Equation~(\ref{eq:spotstar:uncert})        \\
         $\bvec{R}$                                          & Wigner rotation matrix                                       & Equation~(\ref{eq:deconv:R})               \\
         $\bvec{s}$                                          & vector representation of the spectrum                        & Equation~(\ref{eq:inverse:alm})          \\
