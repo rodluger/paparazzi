@@ -8,6 +8,7 @@ jobs:
   showyourwork:
     runs-on: ubuntu-latest
     name: Build the article PDF
+    concurrency: showyourwork-${{ github.ref }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
