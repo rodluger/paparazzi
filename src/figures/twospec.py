@@ -138,7 +138,7 @@ with pm.Model() as model:
     map[:, :, 1] = y2
 
     # Prior on the intensity ratio
-    r = pm.Uniform("r", lower=0.0, upper=0.75)
+    r = pm.Uniform("r", lower=0.0, upper=0.75, testval=0.5)
 
     # Prior on the spectra
     np.random.seed(0)
