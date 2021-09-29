@@ -22,16 +22,19 @@
 \email{rluger@flatironinstitute.org}
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 %
-\author{Megan Bedell}
+\author[0000-0001-9907-7742]{Megan Bedell}
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 %
-\author{Daniel Foreman-Mackey}
+\author[0000-0002-9328-5652]{Daniel Foreman-Mackey}
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 %
-\author{Lily Zhao}
+\author[0000-0002-1835-1891]{Ian Crossfield}
+\affil{Department~of~Physics~and~Astronomy, Kansas University, Lawrence, KS}
+%
+\author[0000-0002-3852-3590]{Lily Zhao}
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 %
-\author{David W. Hogg}
+\author[0000-0003-2866-9403]{David W. Hogg}
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 
 \begin{abstract}
@@ -1041,7 +1044,7 @@ We repeat the same experiment here using our new formalism, except we instead ge
 We do this by computing the $l_\mathrm{max} = 15$ spherical harmonic decomposition of an image of the word, generating a set of $N = (l_\mathrm{max} + 1)^2 = 256$ spherical harmonic coefficients $\bvec{y}$. 
 We assume an equatorial velocity $v = 60$ km/s and an inclination $i = 40^\circ$, such that $v \sin i = 38.6$~km/s (compare to $i = 40^\circ$ and $v \sin i = 40$~km/s in \citealt{Vogt1987}).
 
-Our input spectrum $\bvec{s}$ was generated at high resolution ($R \equiv \frac{\lambda}{\Delta\lambda} = 430,000$) centered on the Fe I $\lambda 6430$ absorption line (blue curve in the bottom panel of Figure~\ref{fig:spot_setup}).
+Our input spectrum $\bvec{s}$ was generated at high resolution ($R \equiv \frac{\lambda}{\Delta\lambda} = 150,000$) centered on the Fe I $\lambda 6430$ absorption line (blue curve in the bottom panel of Figure~\ref{fig:spot_setup}).
 %
 The spectrum consists of a (purely synthetic) Gaussian absorption line of fractional depth 50\% centered at $\lambda = 643$~nm with FWHM of $0.02$~nm, or, in velocity space, $\Delta v = \mathrm{FWHM} \times c / \lambda \approx~10$~km/s, equal to the value used in \citet{Vogt1987}. 
 %
@@ -1375,8 +1378,24 @@ We further keep the true equatorial velocity of the star constant at $60$~km/s a
 Because of this, decreasing the inclination decreases $v\sin i$, reducing the width of the convolution kernel and therefore the spatial resolution of our inferred map.
 Increasing the inclination does not result in appreciable changes until an inclination of $\sim 80^\circ$, above which it becomes difficult to differentiate between features in the northern and southern hemispheres, whose projected velocities are nearly equal. 
 At $i = 90^\circ$, there is a formal degeneracy between the two hemispheres, which can be seen from the mirror-image symmetry in the inferred map. 
-Finally, as expected, the features in the southern hemisphere are not recovered below inclinations of about $60^\circ$, as they are never actually in view. At an inclination of $80^\circ$m tge spots are recovered fairly well, but never with as high fidelity as features in the observer-facing hemisphere.
+Finally, as expected, the features in the southern hemisphere are not recovered below inclinations of about $60^\circ$, as they are never actually in view. 
+At an inclination of $80^\circ$ the spots are recovered fairly well, but never with as high fidelity as features in the observer-facing hemisphere.
 These results are broadly consistent with those of \citet{Vogt1987}.
+
+\section{Application to Luhman 16B}
+\label{sec:luhman16b}
+%
+\begin{figure}[t!]
+    \begin{centering}
+        \includegraphics[width=0.45\linewidth]{figures/luhman16b_map.pdf} % 
+        \includegraphics[width=0.42\linewidth]{static/luhman16b_crossfield.png} % 
+        \caption{%
+            Maximum \emph{a posteriori} surface maps of Luhman 16B inferred from the CRIRES spectra obtained in \citet{Crossfield2014}. \emph{Left:} surface map inferred using the algorithm developed in this work. \emph{Right}: surface map inferred in \citet{Crossfield2014}, reproduced from Figure~2 in that paper. We infer the presence of a bright circumpolar spot, as well as the presence of a few dark features, most of which agree with the map presented in \citet{Crossfield2014}.
+        }
+        \label{fig:luhman16b_maps}
+    \end{centering}
+\end{figure}
+%
 
 \section{Conclusions}
 \label{sec:conclusions}

@@ -12,7 +12,8 @@ def generate_data(
     vsini_max=50000,
     smoothing=0.075,
     theta=None,
-    wav=np.linspace(642.85, 643.15, 200),
+    wav=np.linspace(642.85, 643.15, 70),
+    wav0=np.linspace(642.74, 643.26, 300),
     seed=0,
     image="spot",
     **kwargs
@@ -32,6 +33,7 @@ def generate_data(
         vsini_max=vsini_max,
         nt=nt,
         wav=wav,
+        wav0=wav0,
     )
 
     # Limb darkening
@@ -75,6 +77,7 @@ def generate_data(
             vsini_max=vsini_max,
             nt=nt,
             wav=wav,
+            wav0=wav0,
         ),
         props=dict(u=u),
         truths=dict(y=map.y, spectrum=map.spectrum),

@@ -8,6 +8,7 @@ import pymc3 as pm
 import pymc3_ext as pmx
 import theano.tensor as tt
 from tqdm.auto import tqdm
+import os
 
 
 np.random.seed(0)
@@ -19,8 +20,8 @@ ydeg = 15
 nt = 16
 inc = 40
 veq = 60000
-wav = np.linspace(642.85, 643.15, 200)
-wav0 = np.linspace(642.75, 643.25, 200)
+wav = np.linspace(642.85, 643.15, 70)
+wav0 = np.linspace(642.74, 643.26, 300)
 theta = np.linspace(-180, 180, nt, endpoint=False)
 u = [0.5, 0.25]
 
@@ -137,7 +138,7 @@ with pm.Model() as model:
     map[:, :, 1] = y2
 
     # Prior on the intensity ratio
-    r = pm.Uniform("r", lower=0.0, upper=1.0)
+    r = pm.Uniform("r", lower=0.0, upper=0.75)
 
     # Prior on the spectra
     np.random.seed(0)
@@ -196,6 +197,7 @@ map_soln = model.test_point
 iterator = tqdm(
     pmx.optim.optimize_iterator(pmx.optim.Adam(lr=lr), niter, start=map_soln),
     total=niter,
+    disable=os.getenv("CI", "false") == "true",
 )
 with model:
     for obj, point in iterator:
@@ -230,13 +232,19 @@ fig = plot_maps(data["truths"]["y"][:, 0], y_inferred[:, 0], figsize=(8, 7.5))
 fig.savefig("twospec_maps.pdf", bbox_inches="tight", dpi=300)
 
 
+# Mask portions of the spectrum that don't contribute to the
+# observed flux; we can't know anything about those.
+mask = np.ones(map.nw0, dtype=bool)
+mask[map._unused_idx] = False
+
+
 # Plot spectrum 1
 fig = plot_spectra(
     wav,
-    wav0,
-    data["truths"]["spectrum"][0],
-    spectrum1.tag.test_value,
-    spectrum_inferred[0],
+    wav0[mask],
+    data["truths"]["spectrum"][0][mask],
+    spectrum1.tag.test_value[mask],
+    spectrum_inferred[0][mask],
     figsize=(8, 2),
 )
 fig.gca().set_ylabel("background spectrum", fontsize=12)
@@ -246,10 +254,10 @@ fig.savefig("twospec_spectra1.pdf", bbox_inches="tight", dpi=300)
 # Plot spectrum 2
 fig = plot_spectra(
     wav,
-    wav0,
-    data["truths"]["spectrum"][1],
-    r.tag.test_value * spectrum2.tag.test_value,
-    spectrum_inferred[1],
+    wav0[mask],
+    data["truths"]["spectrum"][1][mask],
+    r.tag.test_value * spectrum2.tag.test_value[mask],
+    spectrum_inferred[1][mask],
     figsize=(8, 2),
 )
 fig.gca().set_ylabel("spot spectrum", fontsize=12)

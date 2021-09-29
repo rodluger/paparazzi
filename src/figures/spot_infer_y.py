@@ -7,6 +7,7 @@ from utils.generate import generate_data
 from utils.plot import plot_timeseries, plot_maps
 import starry
 import numpy as np
+import os
 
 
 # Generate the synthetic dataset
@@ -25,7 +26,12 @@ for n in range(map.udeg):
 
 # Solve for the Ylm coeffs
 soln = map.solve(
-    flux, theta=theta, normalized=False, fix_spectrum=True, flux_err=flux_err
+    flux,
+    theta=theta,
+    normalized=False,
+    fix_spectrum=True,
+    flux_err=flux_err,
+    quiet=os.getenv("CI", "false") == "true",
 )
 
 # Get the inferred map

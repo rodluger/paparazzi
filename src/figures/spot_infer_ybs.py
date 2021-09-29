@@ -7,6 +7,7 @@ from utils.generate import generate_data
 from utils.plot import plot_timeseries, plot_maps, plot_spectra
 import starry
 import numpy as np
+import os
 
 
 # Generate the synthetic dataset
@@ -23,7 +24,13 @@ for n in range(map.udeg):
     map[1 + n] = data["props"]["u"][n]
 
 # Solve for the Ylm coeffs and the spectrum
-soln = map.solve(flux, theta=theta, normalized=True, flux_err=flux_err)
+soln = map.solve(
+    flux,
+    theta=theta,
+    normalized=True,
+    flux_err=flux_err,
+    quiet=os.getenv("CI", "false") == "true",
+)
 
 # Get the inferred map and spectrum
 y_inferred = map.y

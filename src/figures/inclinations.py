@@ -7,7 +7,8 @@ from utils.generate import generate_data
 import starry
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
+import os
+
 
 # Settings
 ydeg = 15
@@ -75,10 +76,11 @@ for i, inc in enumerate(incs):
         fix_spectrum=True,
         flux_err=flux_err,
         spatial_cov=3e-5,
+        quiet=os.getenv("CI", "false") == "true",
     )
 
     # Visualize
-    map.show(ax=ax[i], projection="moll")
+    map.show(ax=ax[i], projection="moll", colorbar=True)
     ax[i].annotate(
         r"$%2d^\circ$" % inc,
         xy=(0, 1),

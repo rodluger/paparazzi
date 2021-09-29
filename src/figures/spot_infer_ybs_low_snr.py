@@ -7,6 +7,7 @@ from utils.generate import generate_data
 from utils.plot import plot_timeseries, plot_maps, plot_spectra
 import starry
 import numpy as np
+import os
 
 
 # Generate the synthetic dataset
@@ -31,6 +32,7 @@ soln = map.solve(
     spectral_lambda=1e4,
     spectral_cov=5e-3,
     spatial_cov=2.5e-4,
+    quiet=os.getenv("CI", "false") == "true",
 )
 
 # Get the inferred map and spectrum
