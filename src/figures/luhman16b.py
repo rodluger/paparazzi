@@ -119,6 +119,7 @@ with pm.Model() as model:
     # The surface map
     A = starry.DopplerMap(ydeg=ydeg).sht_matrix(smoothing=0.075)
     npix = A.shape[1]
+
     p = pm.Uniform("p", lower=0.0, upper=1.0, shape=(npix,))
     y = tt.dot(A, p)
 
