@@ -38,11 +38,19 @@
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 
 \begin{abstract}
-    We derive a closed form solution to the problem of Doppler imaging of stellar surfaces in the limit of negligible differential rotation and convective blueshift.
-    The model for the observed spectrum is linear in the coefficients of the spherical harmonic expansion of the specific intensity distribution on the surface and, in certain limits, the posterior over surface maps has a closed form, analytic solution that is computationally trivial to evaluate.
-    The model is also linear in the local (rest frame) stellar spectrum, which may itself be spatially variable.
-    This allows one to perform Doppler imaging without knowledge of the local stellar spectrum and therefore works on blended lines or regions of the spectrum where line formation mechanisms are not well understood.
-    Finally, the model is fast, differentiable, and allows one to calculate uncertainties on the inferred surface map.
+    We derive a novel, efficient, and closed form solution to the problem of Doppler imaging of stellar surfaces from high resolution spectral timeseries datasets.
+    %
+    Our model for the observed spectrum is linear in the parameters describing the specific intensity distribution on the surface, which makes the posterior over surface maps computationally trivial to evaluate under certain choices of priors.
+    %
+    Our model is also linear in the local (rest frame) stellar spectrum, which may itself be spatially variable; this allows one to perform Doppler imaging with limited knowledge of the local stellar spectrum and therefore works on blended lines, regions of the spectrum where line formation mechanisms are not well understood, or stars whose spots have intrinsically different spectra from the rest of the photosphere.
+    %
+    We implement the model within the open-source \starry stellar modeling framework, making it fast, differentiable, and easy to use in both optimization and posterior inference settings.
+    %
+    As a proof-of-concept, we use our model to infer the surface map of the brown dwarf Luhman 16B, finding close agreement with the solution of \citet{Crossfield2014}.
+    %
+    %While our derivation neglects the effects of differential rotation and convective blueshift, these are straightforward to include and will be addressed in an upcoming paper, which will also extend the present formalism to the problem of Doppler tomography.
+    %
+    This paper was prepared using the \texttt{showyourwork} scientific article workflow, which exposes the data, source code, and package dependencies for all of the paper's figures, allowing readers to reproduce the results in this paper exactly and with minimal effort.
 \end{abstract}
 
 % Main body
@@ -69,9 +77,9 @@
 
 The paper is organized as follows: in \S\ref{sec:the_problem}~and~\S\ref{sec:the_solution} we introduce the math behind the Doppler imaging problem and derive a closed form expression for the model. 
 In \S\ref{sec:linear},~\S\ref{sec:inverse},~and~\S\ref{sec:bellswhistles} we demonstrate how to re-express the model as a linear operation on the input spectrum and stellar map and derive closed form expressions for the two conditioned on the data and priors.
-In \S\ref{sec:spotstar} we apply our techniques to a mock problem. 
-We further discuss and summarize our results in \S\ref{sec:discussion}~and~\S\ref{sec:conclusions}. 
-Finally, auxiliary derivations are presented in the Appendix.
+In \S\ref{sec:spotstar} we apply our techniques to a mock problem,
+and in \S\ref{sec:luhman16b} we apply it to a real spectral dataset of the brown dwarf Luhman 16B.
+We further discuss our results in \S\ref{sec:discussion}~and~our implementation within the \starry framework in \S\ref{sec:starry}. We present a summary of the paper in \S\ref{sec:conclusions}. 
 
 \section{The problem}
 \label{sec:the_problem}
@@ -114,7 +122,7 @@ This is practical when computing the spectrum at a single \emph{point} on the su
 %
 The difficulty in solving Equation~(\ref{eq:the_problem:F}) stems from the fact that $I(\lnlam, \x, t)$ is difficult to write down in closed form, given the nonlinearity of the Doppler shift.
 The standard approach to solving this integral is therefore to discretize the surface of the star with a fine grid, evaluate the Doppler-shifted spectrum in each cell, and sum over the spatial axes to approximate the integral. 
-Depending on the resolution of the grid, this is either numerically inaccurate or computationally inefficient.
+Depending on the resolution of the grid, this may be either numerically inaccurate or computationally inefficient.
 
 \section{The Solution}
 \label{sec:the_solution}
