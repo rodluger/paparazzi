@@ -13,17 +13,19 @@ from matplotlib.colors import Normalize
 ydeg = 15
 smoothing = 0.075
 
-# Compute model at infinite SNR to get the "signal"
-# This is the standard deviation in each wavelength
-# bin across all epochs.
+# Compute model at infinite SNR
 data = generate_data(flux_err=0, ydeg=ydeg, smoothing=smoothing)
 theta = data["data"]["theta"]
 flux = data["data"]["flux"]
-signal = np.mean(np.std(flux, axis=0))
+
+# Typical line depth
+signal = 0.2
 
 # Compute the pointwise uncertainty for a given SNR
-snrs = np.array([1.0, 2.0, 5.0, 10.0, 50.0, 100.0, 200.0, 500.0, 1000.0])
-spatial_cov = np.minimum(1e-4, 1e-4 * (100 / snrs) ** 2)
+snrs = np.array(
+    [10.0, 20.0, 50.0, 100.0, 500.0, 1000.0, 2000.0, 5000.0, 10000.0]
+)
+spatial_cov = np.minimum(1e-4, 1e-4 * (1000 / snrs) ** 2)
 flux_errs = signal / snrs
 
 # Plot the true map

@@ -30,8 +30,8 @@ soln = map.solve(
     normalized=True,
     flux_err=flux_err,
     spectral_lambda=1e4,
-    spectral_cov=5e-3,
-    spatial_cov=5e-4,
+    spectral_cov=2e-2,
+    spatial_cov=2e-4,
     quiet=os.getenv("CI", "false") == "true",
 )
 

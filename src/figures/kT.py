@@ -46,5 +46,23 @@ for i, l in enumerate(range(ydeg + 1)):
         "%d" % l, fontsize=14, rotation=45, labelpad=20, alpha=0.5
     )
 
+plt.annotate(
+    r"$\ell$",
+    xy=(0.18, 0.55),
+    xycoords="figure fraction",
+    rotation=45,
+    fontsize=22,
+    alpha=0.5,
+)
+plt.annotate(
+    r"$m$",
+    xy=(0.415, 0.02),
+    ha="center",
+    xycoords="figure fraction",
+    fontsize=20,
+    alpha=0.5,
+    clip_on=False,
+)
+
 # Save
 fig.savefig("kT.pdf", bbox_inches="tight")

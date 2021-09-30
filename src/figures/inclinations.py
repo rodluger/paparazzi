@@ -80,7 +80,7 @@ for i, inc in enumerate(incs):
     )
 
     # Visualize
-    map.show(ax=ax[i], projection="moll", colorbar=True)
+    map.show(ax=ax[i], projection="moll")
     ax[i].annotate(
         r"$%2d^\circ$" % inc,
         xy=(0, 1),

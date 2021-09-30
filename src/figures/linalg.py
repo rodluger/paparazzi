@@ -85,7 +85,7 @@ def get_ortho_longitude_lines(
 ):
     """
     Return the lines of constant longitude on an orthographic projection.
-    
+
     """
 
     # Angular quantities
@@ -212,6 +212,16 @@ for l in range(ydeg + 1):
         axins.set_ylim(-1.2, 1.2)
         n += 1
         axins.axis("off")
+        axins.annotate(
+            fr"$Y_{{{l},{m}}}$",
+            xy=(0.5, 1),
+            xycoords="axes fraction",
+            xytext=(0, 0),
+            textcoords="offset points",
+            ha="center",
+            va="bottom",
+            fontsize=10,
+        )
 
 # Plot the map orientation
 x0 = -1.0 / 11.0

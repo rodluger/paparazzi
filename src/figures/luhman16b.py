@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
 import pickle
 import starry
 import pymc3 as pm
@@ -220,8 +221,8 @@ ax[-1].set_xlabel(r"$\lambda$ [nm]", fontsize=16)
 fig.savefig("luhman16b_spectra.pdf", bbox_inches="tight")
 
 # Plot the data & model
-fig, ax = plt.subplots(1, 4, figsize=(16, 10))
-fig.subplots_adjust(wspace=0.01)
+fig, ax = plt.subplots(1, 4, figsize=(16, 10), sharey=True)
+fig.subplots_adjust(wspace=0.1)
 with model:
     for c in range(4):
         # Mask breaks in the spectrum
@@ -239,7 +240,35 @@ with model:
                 0.65 * k + pmx.eval_in_model(flux_model[c][k], point=map_soln),
                 "C1-",
             )
-        ax[c].axis("off")
+    # Appearance hacks
+    for c in range(4):
+        if c > 0:
+            ax[c].get_yaxis().set_visible(False)
+        ax[c].spines["left"].set_visible(False)
+        ax[c].spines["right"].set_visible(False)
+        ax[c].spines["top"].set_visible(False)
+        ax[c].margins(0, None)
+        for tick in ax[c].get_xticklabels() + ax[c].get_yticklabels():
+            tick.set_fontsize(10)
+        ax[c].xaxis.set_major_formatter("{x:.3f}")
+    ax[0].set_ylim(0.3, 10)
+    ax[0].set_yticks([0, 0.5, 1.0])
+    ax[0].set_xlim(ax[0].get_xlim()[0] - 0.0005, ax[0].get_xlim()[1])
+    ax[0].set_ylim(*ax[0].get_ylim())
+    x0 = ax[0].get_xlim()[0]
+    y0 = ax[0].get_ylim()[0]
+    ax[0].plot([x0, x0], [y0, 1.25], "k-", clip_on=False, lw=0.75)
+    ax[0].set_xticks([2.290, 2.292, 2.294, 2.296, 2.298])
+    ax[1].set_xticks([2.306, 2.308, 2.310, 2.312, 2.314])
+    ax[2].set_xticks([2.322, 2.324, 2.326, 2.328])
+    ax[3].set_xticks([2.336, 2.338, 2.340, 2.342, 2.344])
+    plt.annotate(
+        r"$\lambda$ [$\mu$m]",
+        xy=(0.415, 0.03),
+        xycoords="figure fraction",
+        ha="center",
+        clip_on=False,
+    )
 fig.savefig("luhman16b_data_model.pdf", bbox_inches="tight")
 
 # Plot the MAP map
@@ -262,8 +291,12 @@ ax = [
     plt.axes([0.0, 0.17 * f, 0.3125, 0.3125]),
     plt.axes([0.1175 * f, 0.34 * f, 0.3125, 0.3125]),
 ]
+img = map_map.render(theta=thetas).eval()
+vmin = np.nanmin(img)
+vmax = np.nanmax(img)
+norm = Normalize(vmin=vmin, vmax=vmax)
 for n, axis in enumerate(ax):
-    map_map.show(ax=axis, theta=thetas[n], cmap="gist_heat")
+    map_map.show(ax=axis, theta=thetas[n], cmap="gist_heat", norm=norm)
     axis.invert_yaxis()
     axis.invert_xaxis()
     angle = np.pi / 3 * (1 - n)
