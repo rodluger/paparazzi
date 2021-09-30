@@ -38,7 +38,7 @@
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 
 \begin{abstract}
-    We derive a closed form, analytic solution to the problem of Doppler imaging of stellar surfaces in the limit of negligible differential rotation and convective blueshift.
+    We derive a closed form solution to the problem of Doppler imaging of stellar surfaces in the limit of negligible differential rotation and convective blueshift.
     The model for the observed spectrum is linear in the coefficients of the spherical harmonic expansion of the specific intensity distribution on the surface and, in certain limits, the posterior over surface maps has a closed form, analytic solution that is computationally trivial to evaluate.
     The model is also linear in the local (rest frame) stellar spectrum, which may itself be spatially variable.
     This allows one to perform Doppler imaging without knowledge of the local stellar spectrum and therefore works on blended lines or regions of the spectrum where line formation mechanisms are not well understood.
@@ -47,6 +47,26 @@
 
 % Main body
 \section{Introduction}
+
+\xxx{%
+    \noindent Introduce the problem of Doppler imaging. Then cite the following papers:\\[0.5em]
+    \noindent\textbf{Misc.} \\
+    \noindent\citet{Luger2019} --- Surface modeling with spherical harmonics: \starry \\
+    \noindent\citet{Bedell2019} --- Data-driven spectral inference: \texttt{wobble} \\[0.5em]
+    %
+    \noindent\textbf{Theory} \\
+    \noindent\citet{Khokhlova1976,Goncharskii1977} --- Local line profile from observed spectrum\\
+    \noindent\citet{Vogt1983,Vogt1987} --- Seminal papers on Doppler imaging \\
+    \noindent\citet{Rice1989} ---  Another seminal paper\\
+    \noindent\citet{Deutsch1958,Deutsch1970,Falk1974} ---  Ylms + Doppler imaging\\
+    \noindent\citet{Unruh1995} --- sensitivity to line profile models\\
+    \noindent\citet{Piskunov1990} --- notes on regularization \\[0.5em]
+    %
+    \noindent\textbf{Application} \\
+    \noindent\citet{Crossfield2014} --- Global cloud map of Luhman 16B \\
+    \noindent\citet{Roettenbacher2017} --- Doppler imaging of $\sigma$ Geminorum \\
+}
+
 The paper is organized as follows: in \S\ref{sec:the_problem}~and~\S\ref{sec:the_solution} we introduce the math behind the Doppler imaging problem and derive a closed form expression for the model. 
 In \S\ref{sec:linear},~\S\ref{sec:inverse},~and~\S\ref{sec:bellswhistles} we demonstrate how to re-express the model as a linear operation on the input spectrum and stellar map and derive closed form expressions for the two conditioned on the data and priors.
 In \S\ref{sec:spotstar} we apply our techniques to a mock problem. 
@@ -1380,15 +1400,7 @@ The black points in Figure~\ref{fig:luhman16b:data_model} show the exact dataset
 
 In order to produce Doppler images of Luhman 16B, \citet{Crossfield2014} used brown dwarf template spectra from the BT-Settl library \citep{Allard2013}, finding that the spectrum with $\log_{10} g = 5.0$ and $T_\mathrm{eff} = 1450$ K provided the best match to the dataset. This spectrum was then Doppler-shifted by the systemic radial velocity of the brown dwarf and broadened to match the spectrograph resolution. This final template spectrum is shown as the blue curves in Figure~\ref{fig:luhman16b:template_spectra}, where we again masked regions where data was discarded.
 
-\citet{Crossfield2014} then employed the common technique of Least Squares Deconvolution \citep[LSD;][]{Donati1997} to transform each of the 14 spectra in Figure~\ref{fig:luhman16b:data_model} into a single high-SNR line spanning 35 pixels, which was used as the input to their Doppler imaging code, based on that of \citet{Vogt1987}. They discretized the stellar surface using 200 cells and solved for the optimal surface map with a maximum entropy prior as in \citet{Vogt1987}, assuming a fiducial inclination $i=60^\circ$ roughly based on the photometric rotation period and the inferred value of $v\sin i$; given the low SNR of the dataset, they were unable to place meaningful constraints on $i$. We reproduce their resulting surface brightness map in the right panel of Figure~\ref{fig:luhman16b:maps}.
-
-In our analysis, we use the same data (Figure~\ref{fig:luhman16b:data_model}) and the same spectral template (Figure~\ref{fig:luhman16b:template_spectra}), but instead following the methodology derived in this work. Our problem is similar to that in \S\ref{sec:spot_y1bs}, in which we treat both the spectrum and the surface map as unknowns given continuum-normalized spectra as input. However, this time we use the template spectrum as the prior mean on the true rest frame spectrum $\bvec{s}$, setting the prior standard deviation to one percent (i.e., a covariance $\boldsymbol{\Lambda}_\bvec{s} = 10^{-4}\bvec{I}$) to allow the model to learn any small deviations from the template. We must also change the way we model the continuum normalization (\S\ref{sec:norm}), given the high density of spectral lines and the consequent difficulty of finding a reliable continuum level to normalize against. Instead, we treat the unknown continuum normalization factor for each of the 14 epochs as a free parameter of the model, $f \sim \mathrm{Uniform}(0.3, 3.0)$; we also allow for a small, time-independent, additive offset $\Delta \sim \mathcal{N}(0, 0.1^2)$ for each of the four spectral channels. We assume the same fiducial inclination $i = 60^\circ$, a rotational period $P = 4.9$ days, and allow the linear limb darkening coefficient and projected velocity to vary subject to $u_1 \sim \mathrm{Uniform}(0, 1)$ and $v \sin i \sim \mathcal{N}(26.1, 0.2^2)$ km/s, respectively, as in \citet{Crossfield2014}. Finally, we place a uniform prior on the pixel intensities $\bvec{p} \sim \mathrm{Uniform}(0, 1)$ as in \S\ref{sec:twospec}, linearly transforming to an $l_\mathrm{max} = 10$ spherical harmonic representation of the map to compute the model at each step. We must therefore solve for $2 \times (l_\mathrm{max} + 1)^2 = 242$ free parameters for the pixelized surface map, $3,748$ free parameters for the rest frame spectrum across each of the four channels (equal to the size of our template spectrum after removing outliers), $18$ parameters describing the continuum normalization, and $2$ stellar parameters (the linear limb darkening coefficient and the projected velocity). In total, our model has just over $4,000$ free parameters.
-
-As in \S\ref{sec:twospec}, our choice of parametrization and priors precludes the use of the fast bilinear approach outlined in \S\ref{sec:inverse}. We therefore follow the same approach as in \S\ref{sec:twospec}, optimizing our log-likelihood function using \texttt{Adam} with a learning rate of $10^{-3}$. Since we have a very good guess for the template spectrum, this optimization is much faster than in \S\ref{sec:twospec}, converging within $1,000$ steps. Because of our efficient gradient-based implementation (\S\ref{sec:starry}), the entire optimization takes only about 3 minutes of runtime on a typical Macbook laptop.
-
-Our results are shown in Figures~\ref{fig:luhman16b:data_model}, \ref{fig:luhman16b:template_spectra}, and \ref{fig:luhman16b:maps}. In Figure~\ref{fig:luhman16b:data_model}, our maximum \emph{a posteriori} (MAP) model for each of the 14 spectra is shown as the orange line; it agrees with the data to within the measurement uncertainties. In Figure~\ref{fig:luhman16b:template_spectra} we show our MAP \emph{template} (rest frame) spectrum as the orange curve. Since we used the \citet{Crossfield2014} template as a prior (blue curve), our solution is very similar to the input spectrum. Nevertheless, we infer slightly different line depths for several of the lines at the level of a few percent; we also infer slightly different continuum levels in certain portions of the spectrum. Note, importantly, since we only performed an optimization (rather than full posterior inference), we cannot quantify the actual significance of these differences.
-
-The right panel of Figure~\ref{fig:luhman16b:maps} shows our principal result: the inferred solution for the surface brightness map of Luhman 16B.
+\citet{Crossfield2014} then employed the common technique of Least Squares Deconvolution \citep[LSD;][]{Donati1997} to transform each of the 14 spectra in Figure~\ref{fig:luhman16b:data_model} into a single high-SNR line spanning 35 pixels, which was used as the input to their Doppler imaging code, based on that of \citet{Vogt1987}. They discretized the stellar surface using 200 cells and solved for the optimal surface map with a maximum entropy prior as in \citet{Vogt1987}, assuming a fiducial inclination $i=60^\circ$ roughly based on the photometric rotation period and the inferred value of $v\sin i$; given the low SNR of the dataset, they were unable to place meaningful constraints on $i$. We reproduce their resulting surface brightness map in the right panel of Figure~\ref{fig:luhman16b:maps}, seen at six different phases spanning a full rotation.
 
 \begin{figure}[p!]
     \begin{centering}
@@ -1409,7 +1421,11 @@ The right panel of Figure~\ref{fig:luhman16b:maps} shows our principal result: t
         \label{fig:luhman16b:template_spectra}
     \end{centering}
 \end{figure}
-%
+
+In our analysis, we use the same data (Figure~\ref{fig:luhman16b:data_model}) and the same spectral template (Figure~\ref{fig:luhman16b:template_spectra}), but instead following the methodology derived in this work. Our problem is similar to that in \S\ref{sec:spot_y1bs}, in which we treat both the spectrum and the surface map as unknowns given continuum-normalized spectra as input. However, this time we use the template spectrum as the prior mean on the true rest frame spectrum $\bvec{s}$, setting the prior standard deviation to one percent (i.e., a covariance $\boldsymbol{\Lambda}_\bvec{s} = 10^{-4}\bvec{I}$) to allow the model to learn any small deviations from the template. We must also change the way we model the continuum normalization (\S\ref{sec:norm}), given the high density of spectral lines and the consequent difficulty of finding a reliable continuum level to normalize against. Instead, we treat the unknown continuum normalization factor for each of the 14 epochs as a free parameter of the model, $f \sim \mathrm{Uniform}(0.3, 3.0)$; we also allow for a small, time-independent, additive offset $\Delta \sim \mathcal{N}(0, 0.1^2)$ for each of the four spectral channels. We assume the same fiducial inclination $i = 60^\circ$, a rotational period $P = 4.9$ days, and allow the linear limb darkening coefficient and projected velocity to vary subject to $u_1 \sim \mathrm{Uniform}(0, 1)$ and $v \sin i \sim \mathcal{N}(26.1, 0.2^2)$ km/s, respectively, as in \citet{Crossfield2014}. Finally, we place a uniform prior on the pixel intensities $\bvec{p} \sim \mathrm{Uniform}(0, 1)$ as in \S\ref{sec:twospec}, linearly transforming to an $l_\mathrm{max} = 10$ spherical harmonic representation of the map to compute the model at each step. We must therefore solve for $2 \times (l_\mathrm{max} + 1)^2 = 242$ free parameters for the pixelized surface map, $3,748$ free parameters for the rest frame spectrum across each of the four channels (equal to the size of our template spectrum after removing outliers), $18$ parameters describing the continuum normalization, and $2$ stellar parameters (the linear limb darkening coefficient and the projected velocity). In total, our model has just over $4,000$ free parameters.
+
+As in \S\ref{sec:twospec}, our choice of parametrization and priors precludes the use of the fast bilinear approach outlined in \S\ref{sec:inverse}. We therefore follow the same approach as in \S\ref{sec:twospec}, optimizing our log-likelihood function using \texttt{Adam} with a learning rate of $10^{-3}$. Since we have a very good guess for the template spectrum, this optimization is much faster than in \S\ref{sec:twospec}, converging within $1,000$ steps. Because of our efficient gradient-based implementation (\S\ref{sec:starry}), the entire optimization takes only about 3 minutes of runtime on a typical Macbook laptop.
+
 \begin{figure}[t!]
     \begin{centering}
         \begin{minipage}[t]{0.49\linewidth}
@@ -1430,8 +1446,10 @@ The right panel of Figure~\ref{fig:luhman16b:maps} shows our principal result: t
         \label{fig:luhman16b:maps}
     \end{centering}
 \end{figure}
-%
 
+Our results are shown in Figures~\ref{fig:luhman16b:data_model}, \ref{fig:luhman16b:template_spectra}, and \ref{fig:luhman16b:maps}. In Figure~\ref{fig:luhman16b:data_model}, our maximum \emph{a posteriori} (MAP) model for each of the 14 spectra is shown as the orange line; it agrees with the data to within the measurement uncertainties. In Figure~\ref{fig:luhman16b:template_spectra} we show our MAP \emph{template} (rest frame) spectrum as the orange curve. Since we used the \citet{Crossfield2014} template as a prior (blue curve), our solution is very similar to the input spectrum. Nevertheless, we infer slightly different line depths for several of the lines at the level of a few percent; we also infer slightly different continuum levels in certain portions of the spectrum. Note, importantly, since we only performed an optimization (rather than full posterior inference), we cannot quantify the actual significance of these differences.
+
+The right panel of Figure~\ref{fig:luhman16b:maps} shows our principal result: the inferred solution for the surface brightness map of Luhman 16B; compare to the right panel, showing the solution inferred by \citet{Crossfield2014}. Broadly speaking, the two surface maps agree rather well: we infer the same circumpolar bright spot, of about the same size and at roughly the same phase, as in the earlier work. We also infer a similar dark feature on the ``back'' side of the object (visible near the sub-observer point at $t = 2.4$ hours). Bright equatorial regions also broadly match between both solutions. There are some important differences, such as the contrast of the dark feature seen at $t = 0.0$ hours and the behavior of the $t = 2.4$ hour dark region beyond $60^\circ$ of the visible pole. In general, we find that different choices for our priors---in particular the regularization on the pixels, the prior on the limb darkening coefficient, and the value of the inclination of the star---result in maps that differ substantially. We do, however, agree with \citet{Crossfield2014} in that the polar bright spot is the most robust of the inferred features, followed by the bottom portion of the dark spot seen at $t = 2.4$ hours. Once again, since this is simply an \emph{optimization}, we are unable to place reliable uncertainties on our solutions. These require a sampling scheme like MCMC (\S\ref{sec:discussion}).
 
 
 \section{Discussion}
@@ -1442,8 +1460,8 @@ The right panel of Figure~\ref{fig:luhman16b:maps} shows our principal result: t
     \begin{enumerate}
         %
         \item%
-              A gaussian prior with unit mean is a pretty bad prior for the spectrum.
-              In a more realistic scenario, we'd know a lot more information about the spectrum---such as where the lines are and some estimate of their shapes and depths---so the fidelity of our maps would be higher.
+              Concerning our SPOT maps: a gaussian prior with unit mean is a pretty bad prior for the spectrum.
+              In a more realistic scenario, we'd know a lot more information about the spectrum---such as where the lines are and some estimate of their shapes and depths---so the fidelity of our maps would be higher. This is what we did in the Luhman 16B case, and it works well.
               %
         \item%
               We are not addressing differential rotation and convective blueshift.
@@ -1451,12 +1469,17 @@ The right panel of Figure~\ref{fig:luhman16b:maps} shows our principal result: t
               We will tackle this in the next paper.
               %
         \item%
-              Telluric lines could be treated much as in Figure~\ref{fig:twospec}, and marginalized over as in \citet{Bedell2019}.
+              We are always integrating over the entire disk of the star. Can integrate over the unocculted
+              disk during an occultation (should actually be pretty trivial) so this can be used for Doppler
+              tomography once I have some time to work it out!
+        \item%
+              Telluric lines could be learned from the data as in \citet{Bedell2019}.
               %
         \item% 
               The instrumental profile is another Toeplitz matrix that can be dotted into Equation~(\ref{eq:linear:f}).
               %
-        \item Discuss the case where the inclination/period/velocity is unknown.
+        \item Discuss the case where the inclination/period/velocity is unknown, such as the case 
+              with Luhman 16B.
               The problem is not linear in these variables, so we need MCMC. 
               But our model is differentiable, so we can easily use HMC. 
               Discuss.
@@ -1464,13 +1487,18 @@ The right panel of Figure~\ref{fig:luhman16b:maps} shows our principal result: t
         \item%
               Evaluation of the model via Equation~(\ref{eq:deconv:F}) requires first the rotation of the $(\lmax + 1)^2$ $\kT$ kernels (each of length $W$) to the correct stellar rotational phase, an operation that scales approximately as $W \lmax^3$, followed by $(\lmax + 1)^2$ linear convolutions of the rotated $\kT$ kernels with the spectral components (each of length $K$), which scales approximately as $W K \lmax^2$. 
               Since typically $K \gg \lmax$, the latter computation dominates and the entire evaluation takes $\mathcal{O}(W K \lmax^2)$ operations.
+              [Is this still true? we do fast 2d convolutions, so it's actually much faster]
         \item%
-              Discuss: how to choose priors
+              Discuss: how to choose priors. Can use cross-validation to choose best regularization strength. In general, a positivity prior on the pixels is preferred.
+        \item%
+              Luhman 16B: we didn't account for finite exposure time. We didn't properly model instrumental broadening. We didn't do MCMC. We didn't vary the inclination. We didn't use maximum entropy regularization. But we solved for a whopping 4,000 parameters in under 3 minutes. We used the full spectrum.
     \end{enumerate}
 }
 
 \section{Implementation in starry}
 \label{sec:starry}
+
+\xxx{A short section discussing the implementation in starry. Perhaps a figure showing how the runtime scales.}
 
 \section{Conclusions}
 \label{sec:conclusions}
@@ -1488,6 +1516,7 @@ The right panel of Figure~\ref{fig:luhman16b:maps} shows our principal result: t
         \item Differentiable!
         \item Fast!
         \item Use in MCMC to marginalize over inclination and stuff
+        \item Advertise showyourwork for open source papers!
     \end{enumerate}
 }
 
