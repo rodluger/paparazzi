@@ -230,7 +230,7 @@ with model:
         dw = np.diff(wav[c])
         dwm = np.mean(dw)
         dws = np.std(dw)
-        x = np.array(wav0[c])
+        x = np.array(wav[c])
         x[1:][np.abs(dw - dwm) > 3 * dws] = np.nan
         for k in range(14):
             ax[c].plot(x, 0.65 * k + flux[c][k], "k.", ms=3, alpha=0.5)
