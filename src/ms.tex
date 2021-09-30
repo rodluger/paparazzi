@@ -500,6 +500,7 @@ where $\Doppler$ is the full $(MK \times N K')$ Doppler design matrix, construct
 %
 Equation~(\ref{eq:linear:f}) represents the full linearization of the problem, where we have expressed the quantity we can observe, $\bvec{f}$, as a linear operation on the quantity of interest, the spectral/spatial decomposition of the stellar surface, $\alm$. 
 Figure~\ref{fig:linalg} shows an example of $\Doppler$.
+Note, importantly, that this expression does not account for limb darkening or for the fact that spectra are often normalized to the continuum level; we account for these two effects in \S\ref{sec:norm} and \S\ref{sec:ld} below.
 
 \section{The inverse problem}
 \label{sec:inverse}
@@ -632,8 +633,7 @@ with covariance
     \quad.
 \end{align}
 %
-If we choose a prior with zero mean ($\boldsymbol{\mu}_\bvec{y} = 0$)
-and a diagonal covariance that is constant for each spherical harmonic order $m$,
+If we choose a prior with diagonal covariance that is constant for each spherical harmonic order $m$,
 %
 \begin{align}
     \boldsymbol{\Lambda}_\bvec{y} & =
@@ -738,18 +738,19 @@ Both sets of solutions require Gaussian priors on the quantities of interest, bu
 A Gaussian prior on the spherical harmonic coefficients of the surface map corresponds to the angular power spectrum of the surface features, whereas a Gaussian prior on the spectrum can be used to correctly propagate uncertainties in the stellar spectrum from observational uncertainties on the stellar metallicity, temperature, etc.
 
 Importantly, the framework developed here allows one to analytically compute not only the ``optimal'' solution to the Doppler imaging problem, but also its uncertainty. 
-The problem of re-constructing surface images of stars from spectra and/or light curves is fundamentally ill-posed because of intrinsic degeneracies and a large null space \citep[e.g.,][]{Cowan2017,Luger2019}. 
-Coupled to uncertainties in the observations themselves, this makes the process of searching for the ``optimal'' solution flawed at best, and meaningless at worst. 
+The problem of re-constructing surface images of stars from spectra and/or light curves is fundamentally ill-posed because of intrinsic degeneracies and a large null space \citep[e.g.,][]{Cowan2017,Luger2019,Luger2021a}. 
+Coupled to uncertainties in properties like the stellar inclination, rotation period, and limb darkening coefficients, as well as the finite signal-to-noise ratio of the data, this makes the process of searching for the ``optimal'' solution flawed at best, and meaningless at worst. 
 Access to the full covariance matrix of the solution is therefore essential to assessing our confidence in the various features of the inferred surface maps.
 
 However, as we mentioned above, the Doppler imaging problem can be solved analytically for either the surface map or the spectrum, but not typically both. 
 If neither are known exactly \emph{a priori}, which is quite often the case, we can still find the MAP solution quickly by guessing at an initial spectrum $\bvec{s}$ and iterating between optimizing for $\bvec{y}$ and optimizing for $\bvec{s}$. 
-This bilinear problem is not generally convex, but given a good starting point for $\bvec{s}$ and sufficient regularization on $\bvec{y}$, we find that it typically converges to the correct solution, especially after refinement with a nonlinear solver; we discuss this in detail below.
+Note, importantly, that this bilinear problem is not generally convex: the likelihood space often has many local minima, which can in principle make it difficult to find the true solution.
+Nevertheless, given a good starting point for $\bvec{s}$ and sufficient regularization on $\bvec{y}$, we find that it typically converges to the correct solution; see \S\ref{sec:spotstar}.
 
 Once the MAP solution has been found for both $\bvec{s}$ and $\bvec{y}$, the covariance of one conditioned on the other can be computed from the formulae above. 
 However, this is necessarily a lower bound on the true covariance of the solution, since it neglects any covariance \emph{between} $\bvec{s}$ and $\bvec{y}$. 
 To \emph{correctly} account for this, one must resort to Monte Carlo methods or other sampling techniques. 
-We discuss this further below.
+We discuss this further in \S\ref{sec:discussion}.
 
 \section{Further considerations}
 \label{sec:bellswhistles}
@@ -1037,7 +1038,7 @@ The spectra were computed at 16 equally spaced rotational phases and downsampled
             We compute the $l_\mathrm{max} = 15$ spherical harmonic expansion of a map where the word ``SPOT'' has been placed across the northern hemisphere (top left). 
             Each point on the surface is given the same spectrum, composed of a sum of synthetic Gaussian absorption lines (blue curve in the bottom panel).
             The specific intensity at each point on the surface is equal to this spectrum weighted by the intensity of the map, which is close to zero within the spot (point labeled \texttt{B}) and close to unity outside the spot (point labeled \texttt{A}).
-            To generate the synthetic dataset (orange curves in the bottom panel), the star is inclined at $40^\circ$ with respect to the line of sight and the disk-integrated spectrum is computed at 16 equally-spaced phases between $-180^\circ$ and $180^\circ$ (middle panel).
+            To generate the synthetic dataset (orange curves in the bottom panel), the star is inclined at $40^\circ$ with respect to the line of sight and the disk-integrated spectrum is computed at 16 equally-spaced phases between $-180^\circ$ and $180^\circ$, assuming an equatorial velocity $v = 60$ km/s (middle panel).
             The grey regions indicate wavelength regions outside the observation window, but whose features can still contribute to the observed spectrum due to rotational broadening.
         }
         \label{fig:spot_setup}
@@ -1095,11 +1096,12 @@ so our choice of $\sigma_\bvec{f}$ corresponds to SNR $\sim 10^{3}$ in each of t
 In the following sections we discuss various approaches to solving the Doppler imaging problem for this dataset.
 Unless otherwise noted, in all experiments we adopt a Gaussian prior for the spherical harmonic coefficients $\bvec{y}$ with mean $\boldsymbol{\mu}_\bvec{y} = \left(1 \quad\quad \bvec{0}\right)$ and covariance $\boldsymbol{\Lambda}_\bvec{y} = 10^{-4} \bvec{I}$, corresponding to a flat power spectrum prior.
 When solving for the rest frame spectrum, we also place a Gaussian prior on $\bvec{s}$ with unit mean and covariance $\boldsymbol{\Lambda}_\bvec{s} = 10^{-3}\bvec{I}$.
+These choices are arbitrary and primarily based on trial-and-error given knowledge of the true solutions. We discuss strategies for choosing optimal priors for real datasets in \S\ref{sec:discussion} below.
 
 \subsection{Known baseline and spectrum}
 \label{sec:spot_y1}
 %
-In our first experiment, we attempt to infer the stellar map assuming we have perfect knowledge of the rest frame spectrum $\bvec{s}$ and the baseline.
+In our first experiment, we attempt to infer the stellar map assuming we have perfect knowledge of the rest frame spectrum $\bvec{s}$ and the baseline, as well as the stellar inclination, rotation period, and limb darkening coefficients.
 This is analogous to the case where a good physical model exists for the stellar spectrum and simultaneous photometry is available to constrain the baseline variations.
 As we showed in \S\ref{sec:solve_y}, the posterior distribution for the map coefficients $\bvec{y}$ is analytic in this case, with mean given by Equation~(\ref{eq:inverse:y1hat})
 and covariance given by Equation~(\ref{eq:inverse:y1cov}). 
@@ -1246,7 +1248,7 @@ We must follow the iterative procedure presented in
 \end{figure}
 
 Because the problem is generally not convex, we need a good starting guess for either the spectrum or the map coefficients. 
-We note that we can very crudely approximate the rest frame spectrum by deconvolving the average observed spectrum with the first term of the convolution kernel $\kT$ (\raisebox{-0.1em}{\includegraphics[width=2em]{figures/kT00.pdf}}).
+We note that we can very crudely approximate the rest frame spectrum by deconvolving the average observed spectrum with the first term of the convolution kernel $\kT$ (\raisebox{-0.1em}{\includegraphics[width=2em]{figures/kT00.pdf}}); we do this by solving the linear problem in Equation~(\ref{eq:linear:convolution_def}) with aggressive regularization.
 In practice, this is a fairly poor approximation, but we find that it suffices as an initial guess. 
 We then iterate between solving for $\bvec{y}$ (\S\ref{sec:solve_y}) and solving for $\bvec{s}$ (\S\ref{sec:solve_s}), followed by a step in which we update our estimate of the baseline. We adopt the same tempering scheme discussed above.
 
@@ -1447,6 +1449,9 @@ These results are broadly consistent with those of \citet{Vogt1987}.
 \section{Conclusions}
 \label{sec:conclusions}
 %
+
+Discuss: how to choose priors
+
 \xxx{%
     \begin{enumerate}
         \item Advantages of data-driven modeling
