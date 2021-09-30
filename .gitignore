@@ -1,3 +1,14 @@
+# Snakemake temporaries
+.snakemake
+.showyourwork
+
+# Showyourwork output files
+report.html
+arxiv.tar.gz
+ms.pdf
+dag.pdf
+
+# Misc
 *.code-workspace
 .vscode
 *.ipynb_checkpoints
@@ -6,14 +17,9 @@
 *.DS_Store
 *.ipynb_checkpoints
 *__pycache__*
-*.pdf
 *.log
 *.blg
 *.bbl
 *.aux
 *.out
 *.egg-info
-**/.showyourwork
-**/.snakemake
-.Snakefile
-.helpers.smk

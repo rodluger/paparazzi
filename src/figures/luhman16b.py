@@ -224,10 +224,18 @@ fig, ax = plt.subplots(1, 4, figsize=(16, 10))
 fig.subplots_adjust(wspace=0.01)
 with model:
     for c in range(4):
+        # Mask breaks in the spectrum
+        # so matplotlib doesn't linearly
+        # interpolate
+        dw = np.diff(wav[c])
+        dwm = np.mean(dw)
+        dws = np.std(dw)
+        x = np.array(wav0[c])
+        x[1:][np.abs(dw - dwm) > 3 * dws] = np.nan
         for k in range(14):
-            ax[c].plot(wav[c], 0.65 * k + flux[c][k], "k.", ms=3, alpha=0.5)
+            ax[c].plot(x, 0.65 * k + flux[c][k], "k.", ms=3, alpha=0.5)
             ax[c].plot(
-                wav[c],
+                x,
                 0.65 * k + pmx.eval_in_model(flux_model[c][k], point=map_soln),
                 "C1-",
             )
