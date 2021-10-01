@@ -1,0 +1,26 @@
+figure_dependencies:
+
+  luhman16b.py:
+    - luhman16b.pickle
+  
+  spot_setup.py: 
+    - utils/generate.py
+  
+  spot_infer_y.py: 
+    - utils/generate.py
+    - utils/plot.py
+  
+  spot_infer_yb.py: 
+    - utils/generate.py
+    - utils/plot.py
+  
+  spot_infer_ybs.py: 
+    - utils/generate.py
+    - utils/plot.py
+  
+  spot_infer_ybs_low_snr.py: 
+    - utils/generate.py
+    - utils/plot.py
+  
+  twospec.py:
+    - utils/plot.py
