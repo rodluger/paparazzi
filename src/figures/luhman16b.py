@@ -289,6 +289,9 @@ with model:
 map_map = starry.Map(ydeg, inc=inc_map)
 map_map[:, :] = y_map
 
+# Save the MAP map (just in case we need it later)
+np.savez("luhman16b_map.npz", y_map=y_map, inc_map=inc_map)
+
 # Plot figure similar to that in Crossfield et al. (2014)
 times = np.array([0.0, 0.8, 1.6, 2.4, 3.2, 4.1])
 thetas = 360 * times / period
