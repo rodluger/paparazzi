@@ -1,8 +1,14 @@
 figure_dependencies:
 
+  inclinations.py:
+    - utils/generate.py
+
   luhman16b.py:
     - luhman16b.pickle
-  
+
+  snr.py:
+    - utils/generate.py
+
   spot_setup.py: 
     - utils/generate.py
   

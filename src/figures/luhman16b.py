@@ -106,7 +106,7 @@ with pm.Model() as model:
     # Fixed
     vsini_max = 30000.0
     period = pm.math.constant(4.9)  # Crossfield et al. (2014)
-    inc = pm.math.constant(60.0)  # Crossfield et al. (2014)
+    inc = pm.math.constant(70.0)  # Crossfield et al. (2014)
 
     # Free
     vsini = pm.Normal("vsini", mu=26100.0, sd=200)  # Crossfield et al. (2014)
@@ -199,8 +199,15 @@ with model:
             best_loss = obj
             map_soln = point
 
+# Plot the loss
+fig, ax = plt.subplots(1, figsize=(5, 5))
+ax.plot(loss)
+ax.set_xlabel("iteration number")
+ax.set_ylabel("loss")
+fig.savefig("luhman16b_loss.pdf", bbox_inches="tight")
+
 # Plot the rest frame spectra
-fig, ax = plt.subplots(4, figsize=(16, 10), sharey=True)
+fig, ax = plt.subplots(4, figsize=(18, 10), sharey=True)
 with model:
     for c in range(4):
         # Mask breaks in the spectrum
@@ -235,7 +242,9 @@ with model:
         x = np.array(wav[c])
         x[1:][np.abs(dw - dwm) > 3 * dws] = np.nan
         for k in range(14):
-            ax[c].plot(x, 0.65 * k + flux[c][k], "k.", ms=3, alpha=0.5)
+            ax[c].plot(
+                x, 0.65 * k + flux[c][k], "k.", ms=3, alpha=0.5, zorder=-1
+            )
             ax[c].plot(
                 x,
                 0.65 * k + pmx.eval_in_model(flux_model[c][k], point=map_soln),
@@ -252,6 +261,7 @@ with model:
         for tick in ax[c].get_xticklabels() + ax[c].get_yticklabels():
             tick.set_fontsize(10)
         ax[c].xaxis.set_major_formatter("{x:.3f}")
+        ax[c].set_rasterization_zorder(0)
     ax[0].set_ylim(0.3, 10)
     ax[0].set_yticks([0, 0.5, 1.0])
     ax[0].set_xlim(ax[0].get_xlim()[0] - 0.0005, ax[0].get_xlim()[1])
@@ -292,10 +302,7 @@ ax = [
     plt.axes([0.0, 0.17 * f, 0.3125, 0.3125]),
     plt.axes([0.1175 * f, 0.34 * f, 0.3125, 0.3125]),
 ]
-img = map_map.render(theta=thetas).eval()
-vmin = np.nanmin(img)
-vmax = np.nanmax(img)
-norm = Normalize(vmin=vmin, vmax=vmax)
+norm = Normalize(vmin=0.46, vmax=0.56)
 for n, axis in enumerate(ax):
     map_map.show(ax=axis, theta=thetas[n], cmap="gist_heat", norm=norm)
     axis.invert_yaxis()

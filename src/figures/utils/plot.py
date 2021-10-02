@@ -80,11 +80,13 @@ def plot_timeseries(
             ms=2,
             alpha=0.75,
             clip_on=False,
+            zorder=-1,
         )
         ax_f[n].plot(
             map.wav, model[n] - model[n, 0], "C1-", lw=1, clip_on=False
         )
         ax_f[n].axis("off")
+        ax_f[n].set_rasterization_zorder(0)
     fac = (np.max(model) - np.min(model)) / overlap
     ax_f[0].set_ylim(-fac, fac)
 
