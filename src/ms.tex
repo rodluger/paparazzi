@@ -1232,7 +1232,7 @@ This is due to a degeneracy involving the $Y_{1,-1}$ spherical harmonic (\raiseb
 Interestingly, while the map uncertainty still increases toward the south pole (bottom panel), its magnitude is smaller than that in Figure~\ref{fig:spot_infer_y}.
 This is counter-intuitive, since the continuum-normalized spectrum should contain \emph{less} information than the unnormalized one.
 Indeed, the uncertainties shown in the figure are conditioned on our estimate of the baseline, so they are actually a strict \emph{lower bound} on the map uncertainty.
-In order to constrain the true uncertainty on the solution to this bilinear problem, we must resort to approximate sampling methods such as MCMC. 
+In order to constrain the true uncertainty on the solution to this bilinear problem, we must resort to approximate sampling methods such as Markov Chain Monte Carlo (MCMC). 
 We discuss this further in \S\ref{sec:discussion:priors}.
 
 \subsection{Unknown spectrum, unknown baseline}
@@ -1546,12 +1546,21 @@ Doing so with gradient-based posterior sampling methods is straightforward with 
 \subsubsection{The need for good priors}
 \label{sec:discussion:priors:need}
 %
-\xxx{
-    Light curve inversion is super not well-posed. 
-    Doppler imaging is better, but there are still degeneracies. 
-    See \citet{Luger2021a} \citep[see also][]{Basri2020}. 
-    It's therefore important to have a good prior to break these degeneracies.
-}
+Inferring surface maps from unresolved astronomical observations is a hard problem.
+It is ``hard'' in the usual sense, requiring the development of complicated algorithms and the evaluation of computationally expensive models; but it is also ``hard'' in the sense that quite often the true answer is \emph{unknowable} because the data simply do not contain sufficient information about it.
+This is especially the case in photometric studies, where one might seek to infer the distribution of spots on the surface of a star from its rotational light curve alone.
+Recently, \citet{Luger2021a} showed that this problem is extremely ill-posed: only a very small fraction of the information about the two-dimensional intensity distribution on the stellar surface is encoded in the light curve \citep[see also][]{Basri2020}.
+Even at infinite SNR, there exist an infinite number of solutions to the inverse problem, most of which look nothing alike.
+In a photometric study, the \emph{only} way to obtain a unique solution is to supplement the dataset with external information, usually in the form of restrictive assumptions or explicit priors on the quantities of interest.
+Most of the information in the solution to a light curve inversion problem comes from these prior assumptions, so it is extremely important to get them right.
+
+In the case of Doppler imaging datasets, the problem is much more well-posed because of the availability of an entire new dimension of information (wavelength). 
+In the limit of infinite SNR, spectral resolution, and temporal sampling, and if the rest frame spectrum is known exactly, in many cases there \emph{are} unique solutions to the visible portion of the stellar surface\footnote{Recall that, except in the pathological case where $i = 90^\circ$, there is always a region on the ``back'' side of the star that is never in view at any phase. No amount of statistical or algorithmic cleverness can ever tell us what that region looks like!}.
+In this limit, the data is sufficiently informative and changing one's prior does not substantially change the inferred surface map.
+This is approximately the case in \S\ref{sec:spot_y1}, in which we inferred the true surface map given a very high SNR dataset and perfect knowledge of the rest frame spectrum (see Figure~\ref{fig:spot_infer_y}).
+However, it is not the case in many of the other examples in that section, particularly when the rest frame spectrum is not known exactly and when the SNR of the dataset is finite.
+In those cases, good solutions to the surface map (ones in which the \texttt{SPOT} feature is clearly legible in the inferred map) can be obtained only under certain choices of our priors (or the strength of the regularization term). 
+In the sections below we discuss how to choose these priors in a principled way.
 
 \subsubsection{Gaussian priors}
 \label{sec:discussion:priors:gaussian}
@@ -1633,35 +1642,54 @@ These can also easily be incorporated into our formalism, although we recommend 
 
 \subsubsection{Posterior sampling}
 \label{sec:discussion:priors:mcmc}
+%
+In the limit of finite SNR, and when things like the true stellar spectrum, the stellar inclination, and the limb darkening profile are not well known (which is usually the case in Doppler imaging studies!), it is important to recognize the limitation of point estimates like those obtained in this work.
+The maps of Luhman 16B presented in Figure~\ref{fig:luhman16b:maps}, for instance, are just that: point estimates that carry no sense of the uncertainty associated with any of those features.
+Given the low SNR of the dataset (Figure~\ref{fig:luhman16b:data_model}), the unknown inclination of the star, and the uncertainty in parameters like the rotation period, $v\sin i$, and the limb darkening profile, the maps shown in Figure~\ref{fig:luhman16b:maps} are almost certainly \emph{not} what Luhman 16B actually looks like in reality.
+The fact that we obtained a solution that is qualitatively similar to that of \citet{Crossfield2014} is encouraging, but it is not sufficient.
+Doppler imaging studies are notorious at producing features that are artificially elongated in latitude, just like the dark spot seen in the figure \xxx{(cite me)}.
+The Doppler imaging method is also less sensitive to azimuthally symmetric features, like the zonal bands that may be present on brown dwarfs as on Jupiter.
+Effects like these can bias the point estimates obtained in Doppler imaging studies, but they \emph{can} be captured if one fully propagates uncertainties to the final result.
+This requires computing the posterior distribution of the model parameters (including the parametrization of the surface map), which is absolutely critical when one wishes to \emph{interpret} a Doppler map.
+
+In some restricted cases, it is possible to obtain the full surface map posterior analytically (\S\ref{sec:inverse}), but only when all priors are Gaussian and the inclination, limb darkening profile, and template spectrum are known exactly. In all other cases, one must compute an approximation to the posterior distribution over all these quantities numerically, such as with MCMC.
 
 \xxx{
-    Discuss the case where the inclination/period/velocity is unknown, such as the case with Luhman 16B.
-    The problem is not linear in these variables, so we need MCMC. 
-    But our model is differentiable, so we can easily use HMC. 
+    Our model is differentiable, so we can easily use HMC. 
     Within HMC, we can learn hyperpriors and marginalize over the unknowns.
+    Stress that it is NOT correct to infer things like active latitudes, differential rotation, etc. from point estimates obtained with Doppler imaging. Those will always be biased. You have to infer that stuff probabilistically!
 }
 
 \subsection{Limitations and future work}
 \label{sec:discussion:caveats}
 
-\xxx{
-    We are not addressing differential rotation and convective blueshift.
-    These make the integral in Equation~(\ref{eq:deconv:kT}) very difficult to solve. 
-    We will tackle this in the next paper.
-}
+There are a few important limitations of the algorithm presented here and its implementation in \starry that we will address in future work.
+First, we do not currently address the effects of differential rotation and convective blueshift.
+Both are straightforward to account for by modifying the path $\mathcal{C}(\lnlam,\bvec{x})$ of the line integral in Equation~(\ref{eq:deconv:kT}) to correspond to the isovelocity lines in the velocity field accounting for these two effects.
+Under the common assumption of linear differential rotation, in which the shear is proportional to the square of the sine of the latitude, the velocity field may be written exactly as a cubic polynomial in the Cartesian coordinates of the stellar surface \citep{Short2018}, therefore admitting an exact representation in terms of an $l_\mathrm{max} = 3$ spherical harmonic expansion\footnote{\url{https://starry.readthedocs.io/en/latest/notebooks/RVDerivation}}.
+Similarly, the effect of convective blueshift on the velocity field can be modeled with a low degree spherical harmonic expansion consisting only of radial ($m = 0$) modes.
+In the Appendix, we showed that in the absence of these effects, the curves $\mathcal{C}(\lnlam,\bvec{x})$ are straight lines, so the line integral in Equation~(\ref{eq:deconv:kT}) is trivial to solve.
+In the presence of differential rotation and convective blueshift, these curves become polynomials, making the integration trickier.
+While we were unable to find simple closed-form expressions for the resulting line integrals, they may still exist; we will investigate this in future work.
+Even if a closed form solution is unavailable, it is likely still possible to efficiently evaluate the integrals numerically.
 
-\xxx{
-    The instrumental profile is another Toeplitz matrix that can be dotted into Equation~(\ref{eq:linear:f}).
-}
+Another effect we do not presently model is stellar oblateness.
+Many of the Doppler imaging targets are massive stars, which tend to be fast-rotating and therefore oblate.
+We recently expanded the \starry framework to model stellar oblateness \citet{Dholakia2021}, and will similarly adapt our Doppler imaging framework in an upcoming paper. 
+In the absence of differential rotation and convective blueshift, oblateness can be accounted for by simply weighting the integration limits in Equation~(\ref{eq:appendix:kT}) by the semi-minor axis of the elliptical boundary of the star in projection. 
+Accounting for those effects may require numerical integration, as discussed above.
 
-\xxx{
-    We are always integrating over the entire disk of the star.
-    Can integrate over the unocculted disk during an occultation (should actually be pretty trivial) so this can be used for Doppler tomography once I have some time to work it out!
-}
+In a similar vein, our present model involves an integration over the entire stellar disk. 
+This is the desired approach in Doppler imaging studies, but does apply in the context of Doppler \emph{tomography} \citep[e.g.,][]{Johnson2017}, in which the star is observed during a transit of an orbiting planet to infer, e.g., the degree of misalignment between the planet's orbit and the stellar spin axis.
+Our formalism can be adapted to Doppler tomography by changing the limits of integration in Equation~(\ref{eq:appendix:kT}) to exclude the region occulted by the planet; we will also investigate this in upcoming work.
 
-\xxx{
-    Telluric lines could be learned from the data as in \citet{Bedell2019}.
-}
+Regarding systematic effects, we do not explicitly account for instrumental broadening. 
+The observed spectrum is a convolution of the Doppler-shifted, disk-integrated stellar spectrum (whose model our algorithm calculates) with the point spread function (PSF) of the spectograph.
+This convolution can be modeled as a dot product of a Toeplitz matrix with the Doppler design matrix $\bvec{D}$, much in the same way as Equation~(\ref{eq:linear:convolution_def}).
+
+Finally, our formalism assumes the data has been corrected for telluric contamination. 
+This is typically done by removing a telluric model (based on a template spectrum) from the data in a pre-processing step \citep[as in][]{Crossfield2014}, but in the data-driven approach of this paper, they could also be learned from the data, similar to the approach in \citet{Bedell2019}.
+We will investigate this in future work.
 
 \section{Implementation in \starry}
 \label{sec:starry}
