@@ -1538,11 +1538,21 @@ A better approach is to compute the Doppler-broadened spectrum based on the true
 Finally, and most importantly, our results (like those of \citet{Crossfield2014}) are just a point estimate.
 While the main features inferred in the map---the polar bright spot and the dark spot on the back side of the object---appear to be robust to changes in our priors, we are unable to quantify our confidence in the map solution.
 %
-Doing so is straightforward with the \starry implementation of our algorithm, but we defer it to future work.
+Doing so with gradient-based posterior sampling methods is straightforward with the \starry implementation of our algorithm, but we defer it to future work.
 
 \subsection{Regularization, priors, and posteriors}
 \label{sec:discussion:priors}
 %
+\subsubsection{The need for good priors}
+\label{sec:discussion:priors:need}
+%
+\xxx{
+    Light curve inversion is super not well-posed. 
+    Doppler imaging is better, but there are still degeneracies. 
+    See \citet{Luger2021a} \citep[see also][]{Basri2020}. 
+    It's therefore important to have a good prior to break these degeneracies.
+}
+
 \subsubsection{Gaussian priors}
 \label{sec:discussion:priors:gaussian}
 %
@@ -1555,8 +1565,7 @@ Its value is therefore as arbitrary as our choice of prior.%
 The gradient seen in the uncertainty maps of Figures~\ref{fig:spot_infer_y}--\ref{fig:spot_infer_ybs} \emph{is} therefore meaningful, as it directly encodes the spatial distribution of the information content of the data.}
 In \S\ref{sec:spotstar} we chose a variance of $10^{-4}$ because we had access to the true maps and found, via trial and error, that this value yielded a good balance between underfitting and overfitting the synthetic data. In a realistic application, however, we could not do this, so we must naturally wonder: how should we go about choosing the prior variance in a principled way?
 
-There are (at least) two general approaches. 
-The first, and most Bayesian, is to choose priors that truly encode our prior knowledge of the system. 
+The Bayesian approach to this is to choose priors that truly encode our prior knowledge of the system. 
 Absent prior observations of the system, these priors usually come from physics, such as our knowledge of the typical stellar photospheric temperatures or our understanding of the kinds of inhomogeneities we would expect on their surfaces (dark spots on stars, or patchy clouds on brown dwarfs). 
 The most straightforward way to encode this information in our priors is to recognize that the prior variance on a spherical harmonic vector is closely related to a prior on its angular power spectrum \citep[see, e.g.,][]{Baldi2006,Wandelt2012}.
 In particular, our choice for prior covariance in \S\ref{sec:spotstar}, namely $\boldsymbol{\Lambda}_\bvec{y} = 10^{-4}\bvec{I}$, implies an isotropic, flat angular power spectrum prior on our surface maps with power equal to $10^{-4}$ in each spherical harmonic degree.
@@ -1568,15 +1577,15 @@ These can be encoded into our Gaussian prior by choosing a prior variance that s
 \begin{align}
     \boldsymbol{\Lambda}_\bvec{y} = 
     \begin{pmatrix}
-        \sigma_0^2 & & & & & & & & & \\[-0.35em]
-        & \sigma_1^2 & & & & & & & & \\[-0.35em]
-        & & \sigma_1^2 & & & & & & & \\[-0.35em]
-        & & & \sigma_1^2 & & & & & & \\[-0.35em]
-        & & & & \sigma_2^2 & & & & & \\[-0.35em]
-        & & & & & \sigma_2^2 & & & & \\[-0.35em]
-        & & & & & & \sigma_2^2 & & & \\[-0.35em]
-        & & & & & & & \sigma_2^2 & & \\[-0.35em]
-        & & & & & & & & \sigma_2^2 & \\[-0.35em]
+        \sigma_0^2 & & & & & & & & & \\[-0.5em]
+        & \sigma_1^2 & & & & & & & & \\[-0.5em]
+        & & \sigma_1^2 & & & & & & & \\[-0.5em]
+        & & & \sigma_1^2 & & & & & & \\[-0.5em]
+        & & & & \sigma_2^2 & & & & & \\[-0.5em]
+        & & & & & \sigma_2^2 & & & & \\[-0.5em]
+        & & & & & & \sigma_2^2 & & & \\[-0.5em]
+        & & & & & & & \sigma_2^2 & & \\[-0.5em]
+        & & & & & & & & \sigma_2^2 & \\[-0.5em]
         & & & & & & & & & \ddots
     \end{pmatrix}
     \quad,
@@ -1585,42 +1594,74 @@ These can be encoded into our Gaussian prior by choosing a prior variance that s
 where the variance at each degree is parametrized as, e.g.,
 %
 \begin{align}
-    \sigma_l^2(\alpha, \lambda, \tau) = \alpha^2 \exp\left(-\frac{(l - \lambda)^2}{2\tau^2}\right)
+    \sigma_l^2(\alpha, \lambda, \tau) = \sigma_\lambda^2 \exp\left(-\frac{(l - \lambda)^2}{2\tau^2}\right)
     \quad,
 \end{align}
 %
-where $\lambda$ is the typical spherical harmonic degree of features, $\alpha^2$ is the prior variance at that degree, and $\tau$ controls the uncertainty in $\lambda$.
-These hyperparameters can be either imposed or even \emph{learned} from the data; see below.
+where $\lambda$ is the typical spherical harmonic degree of features, $\sigma_\lambda^2$ is the prior variance at that degree, and $\tau$ controls the uncertainty in $\lambda$.
+These hyperparameters can be either imposed or even \emph{learned} from the data; see \S\ref{sec:discussion:priors:mcmc}.
 
-Sometimes, however, we may have even more information to encode in our priors, such as the typical \emph{latitude} of the features. This might be the case for Solar-like or low mass stars, which have specific active latitudes at which spots form. An isotropic prior of the form discussed above cannot encode this, but a dense covariance matrix (with structure in the off-diagonal elements) \emph{can}.
+Sometimes, however, we may have even more information to encode in our priors, such as the typical \emph{location} of the features. 
+This might be the case for solar-like or lower mass stars, which have specific active latitudes at which spots form. 
+An isotropic prior of the form discussed above cannot encode this, but a dense covariance matrix (with structure in the off-diagonal elements) \emph{can}. 
+\citet{Luger2021b} showed that it is possible to encode properties such as the distribution of spot latitudes, spot contrasts, and spot sizes into the prior covariance on the spherical harmonic coefficients; see \citet{Luger2021d} for an efficient implementation of this. 
+Priors of this form can, once again, be imposed (if prior knowledge of the active latitudes or spot properties is available) or learned from the data by sampling over the corresponding hyperpriors. 
+We discuss this in more detail in \S\ref{sec:discussion:priors:mcmc} below.
 
+\subsubsection{Cross-validation}
+\label{sec:discussion:priors:crossval}
+%
+The approach discussed above for choosing one's priors is distinctly Bayesian.
+Alternatively, one may choose a data-driven approach: to learn the optimal value of the priors from the data itself.
+One common approach to this is \emph{cross-validation}, in which one's prior is optimized to yield the best predictive power for the data.
+Typically, cross-validation consists of choosing a specific value for the prior, masking one (``leave-one-out-cross-validation'') or several (``leave-p-out-cross-validation'') data points, optimizing the parameters of the model given this smaller dataset, then using the optimized model to predict the values of the missing data \xxx{(cite me)}.
+The optimal value of the prior is then chosen as the one with the highest predictive power, i.e., the smallest loss when fitting the missing data points \citep[for an example of this, see \S 3.7 in][]{Luger2018}.
 
-\xxx{Can use cross-validation to choose best regularization strength.
-In general, a positivity prior on the pixels is preferred.}
+In this context, the prior is usually referred to as a ``regularization'' term, since this procedure is not exactly Bayesian. 
+Specifically, it regularizes the model to ensure a balance between underfitting (the model doesn't fit the data well) and overfitting (the model fits the data so well that it's also fitting the noise, leading to spurious results).
+In addition to helping one choose the value for (say) the prior covariance on the surface map, cross-validation can be used to optimize most of the numerical choices one makes when fitting a dataset, such as the degree $l_\mathrm{max}$ of the spherical harmonic expansion (or, in a discrete basis, the number of pixels in the surface grid) and the number of map components (\S\ref{sec:twospec}).
 
+\subsubsection{Other priors}
+\label{sec:discussion:priors:nongaussian}
 
-\xxx{Discuss the case where the inclination/period/velocity is unknown, such as the case with Luhman 16B.
-The problem is not linear in these variables, so we need MCMC. 
-But our model is differentiable, so we can easily use HMC. 
-Discuss.}
+While we used Gaussian priors in most of our examples (\S\ref{sec:spotstar}), other kinds of priors might make more sense in different contexts. 
+In particular, in \S\ref{sec:luhman16b} we enforced a uniform prior in the range $[0, 1]$ on the pixel intensities. 
+This encodes our seemingly trivial but surprisingly restrictive \citep[see][]{Fienup1982} belief that stellar intensities must be non-negative, which a Gaussian prior cannot do.
+Priors like this one break the analyticity of the MAP solution (\S\ref{sec:inverse}), but they can be especially important in the limit that the data is not sufficiently constraining.
+Traditionally, many Doppler imaging studies impose an additional \emph{maximum entropy} constraint \citep{Vogt1987}, whose objective is to ensure a similar balance between underfitting and overfitting as discussed above.
+These can also easily be incorporated into our formalism, although we recommend using a method such as cross-validation to choose the optimal regularization strength in this context.
+
+\subsubsection{Posterior sampling}
+\label{sec:discussion:priors:mcmc}
+
+\xxx{
+    Discuss the case where the inclination/period/velocity is unknown, such as the case with Luhman 16B.
+    The problem is not linear in these variables, so we need MCMC. 
+    But our model is differentiable, so we can easily use HMC. 
+    Within HMC, we can learn hyperpriors and marginalize over the unknowns.
+}
 
 \subsection{Limitations and future work}
 \label{sec:discussion:caveats}
 
-We are not addressing differential rotation and convective blueshift.
-These make the integral in Equation~(\ref{eq:deconv:kT}) very difficult to solve. 
-We will tackle this in the next paper.
-\xxx{...}
+\xxx{
+    We are not addressing differential rotation and convective blueshift.
+    These make the integral in Equation~(\ref{eq:deconv:kT}) very difficult to solve. 
+    We will tackle this in the next paper.
+}
 
-The instrumental profile is another Toeplitz matrix that can be dotted into Equation~(\ref{eq:linear:f}).
-\xxx{...}
+\xxx{
+    The instrumental profile is another Toeplitz matrix that can be dotted into Equation~(\ref{eq:linear:f}).
+}
 
-We are always integrating over the entire disk of the star.
-Can integrate over the unocculted disk during an occultation (should actually be pretty trivial) so this can be used for Doppler tomography once I have some time to work it out!
-\xxx{...}
+\xxx{
+    We are always integrating over the entire disk of the star.
+    Can integrate over the unocculted disk during an occultation (should actually be pretty trivial) so this can be used for Doppler tomography once I have some time to work it out!
+}
 
-Telluric lines could be learned from the data as in \citet{Bedell2019}.
-\xxx{...}
+\xxx{
+    Telluric lines could be learned from the data as in \citet{Bedell2019}.
+}
 
 \section{Implementation in \starry}
 \label{sec:starry}
