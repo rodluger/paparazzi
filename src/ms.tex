@@ -1561,7 +1561,7 @@ In the limit of infinite SNR, spectral resolution, and temporal sampling, and if
 \footnote{
     Recall that, except in the pathological case where $i = 90^\circ$, there is always a region on the ``back'' side of the star that is never in view at any phase. 
     No amount of statistical or algorithmic cleverness can ever tell us what that region looks like!%
-}%
+}
 In this limit, the data is sufficiently informative and changing one's prior does not substantially change the inferred surface map.
 This is approximately the case in \S\ref{sec:spot_y1}, in which we inferred the true surface map given a very high SNR dataset and perfect knowledge of the rest frame spectrum (see Figure~\ref{fig:spot_infer_y}).
 However, it is not the case in many of the other examples in that section, particularly when the rest frame spectrum is not known exactly and when the SNR of the dataset is finite.
@@ -1737,7 +1737,7 @@ Typical runtimes and scalings for the \starry algorithm are shown in Figure~\ref
     \begin{centering}
         \includegraphics[width=\linewidth]{figures/runtime.pdf}
         \caption{%
-            Model evaluation time as a function of various parameters, for spherical harmonic degree $l_\mathrm{max} = 10$, $M = 10$ spectral epochs, $K = 200$ wavelength bins, and $v\sin i = 50$ km/s.
+            Model evaluation time in milliseconds as a function of various parameters, for spherical harmonic degree $l_\mathrm{max} = 10$, $M = 10$ spectral epochs, $K = 200$ wavelength bins, and $v\sin i = 50$ km/s.
             Thin lines correspond to individual trials; the thick lines show the median evaluation time.
             Timing tests were performed on a 2-core Linux virtual GitHub Actions machine.
         }
@@ -1756,26 +1756,47 @@ In general, evalution of the model for a typical dataset takes on the order of 1
 \label{sec:conclusions}
 %
 
+We have derived a novel method to infer the surface brightness maps of stars from high resolution spectroscopic timeseries data.
+Our method is based on that of \citet{Vogt1987}, but it explicitly exposes the linear dependence of the observed spectrum on both the representation of the surface map (expressed as a vector of spherical harmonic coefficients) and the template (rest frame) spectrum, making it fast, differentiable, and, in certain cases, trivially invertible.
+It also naturally extends to stellar surfaces with multiple spectral components, such as a star whose spectrum differs between spot and photosphere.
+Ours is fundamentally a data-driven approach to the problem of Doppler imaging, where one can not only impose knowledge of the template spectrum but also \emph{learn} it from the data.
+This is particularly useful in the case where reliable spectral templates are not available, such as in certain wavelength regimes or for certain objects, like the brown dwarf considered in \S\ref{sec:luhman16b}.
+Importantly, we derive a model for the \emph{entire observed spectrum}.
+Most Doppler imaging studies rely on techniques like template matching \xxx{(cite me)} or least squares deconvolution \citep[LSD;][]{Donati1997} to infer a mean spectral line shape at each epoch, which is then treated as the input to the Doppler imaging step.
+These studies usually focus on a few distinct, unblended, and well-understood spectral lines, which are transformed into a single mean profile evaluated over a relatively small number of wavelength bins.
+Our approach, however, is to model the entire observed spectrum at full resolution, including line blends and wavelength regimes where the template spectrum may be unreliable.
+This is made computationally possible given our highly optimized \texttt{Python} implementation within the \starry stellar modeling framework \citep{Luger2019}, which is openly available on GitHub with ample documentation.
+By using the entire dataset and learning the template spectrum where in regions where it is unavailable, we are able to maximize the information content of the inputs.
+Our approach therefore has potential applications to slow rotators, low signal-to-noise spectra, and spectra of objects, such as brown dwarfs and directly imaged exoplanets, whose templates are not well known \emph{a priori}.
 
-\xxx{%
-    \begin{enumerate}
-        \item Advantages of data-driven modeling
-        \item Interpretable priors
-        \item Works on blended lines
-        \item Uses the whole spectrum
-        \item Yields uncertainties!
-        \item Probably works on slow rotators
-        \item Differentiable!
-        \item Fast!
-        \item Use in MCMC to marginalize over inclination and stuff
-        \item Advertise showyourwork for open source papers!
-        \item \citet{Crossfield2014b} and \citet{Snellen2014}: people talk seriously about making Doppler Imaging maps of directly-imaged planets like beta Pic b with the ELTs.  
-        Those will be tough measurements but could be the first real, global​ maps of any planet beyond the solar system (sorry, but eclipse-mapping just doesn't quite cut it so far...).  
-        So we need the best possible algorithms to maximize what we get our of the data.
-        \item \citep{Tan2019,Tan2020,Tan2021a,Tan2021b}: Xianyu is the main person running simulations of brown dwarf global weather patterns, and the techniques outlined in your paper will offer the best way to test those models.
-    \end{enumerate}
-}
+As a proof-of-concept, we qualitatively reproduced the Doppler map of the brown dwarf Luhman 16B (WISE 1049-5319B) inferred in \citet{Crossfield2014} from VLT/CRIRES observations; see Figure~\ref{fig:luhman16b:maps}.
+We also tested our model's ability to accurately infer the surface maps and rest frame spectra from synthetic high SNR spectral timeseries observations, even in the limit of minimally informative priors on both quantities. 
+Finally, we showed that we can infer the spectrum within spots when it is significantly different from that of the surrounding photosphere, again in the limit of high SNR and uninformative priors.
 
+Given the linearity of our model, under certain choices of prior one can obtain the posterior distribution of surface maps analytically and in under a second for most datasets. 
+However, given the usual uncertainty on stellar properties such as the inclination angle, the equatorial velocity, and the limb darkening profile, as well as the common need for restrictive priors on the surface map, most realistic applications of Doppler imaging require the use of computationally expensive numerical methods to infer the posterior distribution of the parameters.
+For this reason, Doppler imaging is traditionally performed in an optimization setting: most studies thus far yield only point estimates of the inferred surface maps, with no formal uncertainties.
+As we argued in \S\ref{sec:discussion:priors:mcmc}, this can lead to significant biases when these maps are interpreted to infer higher-level properties of stars, such as the typical sizes and active latitudes of star spots, or the average spot coverage fraction.
+These biases are due to both the use of shrinkage priors (such as the commonly used maximum entropy constraint) and the fact that point estimates usually include spurious artifacts (like latititudinally elongated features) while suppressing certain surface modes (like azimuthally-symmetric features).
+To accurately infer spot properties from Doppler maps, one must treat the problem probabilistically, by explicitly marginalizing over unknown quantities to obtain a posterior \emph{distribution} over the quantities of interest.
+The model presented here, as well as its implementation in \starry, is easy to use in a posterior inference setting.
+In particular, our implementation harnesses the autodifferentation capabilities of the \texttt{theano} \citep{Bergstra2010} package within the \texttt{pymc3} \citep{Salvatier2016} probabilistic modeling framework, allowing for efficient posterior inference using Hamiltonian Monte Carlo (HMC) techniques.
+
+While Doppler imaging has classically been used to infer the surfaces of massive stars \xxx{(cite me)}, the study of \citet{Crossfield2014} used the method to infer the first Doppler map of a brown dwarf, which we reproduced in this work.
+Future studies could help us understand the intricate atmospheric dynamics of brown dwarfs \citep{Tan2021a,Tan2021b}, as well as the global properties of exoplanets, which may be amenable to Doppler imaging given the advent of a new generation of extremely large ground-based telescopes \citep{Crossfield2014b}.
+A likely first target will be the directly-imaged giant planet $\beta$ Pictoris b, which is only an order of magnitude dimmer than Luhman 16B; \citet{Snellen2014} showed that future observations with the planned Extremely Large Telecope (ELT) should be able to produce a global map of its surface.
+Given the expected low SNR of such observations and the considerable uncertainty in the rest-frame spectra of directly imaged exoplanets, a probabilistic Doppler imaging approach like the one developed in this work will be imperative to maximizing the scientific output of those studies.
+
+\vspace{1em}
+
+This paper was prepared using the \showyourwork open source scientific article workflow\footnote{\url{https://github.com/rodluger/showyourwork}}.
+The PDF was generated automatically from a GitHub repository\footnote{\url{https://github.com/rodluger/paparazzi}} using a frozen \texttt{conda} environment on GitHub Actions CI\footnote{\url{https://github.com/features/actions}}, ensuring that all the results are exactly reproducible and easily extensible with minimal effort from the user.
+The algorithm derived in this paper is fully implemented in the \starry \texttt{Python} package, which is installable via \texttt{pip} or directly from GitHub\footnote{\url{https://github.com/rodluger/starry}}, with ample documentation, examples, and tutorials.\footnote{\url{https://starry.readthedocs.io}}
+
+\vspace{1em}
+
+We would like to thank Eric Agol, Rachael Roettenbacher, and the Astronomical Data Group at the Center for Computational Astrophysics (CCA) for useful comments, suggestions, and insights.
+RL and LZ are supported by Flatiron Fellowships at the CCA, a division of the Simons Foundation.
 
 %
 %
