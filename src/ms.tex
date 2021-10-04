@@ -15,7 +15,10 @@
 \begin{document}
 
 % Title
-\title{A Closed-Form Solution to the Doppler Imaging Problem}
+\title{%
+    Mapping stellar surfaces\\
+    III: A Bayesian Approach to Doppler Imaging
+}
 
 % Author list
 \author[0000-0002-0296-3826]{Rodrigo Luger}
@@ -48,33 +51,50 @@
     %
     As a proof-of-concept, we use our model to infer the surface map of the brown dwarf Luhman 16B, finding close agreement with the solution of \citet{Crossfield2014}.
     %
-    %While our derivation neglects the effects of differential rotation and convective blueshift, these are straightforward to include and will be addressed in an upcoming paper, which will also extend the present formalism to the problem of Doppler tomography.
-    %
     This paper was prepared using the \texttt{showyourwork} scientific article workflow, which exposes the data, source code, and package dependencies for all of the paper's figures, allowing readers to reproduce the results in this paper exactly and with minimal effort.
 \end{abstract}
 
 % Main body
 \section{Introduction}
 
-\xxx{%
-    \noindent Introduce the problem of Doppler imaging.
-    Then cite the following papers:\\[0.5em]
-    \noindent\textbf{Misc.} \\
-    \noindent\citet{Luger2019} --- Surface modeling with spherical harmonics: \starry \\
-    \noindent\citet{Bedell2019} --- Data-driven spectral inference: \texttt{wobble} \\[0.5em]
-    %
-    \noindent\textbf{Theory} \\
-    \noindent\citet{Khokhlova1976,Goncharskii1977} --- Local line profile from observed spectrum\\
-    \noindent\citet{Vogt1983,Vogt1987} --- Seminal papers on Doppler imaging \\
-    \noindent\citet{Rice1989} ---  Another seminal paper\\
-    \noindent\citet{Deutsch1958,Deutsch1970,Falk1974} ---  Ylms + Doppler imaging\\
-    \noindent\citet{Unruh1995} --- sensitivity to line profile models\\
-    \noindent\citet{Piskunov1990} --- notes on regularization \\[0.5em]
-    %
-    \noindent\textbf{Application} \\
-    \noindent\citet{Crossfield2014} --- Global cloud map of Luhman 16B \\
-    \noindent\citet{Roettenbacher2017} --- Doppler imaging of $\sigma$ Geminorum \\
-}
+Most modern Doppler imaging studies are based on the methodology developed in \citet{Goncharskii1977} and \citet{Goncharskii1982}, and updated in \citet{Vogt1983} and \citet{Vogt1987}, who formalised the technique of forward-modeling the line shape changes due to arbitrary brightness variations rotating in and out of view.
+
+\xxx{...}
+
+The idea behind modeling the stellar surface map as a spherical harmonic expansion is not new; in fact, it dates back to at least \citet{Deutsch1958}, who used a low-degree spherical harmonic expansion to model chemical peculiarities in massive Ap stars; \citep[see also][]{Deutsch1970,Falk1974}.
+More recently, spherical harmonic expansions are used in the context of Zeeman Doppler Imaging (ZDI), whose goal is to constrain the magnetic field topology from spectropolarimetric observations.
+In particular, \citet{Donati2006} used a spherical harmonic expansion to model the magnetic topology from ZDI observations of the star $\tau$ Sco, while \citet{Kochukhov2014} employed a similar approach to map the magnetic fields of CU Virginis.
+
+\xxx{...}
+
+Several studies have recognized the importance of accurate spectral templates when attempting to infer maps using Doppler imaging, showing that errors in the templates or the presence of unresolved line blends can introduce signficant artifacts in the map solution \citep[e.g.,][]{Rice1989,Unruh1995}.
+
+\xxx{...}
+
+Attempting to learn the local (rest-frame) spectrum across the surface of the star from observed spectra is not a new idea.
+\citet{Khokhlova1976}, \citet{Goncharskii1977}, and \citet{Goncharskii1982} solved for the local line profiles, assuming that changes in the intensity across the star were small.
+\xxx{But doing everything simultaneously in a Bayesian context \emph{is}.}
+
+\xxx{...}
+
+
+\citet{Piskunov1990} --- notes on regularization.
+
+\xxx{...}
+
+
+Different solutions using Doppler imaging, photometric light curve inversion, and interferometry: \citep{Roettenbacher2017}. Need a more robust framework. Gotta be Bayesian.
+\citet{AsensioRamos2021}: importance of Doppler imaging in a Bayesian context.
+
+\xxx{...}
+
+In this paper, the third in a series dedicated to mapping stellar surfaces \citep{Luger2021a,Luger2021b}, we \xxx{...}
+
+\xxx{...}
+
+This paper is a continuation of the work in \citep{Bedell2019} and \citep{Luger2019}.
+
+\xxx{...}
 
 The paper is organized as follows: in \S\ref{sec:the_problem}~and~\S\ref{sec:the_solution} we introduce the math behind the Doppler imaging problem and derive a closed form expression for the model. 
 In \S\ref{sec:linear},~\S\ref{sec:inverse},~and~\S\ref{sec:bellswhistles} we demonstrate how to re-express the model as a linear operation on the input spectrum and stellar map and derive closed form expressions for the two conditioned on the data and priors.
@@ -1316,7 +1336,7 @@ The two columns of $\mathbb{S}$ are $\bvec{s_0}$ and $\bvec{s_1}$, the unknown s
         \caption{%
             An example of a star whose spectrum is different within the spot and outside of the spot.
             We are able to infer both the surface map of the star (upper right) and the two component spectra (lower two panels), assuming virtually no prior knowledge of either.
-            The optimization step in this experiment ran in \timeInferTwoSpec.
+            Starting from a random initial guess for the maps and the spectra, the optimization step in this experiment ran in \timeInferTwoSpec.
         }
         \label{fig:twospec}
     \end{centering}
@@ -1655,7 +1675,7 @@ In the limit of finite SNR, and when things like the true stellar spectrum, the 
 The maps of Luhman 16B presented in Figure~\ref{fig:luhman16b:maps}, for instance, are just that: point estimates that carry no sense of the uncertainty associated with any of those features.
 Given the low SNR of the dataset (Figure~\ref{fig:luhman16b:data_model}), the unknown inclination of the star, and the uncertainty in parameters like the rotation period, $v\sin i$, and the limb darkening profile, the maps shown in Figure~\ref{fig:luhman16b:maps} are almost certainly \emph{not} what Luhman 16B actually looks like in reality.
 The fact that we obtained a solution that is qualitatively similar to that of \citet{Crossfield2014} is encouraging, but it is not sufficient.
-Doppler imaging studies are notorious at producing features that are artificially elongated in latitude, just like the dark spot seen in the figure \xxx{(cite me)}.
+Doppler imaging studies are notorious at producing features that are artificially elongated in latitude, just like the dark spot seen in the figure \citep[see, e.g.,][]{Unruh1995}.
 The Doppler imaging method is also less sensitive to azimuthally symmetric features, like the zonal bands that may be present on brown dwarfs as on Jupiter.
 Effects like these can bias the point estimates obtained in Doppler imaging studies, but they \emph{can} be captured if one fully propagates uncertainties to the final result.
 This requires computing the posterior distribution of the model parameters (including the parametrization of the surface map), which is absolutely critical when one wishes to \emph{interpret} a Doppler map.
@@ -1684,12 +1704,12 @@ An example of this is the model suggested in \S\ref{sec:discussion:priors:gaussi
 When the value of those hyperparameters is not known \emph{a priori}, we can include them as free variables in our model and perform MCMC to compute their marginal distribution (i.e., marginalized over everything else, including all possible surface maps that are consistent with the data).
 We can even imagine doing this in an ensemble setting under a fully hierarchical model, in which we attempt to constrain these properties from the analysis of many Doppler imaging datasets of different stars simultaneously.
 This procedure is likely computationally prohibitive, but the linearity of our model (\S\ref{sec:linear}) allows us to extend the Gaussian process formalism of \citet{Luger2021b} to Doppler imaging datasets, allowing us to marginalize over the surface maps consistent with the data \emph{analytically}.
-We will explore this point in detail in upcoming work.
+We will explore this point in detail in the following paper in this series.
 
 \subsection{Limitations and future work}
 \label{sec:discussion:caveats}
 
-There are a few important limitations of the algorithm presented here and its implementation in \starry that we will address in future work.
+There are a few important limitations of the algorithm presented here and its implementation in \starry that we will address in future papers in this series.
 First, we do not currently address the effects of differential rotation and convective blueshift.
 Both are straightforward to account for by modifying the path $\mathcal{C}(\lnlam,\bvec{x})$ of the line integral in Equation~(\ref{eq:deconv:kT}) to correspond to the isovelocity lines in the velocity field accounting for these two effects.
 Under the common assumption of linear differential rotation, in which the shear is proportional to the square of the sine of the latitude, the velocity field may be written exactly as a cubic polynomial in the Cartesian coordinates of the stellar surface \citep{Short2018}, therefore admitting an exact representation in terms of an $l_\mathrm{max} = 3$ spherical harmonic expansion.\footnote{\url{https://starry.readthedocs.io/en/latest/notebooks/RVDerivation}}
@@ -1785,7 +1805,7 @@ In particular, our implementation harnesses the autodifferentation capabilities 
 While Doppler imaging has classically been used to infer the surfaces of massive stars \xxx{(cite me)}, the study of \citet{Crossfield2014} used the method to infer the first Doppler map of a brown dwarf, which we reproduced in this work.
 Future studies could help us understand the intricate atmospheric dynamics of brown dwarfs \citep{Tan2021a,Tan2021b}, as well as the global properties of exoplanets, which may be amenable to Doppler imaging given the advent of a new generation of extremely large ground-based telescopes \citep{Crossfield2014b}.
 A likely first target will be the directly-imaged giant planet $\beta$ Pictoris b, which is only an order of magnitude dimmer than Luhman 16B; \citet{Snellen2014} showed that future observations with the planned Extremely Large Telecope (ELT) should be able to produce a global map of its surface.
-Given the expected low SNR of such observations and the considerable uncertainty in the rest-frame spectra of directly imaged exoplanets, a probabilistic Doppler imaging approach like the one developed in this work will be imperative to maximizing the scientific output of those studies.
+Given the expected low SNR of such observations and the considerable uncertainty in the rest-frame spectra of directly imaged exoplanets, an efficient, probabilistic Doppler imaging approach like the one developed in this work will be imperative to maximizing the scientific output of those studies.
 
 \vspace{1em}
 
