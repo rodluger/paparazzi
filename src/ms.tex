@@ -582,9 +582,9 @@ The vector $\alm$ is then given by the (flattened) outer product of the two vect
 where $\mathrm{vec}$ denotes the vectorization operation, which in this case transforms the $(K' \times N)$ matrix $\bvec{A}$ into the $(N K' \times 1)$ column vector $\alm$ by vertically stacking all of its columns. 
 In other words, the vector $\alm$ consists of the set of $K'$ intensities in each wavelength bin repeated $N$ times, each time multiplied by the $n^\mathrm{th}$ spherical harmonic coefficient in the expansion of the surface intensity. 
 Returning to our point about priors, note that all of the entries of $\alm$ are the product of two independent random variables. 
-Since the product of two random variables is generally non-Gaussian, even when the variables themselves are Gaussian%
+Since the product of two random variables is generally non-Gaussian, even when the variables themselves are Gaussian,%
 \footnote{see, e.g., \url{http://mathworld.wolfram.com/NormalProductDistribution.html}}%
-, so too is the prior on $\alm$. 
+so too is the prior on $\alm$. 
 This point makes Equation~(\ref{eq:inverse:ahat}) tricky to use in practice, since a multivariate Gaussian is not generally the most suitable prior for $\alm$.
 
 That said, a Gaussian prior \emph{is} typically suitable for both the spectrum $\bvec{s}$ and the intensity $\bvec{y}$ (just not their product). 
@@ -1489,7 +1489,9 @@ Because of our efficient gradient-based implementation (\S\ref{sec:starry}), the
         \includegraphics[width=0.495\linewidth]{figures/luhman16b_map.pdf} % 
         \includegraphics[width=0.462\linewidth]{static/luhman16b_crossfield.png} % 
         \caption{%
-            Maximum \emph{a posteriori} surface maps of Luhman 16B inferred from the spectra in Figure~\ref{fig:luhman16b:data_model}. \emph{Left:} surface map inferred using the algorithm developed in this work. \emph{Right}: surface map inferred in \citet{Crossfield2014}, reproduced from Figure~2 in that paper.
+            Maximum \emph{a posteriori} surface maps of Luhman 16B inferred from the spectra in Figure~\ref{fig:luhman16b:data_model}. 
+            \emph{Left:} surface map inferred using the algorithm developed in this work. 
+            \emph{Right}: surface map inferred in \citet{Crossfield2014}, reproduced from Figure~2 in that paper.
             We infer the presence of a bright circumpolar spot, as well as the presence of a few dark features, most of which agree with the map presented in the original work.
         }
         \label{fig:luhman16b:maps}
@@ -1543,8 +1545,8 @@ Doing so with gradient-based posterior sampling methods is straightforward with 
 \subsection{Regularization, priors, and posteriors}
 \label{sec:discussion:priors}
 %
-\subsubsection{The need for good priors}
-\label{sec:discussion:priors:need}
+%\subsubsection{The need for good priors}
+%\label{sec:discussion:priors:need}
 %
 Inferring surface maps from unresolved astronomical observations is a hard problem.
 It is ``hard'' in the usual sense, requiring the development of complicated algorithms and the evaluation of computationally expensive models; but it is also ``hard'' in the sense that quite often the true answer is \emph{unknowable} because the data simply do not contain sufficient information about it.
@@ -1555,7 +1557,11 @@ In a photometric study, the \emph{only} way to obtain a unique solution is to su
 Most of the information in the solution to a light curve inversion problem comes from these prior assumptions, so it is extremely important to get them right.
 
 In the case of Doppler imaging datasets, the problem is much more well-posed because of the availability of an entire new dimension of information (wavelength). 
-In the limit of infinite SNR, spectral resolution, and temporal sampling, and if the rest frame spectrum is known exactly, in many cases there \emph{are} unique solutions to the visible portion of the stellar surface\footnote{Recall that, except in the pathological case where $i = 90^\circ$, there is always a region on the ``back'' side of the star that is never in view at any phase. No amount of statistical or algorithmic cleverness can ever tell us what that region looks like!}.
+In the limit of infinite SNR, spectral resolution, and temporal sampling, and if the rest frame spectrum is known exactly, in many cases there \emph{are} unique solutions to the visible portion of the stellar surface.%
+\footnote{
+    Recall that, except in the pathological case where $i = 90^\circ$, there is always a region on the ``back'' side of the star that is never in view at any phase. 
+    No amount of statistical or algorithmic cleverness can ever tell us what that region looks like!%
+}%
 In this limit, the data is sufficiently informative and changing one's prior does not substantially change the inferred surface map.
 This is approximately the case in \S\ref{sec:spot_y1}, in which we inferred the true surface map given a very high SNR dataset and perfect knowledge of the rest frame spectrum (see Figure~\ref{fig:spot_infer_y}).
 However, it is not the case in many of the other examples in that section, particularly when the rest frame spectrum is not known exactly and when the SNR of the dataset is finite.
@@ -1572,7 +1578,8 @@ In particular, the value of the posterior uncertainty close to the south pole of
 Its value is therefore as arbitrary as our choice of prior.%
 \footnote{While the exact \emph{value} of the posterior variance scales with the prior variance, the \emph{ratio} between the uncertainty in the north and the south does not. 
 The gradient seen in the uncertainty maps of Figures~\ref{fig:spot_infer_y}--\ref{fig:spot_infer_ybs} \emph{is} therefore meaningful, as it directly encodes the spatial distribution of the information content of the data.}
-In \S\ref{sec:spotstar} we chose a variance of $10^{-4}$ because we had access to the true maps and found, via trial and error, that this value yielded a good balance between underfitting and overfitting the synthetic data. In a realistic application, however, we could not do this, so we must naturally wonder: how should we go about choosing the prior variance in a principled way?
+In \S\ref{sec:spotstar} we chose a variance of $10^{-4}$ because we had access to the true maps and found, via trial and error, that this value yielded a good balance between underfitting and overfitting the synthetic data. 
+In a realistic application, however, we could not do this, so we must naturally wonder: how should we go about choosing the prior variance in a principled way?
 
 The Bayesian approach to this is to choose priors that truly encode our prior knowledge of the system. 
 Absent prior observations of the system, these priors usually come from physics, such as our knowledge of the typical stellar photospheric temperatures or our understanding of the kinds of inhomogeneities we would expect on their surfaces (dark spots on stars, or patchy clouds on brown dwarfs). 
@@ -1603,6 +1610,7 @@ These can be encoded into our Gaussian prior by choosing a prior variance that s
 where the variance at each degree is parametrized as, e.g.,
 %
 \begin{align}
+    \label{eq:powerspec}
     \sigma_l^2(\alpha, \lambda, \tau) = \sigma_\lambda^2 \exp\left(-\frac{(l - \lambda)^2}{2\tau^2}\right)
     \quad,
 \end{align}
@@ -1652,13 +1660,31 @@ The Doppler imaging method is also less sensitive to azimuthally symmetric featu
 Effects like these can bias the point estimates obtained in Doppler imaging studies, but they \emph{can} be captured if one fully propagates uncertainties to the final result.
 This requires computing the posterior distribution of the model parameters (including the parametrization of the surface map), which is absolutely critical when one wishes to \emph{interpret} a Doppler map.
 
-In some restricted cases, it is possible to obtain the full surface map posterior analytically (\S\ref{sec:inverse}), but only when all priors are Gaussian and the inclination, limb darkening profile, and template spectrum are known exactly. In all other cases, one must compute an approximation to the posterior distribution over all these quantities numerically, such as with MCMC.
+In all but the simplest cases, maximum likelihood estimators are typically biased estimators of the true parameters \citep[e.g.,][]{Lehman1998}, meaning point estimates like those shown in Figure~\ref{fig:luhman16b:maps}, as well as in many other Doppler imaging studies, are also biased.
+If the goal of a study is \emph{only} to produce a map of the stellar surface, this may not be too much of an issue, especially because it is generally understood that Doppler maps are subject to artifacts like latitudinal elongation and suppression of azimuthally-symmetric features like bands, as mentioned above.
+Some of the features in Figure~\ref{fig:luhman16b:maps}, for instance, are likely to be real, such as the bright polar spot and the dark spot on the back side of the object; but their exact properties are uncertain, and many of the other features in the maps may be spurious.
+However, generating a surface map is often \emph{not} the ultimate end goal of Doppler imaging studies.
+Rather, we are usually interested in a more fundamental question: what does our inferred map tell us about the star's properties, or even about stellar physics in general?
+And therein lies the problem: as soon as we attempt to interpret the maps we've generated in terms of metadata such as the typical contrast of the star spots, their typical latitudes, or  the rate of differential rotation (based on comparing Doppler imaging maps taken at different epochs), we are subject to substantial bias due to the point estimate problem \citep[for an example of this same problem in the context of inferring the exoplanet eccentricity distribution, see][]{Hogg2010}.
 
-\xxx{
-    Our model is differentiable, so we can easily use HMC. 
-    Within HMC, we can learn hyperpriors and marginalize over the unknowns.
-    Stress that it is NOT correct to infer things like active latitudes, differential rotation, etc. from point estimates obtained with Doppler imaging. Those will always be biased. You have to infer that stuff probabilistically!
-}
+For this reason, it is crucial to treat Doppler imaging as a posterior inference problem, when at all possible.
+In some restricted cases, we showed that is possible to obtain the full surface map posterior analytically (\S\ref{sec:inverse}), but only when all priors are Gaussian and the inclination, limb darkening profile, and template spectrum are known exactly. 
+In all other cases, one must compute an approximation to the posterior distribution over all these quantities numerically, such as with MCMC.
+This is typically a computationally expensive problem, given the intricate degeneracies at play (which makes posterior sampling difficult), but also the sheer number of parameters, as we must sample over all the parameters representing our surface map (typically on the order of several hundred). 
+When the input spectrum is unknown, the dimension of our problem can easily exceed a few thousand (\S\ref{sec:luhman16b}).
+
+Fortunately, our model is computationally efficient to evaluate and, given its analyticity, trivial to differentiate using an autodifferentiation scheme (see \S\ref{sec:starry}).
+It can therefore be used out-of-the-box within gradient-based sampling schemes such as \texttt{pymc3} \citep{Salvatier2016}, in particular the No-U-Turn Sampler (NUTS), a variant of Hamiltonian Monte Carlo that harnesses gradient information to greatly speed up the convergence of the MCMC chains. 
+The script used to infer the MAP solution for the map of Luhman 16B (see Figure~\ref{fig:luhman16b:maps}) uses \texttt{pymc3} to perform the optimization; extending it to perform posterior inference is straightforward.
+However, doing so is beyond the scope of the present paper, given that this task is still likely to be challenging given the very large number of parameters (${\sim}4{,}000$). 
+We will therefore revisit this system in the context of posterior estimation in a future paper.
+
+One final word regarding posterior inference: given that our end goal is often to infer something about the physics of stellar atmospheres rather than exactly what they look like, posterior sampling can be employed to explicitly marginalize over all possible surface maps to directly constrain our posterior beliefs about the physics.
+An example of this is the model suggested in \S\ref{sec:discussion:priors:gaussian} above, where we express our prior covariance in terms of hyperparameters controlling the amplitude of the surface features and their typical lengthscale (Equation~\ref{eq:powerspec}) or in terms of the typical size, contrast, and latitude of spots \citep{Luger2021b,Luger2021d}.
+When the value of those hyperparameters is not known \emph{a priori}, we can include them as free variables in our model and perform MCMC to compute their marginal distribution (i.e., marginalized over everything else, including all possible surface maps that are consistent with the data).
+We can even imagine doing this in an ensemble setting under a fully hierarchical model, in which we attempt to constrain these properties from the analysis of many Doppler imaging datasets of different stars simultaneously.
+This procedure is likely computationally prohibitive, but the linearity of our model (\S\ref{sec:linear}) allows us to extend the Gaussian process formalism of \citet{Luger2021b} to Doppler imaging datasets, allowing us to marginalize over the surface maps consistent with the data \emph{analytically}.
+We will explore this point in detail in upcoming work.
 
 \subsection{Limitations and future work}
 \label{sec:discussion:caveats}
@@ -1666,7 +1692,7 @@ In some restricted cases, it is possible to obtain the full surface map posterio
 There are a few important limitations of the algorithm presented here and its implementation in \starry that we will address in future work.
 First, we do not currently address the effects of differential rotation and convective blueshift.
 Both are straightforward to account for by modifying the path $\mathcal{C}(\lnlam,\bvec{x})$ of the line integral in Equation~(\ref{eq:deconv:kT}) to correspond to the isovelocity lines in the velocity field accounting for these two effects.
-Under the common assumption of linear differential rotation, in which the shear is proportional to the square of the sine of the latitude, the velocity field may be written exactly as a cubic polynomial in the Cartesian coordinates of the stellar surface \citep{Short2018}, therefore admitting an exact representation in terms of an $l_\mathrm{max} = 3$ spherical harmonic expansion\footnote{\url{https://starry.readthedocs.io/en/latest/notebooks/RVDerivation}}.
+Under the common assumption of linear differential rotation, in which the shear is proportional to the square of the sine of the latitude, the velocity field may be written exactly as a cubic polynomial in the Cartesian coordinates of the stellar surface \citep{Short2018}, therefore admitting an exact representation in terms of an $l_\mathrm{max} = 3$ spherical harmonic expansion.\footnote{\url{https://starry.readthedocs.io/en/latest/notebooks/RVDerivation}}
 Similarly, the effect of convective blueshift on the velocity field can be modeled with a low degree spherical harmonic expansion consisting only of radial ($m = 0$) modes.
 In the Appendix, we showed that in the absence of these effects, the curves $\mathcal{C}(\lnlam,\bvec{x})$ are straight lines, so the line integral in Equation~(\ref{eq:deconv:kT}) is trivial to solve.
 In the presence of differential rotation and convective blueshift, these curves become polynomials, making the integration trickier.
@@ -1743,7 +1769,9 @@ In general, evalution of the model for a typical dataset takes on the order of 1
         \item Fast!
         \item Use in MCMC to marginalize over inclination and stuff
         \item Advertise showyourwork for open source papers!
-        \item \citet{Crossfield2014b} and \citet{Snellen2014}: people talk seriously about making Doppler Imaging maps of directly-imaged planets like beta Pic b with the ELTs.  Those will be tough measurements but could be the first real, global​ maps of any planet beyond the solar system (sorry, but eclipse-mapping just doesn't quite cut it so far...).  So we need the best possible algorithms to maximize what we get our of the data.
+        \item \citet{Crossfield2014b} and \citet{Snellen2014}: people talk seriously about making Doppler Imaging maps of directly-imaged planets like beta Pic b with the ELTs.  
+        Those will be tough measurements but could be the first real, global​ maps of any planet beyond the solar system (sorry, but eclipse-mapping just doesn't quite cut it so far...).  
+        So we need the best possible algorithms to maximize what we get our of the data.
         \item \citep{Tan2019,Tan2020,Tan2021a,Tan2021b}: Xianyu is the main person running simulations of brown dwarf global weather patterns, and the techniques outlined in your paper will offer the best way to test those models.
     \end{enumerate}
 }
