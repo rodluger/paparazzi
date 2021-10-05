@@ -4,7 +4,7 @@ import starry
 import starry_process
 
 # Number of samples to draw
-nsamples = 10
+nsamples = 20
 
 # Instantiate the Doppler map
 wav = np.linspace(642.85, 643.15, 70)
@@ -13,7 +13,7 @@ map = starry.DopplerMap(
     ydeg=15,
     nc=1,
     vsini_max=50000,
-    nt=10,
+    nt=16,
     wav=wav,
 )
 
@@ -32,7 +32,7 @@ D = map.design_matrix(fix_spectrum=True)
 # Note that in general it is more efficient to *compile* the theano
 # function (rather than call the `eval` method); see the starry-process
 # docs for details!
-sp = starry_process.StarryProcess(r=15.0, n=10.0, mu=30.0, sigma=5.0, c=0.1)
+sp = starry_process.StarryProcess(r=15.0, n=10.0, mu=30.0, sigma=5.0, c=0.25)
 np.random.seed(0)
 y = sp.sample_ylm(nsamples=nsamples).eval()
 y[:, 0] += 1  # starry processes are zero-mean; we need to offset our baseline
@@ -45,14 +45,14 @@ samples = np.rollaxis(samples, -1, 0)  # shape (nsamples, nt, nw)
 samples /= samples[:, :, 0].reshape(nsamples, map.nt, 1)
 
 # Plot the samples
-fig, ax = plt.subplots(2, nsamples // 2, figsize=(12, 4))
+fig, ax = plt.subplots(4, nsamples // 4, figsize=(12, 10))
 ax = ax.flatten()
 for n in range(nsamples):
     for k in range(map.nt):
-        ax[n].plot(map.wav, 0.03 * k + samples[n][k], "C0-", lw=0.75)
+        ax[n].plot(map.wav, 0.05 * k + samples[n][k], "C0-", lw=0.75)
 
 # Appearance
-N = nsamples // 2
+N = nsamples - nsamples // 4
 for n in range(nsamples):
     if n != N:
         ax[n].set_xticklabels([])

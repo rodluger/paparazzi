@@ -716,7 +716,7 @@ If we choose a prior with diagonal covariance that is constant for each spherica
 we are in fact imposing an isotropic prior with an angular power spectrum given by $C_l = \sigma_l^2$
 \citep[e.g.,][]{Baldi2006}. 
 This is especially useful if the typical angular scale of features on the surface of the star is known or if a Gaussian prior can be placed on it.
-Alternatively, we may compute $\boldsymbol{\Lambda}_\bvec{y}$ from the Gaussian process formalism in \citet{Luger2021b} to incorporate explicit prior information on the typical latitudes, sizes, and contrasts of spots.
+Alternatively, we may compute $\boldsymbol{\Lambda}_\bvec{y}$ from the Gaussian process (GP) formalism in \citet{Luger2021b} to incorporate explicit prior information on the typical latitudes, sizes, and contrasts of spots.
 We discuss this point further in \S\ref{sec:discussion:priors}.
 
 \subsection{Solution for the spectrum}
@@ -1360,7 +1360,7 @@ While our bilinear method (\S\ref{sec:spot_y1bs}) could in principle work here, 
 We therefore optimize our model using the nonlinear gradient-descent \texttt{Adam} optimizer \citep{Adam} within the \texttt{pymc3} probabilistic modeling framework \citep{Salvatier2016}.
 Since we are no longer restricted to using Gaussian priors on the variables (a requirement of our bilinear method), we place a unit-mean Laplacian (sparsity) prior on the two spectra with scale parameter $b = 10^{-3}$ and bounded to the range $[0, 1]$.
 %
-We further place a Gaussian process prior on the spectra to enforce smoothness, adopting a squared exponential kernel with amplitude $10^{-1}$ and lengthscale $10^{-2}$~nm.
+We further place a Gaussian process (GP) prior on the spectra to enforce smoothness, adopting a squared exponential kernel with amplitude $10^{-1}$ and lengthscale $10^{-2}$~nm.
 %
 We also solve for a single scale parameter $r \sim \mathrm{Uniform}(0, 0.75)$, equal to the ratio of the continuum levels of the two spectra (whose true value is 0.5).
 Finally, in order to enforce that the two component surface maps sum to unity (as described above), we optimize for the actual \emph{pixel} intensities of the photosphere map, on which we place a simple uniform prior on $[0, 1]$; the spot map is then simply the complement.
@@ -1709,7 +1709,7 @@ One final word regarding posterior inference: given that our end goal is often t
 An example of this is the model suggested in \S\ref{sec:discussion:priors:gaussian} above, where we express our prior covariance in terms of hyperparameters controlling the amplitude of the surface features and their typical lengthscale (Equation~\ref{eq:powerspec}) or in terms of the typical size, contrast, and latitude of spots \citep{Luger2021b,Luger2021d}.
 When the value of those hyperparameters is not known \emph{a priori}, we can include them as free variables in our model and perform MCMC to compute their marginal distribution (i.e., marginalized over everything else, including all possible surface maps that are consistent with the data).
 We can even imagine doing this in an ensemble setting under a fully hierarchical model, in which we attempt to constrain these properties from the analysis of many Doppler imaging datasets of different stars simultaneously.
-This procedure is likely computationally prohibitive, but the linearity of our model (\S\ref{sec:linear}) allows us to extend the Gaussian process formalism of \citet{Luger2021b} to Doppler imaging datasets, allowing us to marginalize over the surface maps consistent with the data \emph{analytically}; see \S\ref{sec:discussion:caveats} below.
+This procedure is likely computationally prohibitive, but the linearity of our model (\S\ref{sec:linear}) allows us to extend the Gaussian process formalism of \citet{Luger2021b} to Doppler imaging datasets, allowing us to marginalize over the surface maps consistent with the data \emph{analytically}; see \S\ref{sec:discussion:gp} below.
 
 \subsection{Limitations and future work}
 \label{sec:discussion:caveats}
@@ -1749,23 +1749,61 @@ We will investigate this in future work.
     \begin{centering}
         \includegraphics[width=\linewidth]{figures/gp.pdf}
         \caption{%
-            Ten samples from a spectral-spatial-temporal Gaussian Process constructed from the algorithm presented here.
-            Each panel shows a different sample, each of which consists of ten epochs, offset vertically for visibility.
+            20 samples from a spectral-spatial-temporal Gaussian process constructed from the algorithm presented here.
+            Each panel shows a different sample, each of which consists of 16 epochs, offset vertically for visibility.
             The rest frame spectrum is the same as in Figure~\ref{fig:spot_setup} and the star is inclined at $i = 40^\circ$ with equatorial velocity $v = 50{,}000$ km/s.
-            The star is assumed to have spots with radius $r = 15^\circ$, ten percent contrast, and active latitude $\phi = 30^\circ \pm 5^\circ$.
+            The star is assumed to have spots with radius $r = 15^\circ$, 25 percent contrast, and active latitude $\phi = 30^\circ \pm 5^\circ$.
         }
         \label{fig:gp}
     \end{centering}
 \end{figure}
 %
 
-Finally, an immediate extension of the work presented here is to cast the Doppler imaging problem as a Gaussian process. Figure~\ref{fig:gp}.
-\xxx{FOO BAR.}
+There is one immediate extension of the formalism developed in this work that merits a more in-depth discussion: the adaption of the Doppler imaging method into a Gaussian process (GP) for stellar spectroscopy.
+While the goal of Doppler imaging is often to infer the actual surface map of the star, sometimes the goal may be to infer higher-level statistical information, such as the active latitude of spots or their typical sizes.
+And sometimes, the goal of a spectroscopic analysis may not be to infer something about the star at all, such as in the case of radial velocity surveys of exoplanets.
+In both of these cases, one does not really care about what the \emph{actual} map of the star is irrelevant; rather, the goal is to \emph{marginalize} over all the possible stellar surfaces consistent with the data to obtain the marginal posterior of the quantities of interest, such as the active latitude or the properties of an orbiting exoplanet.
+In \S\ref{sec:discussion:priors:mcmc}, we discussed how one might perform this marginalization via MCMC sampling.
+However, thanks to the linearity of the model developed here, we can use the formalism developed in \citet{Luger2021b} to do this \emph{analytically}.
+
+\citet{Luger2021b} presented an interpretable GP for stellar photometric variability, based on the fact that it is possible to analytically compute the covariance matrix $\boldsymbol{\Lambda}_\bvec{y}$ describing the distribution of spherical harmonic coefficients characterizing a given stellar surface conditioned on certain bulk spot properties $\boldsymbol{\theta}$, such as their radius, latitude, and contrast distributions.%
+\footnote{In \citet{Luger2021b}, this covariance matrix is denoted $\boldsymbol{\Sigma}_\bvec{y}$.}
+Since the model for the (photometric) flux is linear in the spherical harmonic coefficients \citep{Luger2019}, the covariance of the GP for stellar light curves is then simply
+%
+\begin{align}
+    \boldsymbol{\Sigma}_\mathrm{photo} = \mathbf{A} \, \boldsymbol{\Lambda}_\bvec{y} (\boldsymbol{\theta}) \, \mathbf{A}^\top
+    \quad,
+\end{align}
+%
+where $\mathbf{A}$ is the design matrix that transforms from spherical harmonic coefficients to flux, which implicitly depends on the stellar inclination, rotation period, etc.
+
+Conditioned on a fixed spectrum, the Doppler imaging problem is also linear in $\bvec{y}$ (Equation~\ref{eq:inverse:fy}), so we can write the covariance of the GP for a spectroscopic timeseries dataset as
+%
+\begin{align}
+    \label{eq:discussion:gpcov}
+    \boldsymbol{\Sigma}_\mathrm{Doppler} = \mathbf{D} \, \mathbf{S} \, \boldsymbol{\Lambda}_\bvec{y} (\boldsymbol{\theta}) \, \mathbf{S}^\top \, \mathbf{D}^\top
+    \quad,
+\end{align}
+%
+where $\bvec{S}$ is given by Equation~(\ref{eq:inverse:S}) and $\bvec{D}$ is the Doppler design matrix (Equation~\ref{eq:linear:D}).
+The likelihood of the Gaussian with covariance given by Equation~(\ref{eq:discussion:gpcov}) is the probability of the observed spectra conditioned on spot hyperparameters $\boldsymbol{\theta}$, \emph{marginalized} over all possible stellar surface maps.
+Since this marginalization is done analytically, one need only sample over the parameters of interest (the components of $\boldsymbol{\theta}$, as well as the properties of the orbiting planet, in the case of a radial velocity study) in an inference problem.
+Thus, this GP formalism can reduce the dimensionality of one's model from several hundred (the number of parameters used to model the surface map) to a handful (the hyperparameters of the GP, plus the parameters of the planet model, if applicable).
+
+As an example, Figure~\ref{fig:gp} shows twenty samples from the GP described above. 
+We condition the GP on the same spectrum used in \S\ref{sec:spotstar} and on a stellar inclination $i = 40^\circ$ and equatorial velocity $v = 50{,}000$ km/s, and choose hyperparameters $\boldsymbol{\theta}$ corresponding to spots with mean radius $r = 15^\circ$, mean fractional contrast $c = 0.25$, and active latitude $\phi = 30^\circ \pm 5^\circ$.
+Each panel shows a full spectral-temporal dataset sampled from this GP, where individual spectra are vertically offset from each other for visibility.
+
+The main application of our GP, of course, will not be for drawing samples, but for doing inference. 
+In particular, we expect this GP to be useful for extreme precision radial velocity (EPRV) planet searches, which must contend with stellar variability signals that are often orders of magnitude stronger than the planetary signals of interest.
+Our GP can be used as a principled, physically-motivated way to marginalize over the stellar signal to robustly detect the Keplerian signal of an orbiting planet.
+
+The next paper in the \emph{Mapping Stellar Surfaces} series will focus on further development of this GP, including accounting for uncertainty in the spectral template, accounting for the nonlinearity introduced by the continuum normalization, marginalizing over unknowns such as the inclination and limb darkening parameters, and rigorously testing the formalism on both synthetic and real datasets.
 
 \section{Implementation in \starry}
 \label{sec:starry}
 
-We implement the algorithm presented here in the \starry package \citep{Luger2019,Luger2021c}, an open-source \texttt{Python} library for stellar and planetary light curve analysis. 
+We implement the Doppler imaging algorithm presented here in the \starry package \citep{Luger2019,Luger2021c}, an open-source \texttt{Python} library for stellar and planetary light curve analysis. 
 All of the figures in this paper were generated via the Doppler imaging API in \starry. 
 The scripts used to generate them are available on GitHub\footnote{\url{https://github.com/rodluger/paparazzi}} and can be directly accessed via the GitHub icons next to each figure caption.
 These are well-commented and can be used as a starting point for other Doppler imaging projects.
@@ -1826,6 +1864,7 @@ These biases are due to both the use of shrinkage priors (such as the commonly u
 To accurately infer spot properties from Doppler maps, one must treat the problem probabilistically, by explicitly marginalizing over unknown quantities to obtain a posterior \emph{distribution} over the quantities of interest.
 The model presented here, as well as its implementation in \starry, is easy to use in a posterior inference setting.
 In particular, our implementation harnesses the autodifferentation capabilities of the \texttt{theano} \citep{Bergstra2010} package within the \texttt{pymc3} \citep{Salvatier2016} probabilistic modeling framework, allowing for efficient posterior inference using Hamiltonian Monte Carlo (HMC) techniques.
+We also present a sketch of how to incorporate our model into an interpretable, physically-motivated Gaussian process (GP) formalism for stellar spectroscopic timeseries datasets, a method that is highly relevant to extreme precision radial velocity (EPRV) searches for exoplanets. We will explore this application in more detail in the next paper in this series.
 
 While Doppler imaging has classically been used to infer the surfaces of massive stars \xxx{(cite me)}, the study of \citet{Crossfield2014} used the method to infer the first Doppler map of a brown dwarf, which we reproduced in this work.
 Future studies could help us understand the intricate atmospheric dynamics of brown dwarfs \citep{Tan2021a,Tan2021b}, as well as the global properties of exoplanets, which may be amenable to Doppler imaging given the advent of a new generation of extremely large ground-based telescopes \citep{Crossfield2014b}.
@@ -1840,7 +1879,7 @@ The algorithm derived in this paper is fully implemented in the \starry \texttt{
 
 \vspace{1em}
 
-We would like to thank Eric Agol, Rachael Roettenbacher, and the Astronomical Data Group at the Center for Computational Astrophysics (CCA) for useful comments, suggestions, and insights.
+We would like to thank Eric Agol, Christina Hedges, Rachael Roettenbacher, and the Astronomical Data Group at the Center for Computational Astrophysics (CCA) for useful comments, suggestions, and insights.
 RL and LZ are supported by Flatiron Fellowships at the CCA, a division of the Simons Foundation.
 
 %
