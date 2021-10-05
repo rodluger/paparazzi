@@ -1741,12 +1741,18 @@ In a similar vein, our formalism assumes the data has been corrected for telluri
 This is typically done by removing a telluric model (based on a template spectrum) from the data in a pre-processing step \citep[as in][]{Crossfield2014}, but in the data-driven approach of this paper, they could also be learned from the data, similar to the approach in \citet{Bedell2019}.
 We will investigate this in future work.
 
+\subsection{A Spectral-Spatial-Temporal Gaussian Process}
+\label{sec:discussion:gp}
+
 %
 \begin{figure}[t!]
     \begin{centering}
         \includegraphics[width=\linewidth]{figures/gp.pdf}
         \caption{%
-            Samples from a spectral-spatial-temporal Gaussian Process.
+            Ten samples from a spectral-spatial-temporal Gaussian Process constructed from the algorithm presented here.
+            Each panel shows a different sample, each of which consists of ten epochs, offset vertically for visibility.
+            The rest frame spectrum is the same as in Figure~\ref{fig:spot_setup} and the star is inclined at $i = 40^\circ$ with equatorial velocity $v = 50{,}000$ km/s.
+            The star is assumed to have spots with radius $r = 15^\circ$, ten percent contrast, and active latitude $\phi = 30^\circ \pm 5^\circ$.
         }
         \label{fig:gp}
     \end{centering}

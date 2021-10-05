@@ -45,16 +45,23 @@ samples = np.rollaxis(samples, -1, 0)  # shape (nsamples, nt, nw)
 samples /= samples[:, :, 0].reshape(nsamples, map.nt, 1)
 
 # Plot the samples
-fig, ax = plt.subplots(1, nsamples, figsize=(12, 2), sharex=True, sharey=True)
+fig, ax = plt.subplots(2, nsamples // 2, figsize=(12, 4))
+ax = ax.flatten()
 for n in range(nsamples):
     for k in range(map.nt):
-        ax[n].plot(
-            map.wav,
-            0.03 * k + samples[n][k],
-            "k-",
-            lw=0.75,
-            alpha=0.75,
-        )
-    ax[n].set_xticklabels([])
-    ax[n].set_yticklabels([])
+        ax[n].plot(map.wav, 0.03 * k + samples[n][k], "C0-", lw=0.75)
+
+# Appearance
+N = nsamples // 2
+for n in range(nsamples):
+    if n != N:
+        ax[n].set_xticklabels([])
+        ax[n].set_yticklabels([])
+        ax[n].set_xlim(*ax[N].get_xlim())
+        ax[n].set_ylim(*ax[N].get_ylim())
+for tick in ax[N].get_xticklabels() + ax[N].get_yticklabels():
+    tick.set_fontsize(8)
+ax[N].set_xlabel(r"$\lambda$ [nm]", fontsize=10)
+ax[N].set_ylabel(r"intensity", fontsize=10)
+
 fig.savefig("gp.pdf", bbox_inches="tight")
