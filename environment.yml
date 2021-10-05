@@ -10,4 +10,5 @@ dependencies:
   - pip:
       - matplotlib>=3.3.3
       - tqdm>=4.56.0
+      - starry-process==0.9.8
       - git+https://github.com/rodluger/starry.git@33158718bbb4f347f79818806965f8b014727e56#egg=starry
