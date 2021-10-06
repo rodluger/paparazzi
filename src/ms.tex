@@ -47,7 +47,7 @@
     %
     Our model is also linear in the local (rest frame) stellar spectrum, which may itself be spatially variable; this allows one to perform Doppler imaging with limited knowledge of the local stellar spectrum and therefore works on blended lines, regions of the spectrum where line formation mechanisms are not well understood, or stars whose spots have intrinsically different spectra from the rest of the photosphere.
     %
-    We implement the model within the open-source \starry stellar modeling framework, making it fast, differentiable, and easy to use in both optimization and posterior inference settings.
+    We implement the model within the open source \starry stellar modeling framework, making it fast, differentiable, and easy to use in both optimization and posterior inference settings.
     %
     As a proof-of-concept, we use our model to infer the surface map of the brown dwarf Luhman 16B, finding close agreement with the solution of \citet{Crossfield2014}.
     %
@@ -57,50 +57,44 @@
 % Main body
 \section{Introduction}
 
+High resolution spectra encode a vast amount of information about the structure, dynamics, and chemical composition of stars.
+Spectra of fast-rotating stars, in particular, also encode the two-dimensional brightness map of the photosphere via subtle line shape changes as inhomogeneities rotate from the blueshifted side to the redshifted side of the star.
+The process of inferring the map of a stellar ``surface'' given high resolution spectra taken at different rotational phases is known as \emph{Doppler imaging}, a technique that dates back to at least \citet{Deutsch1958}.
+Most modern Doppler imaging studies, however, are based on the methodology developed in \citet{Khokhlova1976}, \citet{Goncharskii1977}, and \citet{Goncharskii1982}, and updated in \citet{Vogt1983} and \citet{Vogt1987}. These studies formalised the technique of forward-modeling the line shape changes due to arbitrary brightness variations rotating in and out of view. The latter study, in particular, presented a now common technique for solving the inverse problem---inferring the map of the star given a spectroscopic dataset---under certain regularizing assumptions.
 
+Since those pioneering studies several decades ago, Doppler maps have now been obtained for a variety of targets, ranging from red giant stars \citep{Roettenbacher2017} to massive main sequence stars \xxx{(cite me)} to cool dwarfs \citep{Rosen2015}. Recently, \citet{Crossfield2014} produced a Doppler map of Luhman 16B, a brown dwarf in the solar neighborhood. Future observations with extremely large telescopes may even allow one to obtain Doppler maps of directly imaged extrasolar planets \citep{Snellen2014}.
 
-Most modern Doppler imaging studies are based on the methodology developed in \citet{Khokhlova1976}, \citet{Goncharskii1977}, and \citet{Goncharskii1982}, and updated in \citet{Vogt1983} and \citet{Vogt1987}. These studies formalised the technique of forward-modeling the line shape changes due to arbitrary brightness variations rotating in and out of view. The latter study, in particular, presented a now common technique for solving the inverse problem---inferring the map of the star given a spectroscopic dataset---under certain regularizing assumptions.
+As more and more stars are imaged in this way, it becomes tempting to interpret Doppler images in the broader context of stellar physics and evolution.
+For instance, one may be interested in understanding trends in the population-level magnetic properties of giant stars, or in how those properties change as a function of spectral type or stellar age.
+However, the vast majority of Doppler imaging studies produce \emph{point estimates}: that is, they usually report the maximum likelihood solution to the stellar surface map, with no formal assessment of its uncertainty.
+In all but the simplest cases, maximum likelihood estimators are biased \citep[e.g.,][]{Lehman1998}, meaning any attempt to understand these estimates in bulk is prone to significant bias \citep[see, e.g.,][]{Hogg2010}.
+This problem is compounded by four factors.
+%
+First, Doppler imaging is usually an ill-posed problem, meaning there is no unique solution to the surface map given a spectroscopic dataset.
+This issue is typically well understood \xxx{(cite me)}, and most studies circumvent this issue by employing restrictive priors to ensure the uniqueness of the solution. 
+These include maximum entropy regularization \citep{Vogt1987} and Tikhonov regularization \citep[e.g.,][]{Piskunov1990}, which typically enforce sparsity and smoothness in the solution, respectively.
+However, while useful for obtaining a maximum likelihood solution, both choices can lead to significant bias in the inferred map, as they can both suppress features and introduce spurious artifacts.
+In fact, a recent comparison of Doppler imaging, photometric light curve inversion, and interferometry revealed qualitatively diffferent maps of the the same star \citep{Roettenbacher2017}, due to the various degeneracies afflicting each method.
+%
+Second, the Doppler imaging technique is generally more sensitive to longitudinal than latitudinal variations, often leading to spurious, latititudinally elongated features in the maximum likelihood solution \citep[e.g.,][]{Unruh1995,Crossfield2014b}.
+%
+Third, the Doppler imaging technique requires the availability of accurate spectral templates for the local rest frame spectrum of the star.
+Several studies have shown that errors in these templates or the presence of unresolved line blends in the observed spectrum can introduce signficant artifacts in the map solution \citep[e.g.,][]{Rice1989,Unruh1995}.
+Moreover, changes in the local spectrum over the surface of the star (such as different line depths or the presence of different absorption lines within spots) can similarly bias the inferred map if these are not properly modeled \xxx{(cite me)}.
+While some past studies have solved for variations in the local line profiles \citep{Khokhlova1976,Goncharskii1977,Goncharskii1982}, these usually make the assumption that the intensity variation is small across the surface of the star; that is, they do not simultaneously solve for the Doppler map of the surface brightness variations.
+%
+Fourth, and finally, most Doppler imaging codes are not open source \xxx{(cite me)}, nor are the data used to produce many of the maps found in the literature, making it difficult to reproduce results and compare Doppler images of different stars on the same footing.
 
-\xxx{...}
-
-The idea behind modeling the stellar surface map as a spherical harmonic expansion is not new; in fact, it dates back to at least \citet{Deutsch1958}, who used a low-degree spherical harmonic expansion to model chemical peculiarities in massive Ap stars; \citep[see also][]{Deutsch1970,Falk1974}.
-More recently, spherical harmonic expansions are used in the context of Zeeman Doppler Imaging (ZDI), whose goal is to constrain the magnetic field topology from spectropolarimetric observations.
-In particular, \citet{Donati2006} used a spherical harmonic expansion to model the magnetic topology from ZDI observations of the star $\tau$ Sco, while \citet{Kochukhov2014} employed a similar approach to map the magnetic fields of CU Virginis.
-
-\xxx{...}
-
-Several studies have recognized the importance of accurate spectral templates when attempting to infer maps using Doppler imaging, showing that errors in the templates or the presence of unresolved line blends can introduce signficant artifacts in the map solution \citep[e.g.,][]{Rice1989,Unruh1995}.
-
-\xxx{...}
-
-Attempting to learn the local (rest-frame) spectrum across the surface of the star from observed spectra is not a new idea.
-\citet{Khokhlova1976}, \citet{Goncharskii1977}, and \citet{Goncharskii1982} solved for the local line profiles, assuming that changes in the intensity across the star were small.
-\xxx{But doing everything simultaneously in a Bayesian context \emph{is}.}
-
-\xxx{...}
-
-
-
-
-\xxx{...}
-
-
-Different solutions using Doppler imaging, photometric light curve inversion, and interferometry: \citep{Roettenbacher2017}. Need a more robust framework. Gotta be Bayesian.
-\citet{AsensioRamos2021}: importance of Doppler imaging in a Bayesian context.
-
-\xxx{...}
-
-Most studies either use maximum entropy regularization \citep{Vogt1987} or Tikhonov regularization \citep[e.g.,][]{Piskunov1990}, which typically enforce sparsity and smoothness in the solution, respectively.
-
-In this paper, the third in a series dedicated to mapping stellar surfaces \citep{Luger2021a,Luger2021b}, we \xxx{...}
-
-\xxx{...}
-
-This paper is a continuation of the work in \citep{Bedell2019} and \citep{Luger2019}.
-
-We present a closed-form solution.
-
-\xxx{...}
+In this paper, the third in a series dedicated to mapping stellar surfaces \citep{Luger2021a,Luger2021b}, we seek to address these issues by developing a novel algorithm for Doppler imaging.
+The various pitfalls of Doppler imaging outlined above necessitate an algorithm that is efficient enough to be used in a Bayesian posterior inference context, where one can formally address the degeneracies at play and quantify their effect on the uncertainties of the inferred stellar maps.
+They also necessitate an algorithm that is flexible, capable of learning deviations from the template or capturing spatial variations in the rest-frame spectrum.
+And most of all, they necessitate a user-friendly, well-documented, and open source implementation, which is sorely lacking the literature.
+Our algorithm addresses these various issues by building on the work of \citet{Luger2019}, who derived analytic solutions to the light curve mapping problem by expanding the stellar surface map in the spherical harmonic basis.
+While spherical harmonics are routinely used in Doppler imaging problems \citep{Deutsch1958,Deutsch1970,Falk1974,Donati2006,Kochukhov2014}, we present a new closed-form solution to the forward model for Doppler imaging when working in this basis, making our model both precise and computationally efficient.
+We also expose a fundamental linearity of the model in terms of both the surface map and the rest frame spectrum, allowing us to learn both using a fast bilinear solver.
+Finally, we implement our algorithm within the open source \starry code package with ample documentation, examples, and tutorials.\footnote{\url{https://github.com/rodluger/starry}}.
+All of the figures in this paper are also open source; clickable \GitHubIconBlue icons next to each figure link to the exact version of the \texttt{Python} script used to generate them.
+To ensure the full reproducibility of this paper, we prepared it using the \showyourwork workflow\footnote{\url{https://github.com/rodluger/showyourwork}}, which exposes the datasets, source code, and all package dependencies needed to exactly reproduce the results.
 
 The paper is organized as follows: in \S\ref{sec:the_problem}~and~\S\ref{sec:the_solution} we introduce the math behind the Doppler imaging problem and derive a closed form expression for the model. 
 In \S\ref{sec:linear},~\S\ref{sec:inverse},~and~\S\ref{sec:bellswhistles} we demonstrate how to re-express the model as a linear operation on the input spectrum and stellar map and derive closed form expressions for the two conditioned on the data and priors.
@@ -1693,8 +1687,8 @@ However, generating a surface map is often \emph{not} the ultimate end goal of D
 Rather, we are usually interested in a more fundamental question: what does our inferred map tell us about the star's properties, or even about stellar physics in general?
 And therein lies the problem: as soon as we attempt to interpret the maps we've generated in terms of metadata such as the typical contrast of the star spots, their typical latitudes, or  the rate of differential rotation (based on comparing Doppler imaging maps taken at different epochs), we are subject to substantial bias due to the point estimate problem \citep[for an example of this same problem in the context of inferring the exoplanet eccentricity distribution, see][]{Hogg2010}.
 
-For this reason, it is crucial to treat Doppler imaging as a posterior inference problem, when at all possible.
-In some restricted cases, we showed that is possible to obtain the full surface map posterior analytically (\S\ref{sec:inverse}), but only when all priors are Gaussian and the inclination, limb darkening profile, and template spectrum are known exactly. 
+For this reason, it is crucial to treat Doppler imaging as a posterior inference problem, when at all possible; see \citet{AsensioRamos2021} for recent work on a Doppler imaging model that harnesses approximate Bayesian techniques to perform posterior inference. 
+In some restricted cases, we showed that is possible to obtain the full surface map posterior analytically with our method (\S\ref{sec:inverse}), but only when all priors are Gaussian and the inclination, limb darkening profile, and template spectrum are known exactly. 
 In all other cases, one must compute an approximation to the posterior distribution over all these quantities numerically, such as with MCMC.
 This is typically a computationally expensive problem, given the intricate degeneracies at play (which makes posterior sampling difficult), but also the sheer number of parameters, as we must sample over all the parameters representing our surface map (typically on the order of several hundred). 
 When the input spectrum is unknown, the dimension of our problem can easily exceed a few thousand (\S\ref{sec:luhman16b}).
@@ -1803,7 +1797,7 @@ The next paper in the \emph{Mapping Stellar Surfaces} series will focus on furth
 \section{Implementation in \starry}
 \label{sec:starry}
 
-We implement the Doppler imaging algorithm presented here in the \starry package \citep{Luger2019,Luger2021c}, an open-source \texttt{Python} library for stellar and planetary light curve analysis. 
+We implement the Doppler imaging algorithm presented here in the \starry package \citep{Luger2019,Luger2021c}, an open source \texttt{Python} library for stellar and planetary light curve analysis. 
 All of the figures in this paper were generated via the Doppler imaging API in \starry. 
 The scripts used to generate them are available on GitHub\footnote{\url{https://github.com/rodluger/paparazzi}} and can be directly accessed via the GitHub icons next to each figure caption.
 These are well-commented and can be used as a starting point for other Doppler imaging projects.
