@@ -92,7 +92,7 @@ And most of all, they necessitate a user-friendly, well-documented, and open sou
 Our algorithm addresses these various issues by building on the work of \citet{Luger2019}, who derived analytic solutions to the light curve mapping problem by expanding the stellar surface map in the spherical harmonic basis.
 While spherical harmonics are routinely used in Doppler imaging problems \citep{Deutsch1958,Deutsch1970,Falk1974,Donati2006,Kochukhov2014}, we present a new closed-form solution to the forward model for Doppler imaging when working in this basis, making our model both precise and computationally efficient.
 We also expose a fundamental linearity of the model in terms of both the surface map and the rest frame spectrum, allowing us to learn both using a fast bilinear solver.
-Finally, we implement our algorithm within the open source \starry code package with ample documentation, examples, and tutorials.\footnote{\url{https://github.com/rodluger/starry}}.
+Finally, we implement our algorithm within the open source \starry code package with ample documentation, examples, and tutorials.\footnote{\url{https://github.com/rodluger/starry}}
 All of the figures in this paper are also open source; clickable \GitHubIconBlue icons next to each figure link to the exact version of the \texttt{Python} script used to generate them.
 To ensure the full reproducibility of this paper, we prepared it using the \showyourwork workflow\footnote{\url{https://github.com/rodluger/showyourwork}}, which exposes the datasets, source code, and all package dependencies needed to exactly reproduce the results.
 
@@ -1694,7 +1694,7 @@ This is typically a computationally expensive problem, given the intricate degen
 When the input spectrum is unknown, the dimension of our problem can easily exceed a few thousand (\S\ref{sec:luhman16b}).
 
 Fortunately, our model is computationally efficient to evaluate and, given its analyticity, trivial to differentiate using an autodifferentiation scheme (see \S\ref{sec:starry}).
-It can therefore be used out-of-the-box within gradient-based sampling schemes such as \texttt{pymc3} \citep{Salvatier2016}, in particular the No-U-Turn Sampler (NUTS), a variant of Hamiltonian Monte Carlo that harnesses gradient information to greatly speed up the convergence of the MCMC chains. 
+It can therefore be used out-of-the-box within gradient-based sampling schemes such as \texttt{pymc3} \citep{Salvatier2016}, in particular the No-U-Turn Sampler (NUTS), a variant of Hamiltonian Monte Carlo that harnesses gradient information to greatly speed up the convergence of the MCMC chains \citep{for a recent application of HMC in the context of spectroscopy, see}{Kawahara2021}.
 The script used to infer the MAP solution for the map of Luhman 16B (see Figure~\ref{fig:luhman16b:maps}) uses \texttt{pymc3} to perform the optimization; extending it to perform posterior inference is straightforward.
 However, doing so is beyond the scope of the present paper, given that this task is still likely to be challenging given the very large number of parameters (${\sim}4{,}000$). 
 We will therefore revisit this system in the context of posterior estimation in a future paper.

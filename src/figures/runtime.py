@@ -31,7 +31,7 @@ def timeit(ydeg=10, nt=10, nw=100, vsini=50000.0):
 # Set up
 fig, ax = plt.subplots(2, 2, sharey=True, figsize=(8, 4))
 fig.subplots_adjust(hspace=0.4, wspace=0.1)
-ax[0, 0].set_ylim(0, 30)
+ax[0, 0].set_ylim(0, 25)
 
 
 # Versus spherical harmonic degree
