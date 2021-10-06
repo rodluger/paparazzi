@@ -48,7 +48,7 @@ ax[0, 0].plot(ydegs, np.median(times, axis=1), "C0-", lw=2)
 ax[0, 0].set_xlabel("spherical harmonic degree", fontsize=12)
 ax[0, 0].set_xticks([0, 5, 10, 15, 20])
 ax[0, 0].set_xlim(0, 20)
-
+ax[0, 0].set_yticks([0, 5, 10, 15, 20, 25])
 
 # Versus number of epochs
 nts = np.array(np.linspace(1, 51, 20), dtype=int)
