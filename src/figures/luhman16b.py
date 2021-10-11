@@ -305,7 +305,7 @@ ax = [
     plt.axes([0.0, 0.17 * f, 0.3125, 0.3125]),
     plt.axes([0.1175 * f, 0.34 * f, 0.3125, 0.3125]),
 ]
-norm = Normalize(vmin=0.46, vmax=0.56)
+norm = Normalize(vmin=0.45, vmax=0.56)
 for n, axis in enumerate(ax):
     map_map.show(ax=axis, theta=thetas[n], cmap="gist_heat", norm=norm)
     axis.invert_yaxis()
