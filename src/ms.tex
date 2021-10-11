@@ -83,9 +83,11 @@ Several studies have shown that errors in these templates or the presence of unr
 Moreover, changes in the local spectrum over the surface of the star (such as different line depths or the presence of different absorption lines within spots) can similarly bias the inferred map if these are not properly modeled.
 While some past studies have solved for variations in the local line profiles \citep{Khokhlova1976,Goncharskii1977,Goncharskii1982}, these usually make the assumption that the intensity variation is small across the surface of the star; that is, they do not simultaneously solve for the Doppler map of the surface brightness variations.
 %
-Fourth, and finally, most Doppler imaging codes are not open source \citep[][to name a few]{Collier1997,Hackman2001,Carroll2012,Rosen2015,AsensioRamos2021},
-% DOTS, INVERS7-PD, iMAP, INVERSLSD, ??
-nor are the data used to produce many of the maps found in the literature, making it difficult to reproduce results and compare Doppler images of different stars on the same footing.
+Fourth, and finally, Doppler imaging results reported in the literature use a variety of custom data analysis codes, most of which are not open source 
+\citep[][to name a few]{Collier1997,Hackman2001,Carroll2012,Rosen2015,AsensioRamos2021}; % DOTS, INVERS7-PD, iMAP, INVERSLSD, ??
+many studies also utilize data that is often not included in the resulting publication or made easily available online. 
+This makes it difficult to reproduce results and compare Doppler images of different stars on the same footing. 
+As argued above, detailed choices in a Doppler imaging analysis will have a significant effect on the reported point-estimate result, so this inability to compare uniformly analyzed observations is a significant hindrance to interpretation.
 
 In this paper, the third in a series dedicated to mapping stellar surfaces \citep{Luger2021a,Luger2021b}, we seek to address these issues by developing a novel algorithm for Doppler imaging.
 The various pitfalls of Doppler imaging outlined above necessitate an algorithm that is efficient enough to be used in a Bayesian posterior inference context, where one can formally address the degeneracies at play and quantify their effect on the uncertainties of the inferred stellar maps.
@@ -1710,8 +1712,8 @@ In the absence of differential rotation and convective blueshift, oblateness can
 Accounting for those effects may require numerical integration, as discussed above.
 
 In a similar vein, our present model involves an integration over the entire stellar disk. 
-This is the desired approach in Doppler imaging studies, but does apply in the context of Doppler \emph{tomography} \citep[e.g.,][]{Johnson2017}, in which the star is observed during a transit of an orbiting planet to infer, e.g., the degree of misalignment between the planet's orbit and the stellar spin axis.
-Our formalism can be adapted to Doppler tomography by changing the limits of integration in Equation~(\ref{eq:appendix:kT}) to exclude the region occulted by the planet; we will also investigate this in upcoming work.
+This is the desired approach in Doppler imaging studies, but does not apply in the context of Doppler \emph{tomography} \citep[e.g.,][]{Johnson2017}, in which the star is observed during a transit of an orbiting companion to infer, e.g., the degree of misalignment between the companion's orbit and the stellar spin axis.
+Our formalism can be adapted to Doppler tomography by changing the limits of integration in Equation~(\ref{eq:appendix:kT}) to exclude the region occulted by the companion; we will also investigate this in upcoming work.
 %
 We will also explore an extension of the method to the case of Zeeman-Doppler imaging \citep{Marsh1988}, which makes use of spectropolarimetric observations to map the stellar magnetic field topology.
 
