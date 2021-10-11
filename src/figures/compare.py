@@ -75,7 +75,7 @@ ax[1].set_yscale("log")
 ax[1].set_xlabel(r"$\lambda$ [nm]")
 ax[1].legend(fontsize=10, loc="upper right")
 ax[1].set_ylim(1e-10, 1e0)
-ax[1].set_ylabel(r"residuals")
+ax[1].set_ylabel(r"relative error (numerical)")
 
 # Show the image
 aximg = inset_axes(ax[0], width="15%", height="45%", loc=4, borderpad=1)

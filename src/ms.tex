@@ -5,11 +5,11 @@
 \include{style}
 
 % TIMING RESULTS
-\def\timeInferY{under 1 second}
-\def\timeInferYB{about 5 seconds}
-\def\timeInferYBS{about 30 seconds}
-\def\timeInferYBSLOSNR{about 30 seconds}
-\def\timeInferTwoSpec{about 20 minutes}
+\def\timeInferY{under 1 second\xspace}
+\def\timeInferYB{about 5 seconds\xspace}
+\def\timeInferYBS{about 30 seconds\xspace}
+\def\timeInferYBSLOSNR{about 30 seconds\xspace}
+\def\timeInferTwoSpec{about 20 minutes\xspace}
 
 % Begin!
 \begin{document}
@@ -43,7 +43,7 @@
 \begin{abstract}
     We derive a novel, efficient, and closed form solution to the problem of Doppler imaging of stellar surfaces from high resolution spectral timeseries datasets.
     %
-    Our model for the observed spectrum is linear in the parameters describing the specific intensity distribution on the surface, which makes the posterior over surface maps computationally trivial to evaluate under certain choices of priors.
+    Our model for the observed spectrum is linear in the parameters describing the specific intensity distribution on the surface, which makes the posterior distribution over surface maps computationally trivial to evaluate under certain choices of priors.
     %
     Our model is also linear in the local (rest frame) stellar spectrum, which may itself be spatially variable; this allows one to perform Doppler imaging with limited knowledge of the local stellar spectrum and therefore works on blended lines, regions of the spectrum where line formation mechanisms are not well understood, or stars whose spots have intrinsically different spectra from the rest of the photosphere.
     %
@@ -107,7 +107,7 @@ We present a summary of the paper in \S\ref{sec:conclusions}.
 \section{The problem}
 \label{sec:the_problem}
 %
-Let $I(\lnlam, \x, t)$ be the specific intensity observed at log wavelength $\lnlam \equiv \ln\frac{\lambda}{\lambda_\mathrm{r}}$ and at sky-projected Cartesian position $\x = (x, y, z)$ on the surface of the star at time $t$, where $\lambda_\mathrm{r}$ is a reference wavelength.
+Let $I(\lnlam, \x, t)$ be the specific intensity observed at log wavelength $\lnlam \equiv \ln\frac{\lambda}{\lambda_\mathrm{r}}$ and at sky-projected Cartesian position $\x = (x, y, z)$ on the surface of the star at time $t$, where $\lambda_\mathrm{r}$ is an arbitrary reference wavelength, such as the central wavelength in the observed spectrum.
 We may express this intensity as
 %
 \begin{align}
@@ -328,7 +328,7 @@ In the next section, we will discuss how to efficiently solve the line integral 
 \subsection{Computing the kernel $\kT$}
 \label{sec:kT}
 %
-In the case that the star's rotation is rigid (i.e., differential rotation is negligible) and other effects such as convective blueshift may be ignored, the radial velocity at any point on the surface is simply proportional to the distance to the axis of rotation. 
+In the case that the star's rotation is rigid (i.e., the effect of differential rotation on the spectrum is small) and other effects such as convective blueshift may be ignored, the radial velocity at any point on the surface is simply proportional to the distance to the axis of rotation. 
 Without loss of generality, if we assume the axis of rotation lies along the $y-z$ plane, we have
 %
 \begin{align}
@@ -397,8 +397,8 @@ This completes our derivation of the analytic expression for the observed spectr
 %
 Figure~\ref{fig:spot} shows an example application of the formulae derived in this section. 
 We generated a synthetic stellar surface with a large, circular spot at a latitude of $30^\circ$ and computed its spherical harmonic expansion up to $l_\mathrm{max}=20$ in the form of the vector of coefficients $\bvec{y}$.
-The stellar rest frame spectrum $I(\lnlam_0)$ is taken to be a single Gaussian absorption line that is spatially constant everywhere save for a multiplicative factor equal to the local spot intensity.
-This corresponds to a spectral/spatial expansion vector $\alm(\lnlam_0)$ whose coefficient at degree $l$ and order $m$ is equal to $y_{lm} I(\lnlam_0)$.
+The stellar rest frame spectrum $I(\lnlam_0)$ is taken to be a single Gaussian absorption line that is spatially constant everywhere save for a multiplicative factor equal to the local spot intensity, which is described by the spherical harmonic expansion.
+%This corresponds to a spectral/spatial expansion vector $\alm(\lnlam_0)$ whose coefficient at degree $l$ and order $m$ is equal to $y_{lm} I(\lnlam_0)$.
 In the Figure, we rotated the star about an axis perpendicular to the line of sight (left panel) and computed the observed spectrum using Equation~(\ref{eq:deconv:F}) (center panel). 
 The right panel shows the difference between the observed spectrum and the spectrum when the spot is not in view.
 The effect of the spot on the absorption line is evident: a ``bump'' that travels from the blueshifted side of to the redshifted side of the line in sync with the change in longitude of the spot. 
@@ -412,7 +412,7 @@ This correspondence between line shape and spot location is the cornerstone of t
             The stellar surface is modeled as a spherical harmonic expansion up to $l_\mathrm{max}=20$, and the line shape is assumed to be the same everywhere;
             the spot simply downweights the local intensity at all wavelengths.
             As the spot rotates into view (left panel), the line shape changes slightly (center panel). 
-            The residuals between the line when the spot is in view (solid) and when it is on the backside of the star (dotted) are shown in the right panel, where a Gaussian-like feature can be seen tracking the spot as it rotates from the blueshifted hemisphere to the redshifted hemisphere of the star.
+            The difference between the line when the spot is in view (solid) and when it is on the backside of the star (dotted) are shown in the right panel, where a Gaussian-like feature can be seen tracking the spot as it rotates from the blueshifted hemisphere to the redshifted hemisphere of the star.
         }
         \label{fig:spot}
     \end{centering}
@@ -435,7 +435,7 @@ We show the residuals in the lower panel, where it is clear that as the number o
             The observed spectrum when the spot is in view computed with our algorithm (blue) and numerically (orange). 
             The problem setup is the same as that in Figure~\ref{fig:spot}. 
             The bottom panel shows the absolute value of the difference between the two spectra for different number of grid points in the numerical solution.
-            As the number of grid points increases, the numerical solution approaches the \starry solution.
+            As the number of grid points increases, the numerical solution approaches our solution.
         }
         \label{fig:compare}
     \end{centering}
@@ -605,7 +605,7 @@ where $\mathrm{vec}$ denotes the vectorization operation, which in this case tra
 In other words, the vector $\alm$ consists of the set of $K'$ intensities in each wavelength bin repeated $N$ times, each time multiplied by the $n^\mathrm{th}$ spherical harmonic coefficient in the expansion of the surface intensity. 
 Returning to our point about priors, note that all of the entries of $\alm$ are the product of two independent random variables. 
 Since the product of two random variables is generally non-Gaussian, even when the variables themselves are Gaussian,%
-\footnote{see, e.g., \url{http://mathworld.wolfram.com/NormalProductDistribution.html}}%
+\footnote{see, e.g., \url{http://mathworld.wolfram.com/NormalProductDistribution.html}}
 so too is the prior on $\alm$. 
 This point makes Equation~(\ref{eq:inverse:ahat}) tricky to use in practice, since a multivariate Gaussian is not generally the most suitable prior for $\alm$.
 
@@ -684,6 +684,7 @@ with covariance
 If we choose a prior with diagonal covariance that is constant for each spherical harmonic order $m$,
 %
 \begin{align}
+    \label{eq:isotropicprior}
     \boldsymbol{\Lambda}_\bvec{y} & =
     \mathrm{diag} \left(
     \sigma_0^2
@@ -813,8 +814,8 @@ Below we discuss what to do when the relative brightness of the star across diff
 Consider the star depicted in Figure~\ref{fig:spot}. 
 When the spot is in view, absorption lines become distorted due to the suppression of either blueshifted or redshifted light. 
 However, what is not shown in the figure is the fact that overall, the star also gets \emph{dimmer}: the continuum level drops in the presence of the spot. 
-Unfortunately, spectrographs are not usually designed to measure this, since the change in the star's overall brightness from one observation to the next is often dwarfed by (unknown) changes in the spectrograph sensitivity, cloud cover, etc.
-For this reason, the spectra are usually normalized to have a fixed baseline continuum, and Equation~\ref{eq:linear:f} is no longer a good model for the data.
+Unfortunately, spectrographs are not usually designed to measure this, since the change in the star's overall brightness from one observation to the next is often dwarfed by (unknown) changes in the spectrograph stability, cloud cover, etc.
+For this reason, the spectra are usually normalized to have a fixed baseline continuum, and Equation~(\ref{eq:linear:f}) is no longer a good model for the data.
 
 One option is to collect simultaneous photometry on the target in a band similar to the wavelength range observed, and use this light curve to (un-)normalize the spectral timeseries $\bvec{f}$. 
 However, when this is not an option, our model for $\bvec{f}$ (Equation~\ref{eq:linear:f}) must be amended:
@@ -1166,7 +1167,7 @@ Note that we must first scale the data vector $\fnorm$ by the baseline (which in
             The Mollweide projection of the original map is shown at the top right; the inferred map is displayed below it. 
             The bottom panel shows the posterior uncertainty on the inferred intensity, ranging from close to zero in the northern hemisphere to $\sigma_\mathrm{prior} \approx 13\%$ below a latitude of $-30^\circ$. 
             The latter is the uncertainty associated with our particular choice of prior, as the southernmost latitudes of the star are never visible to the observer.
-            The optimization step in this experiment ran in \timeInferY.
+            The optimization step in this experiment ran in \timeInferY on a two-core virtual machine.
         }
         \label{fig:spot_infer_y}
     \end{centering}
@@ -1385,7 +1386,7 @@ The setup is the same as that in \S\ref{sec:spot_y1b}, where the spectrum is kno
 As may be expected, the quality of the map decreases with lower SNR, but a reduction of the SNR by $\sim 20\times$ still allows for reasonable recovery of the \spot feature. 
 In general, as the SNR decreases further, the features begin to blur out, especially south of about $+30^\circ$ latitude, where features are more limb-darkened at this inclination and in view for a smaller fraction of the time.
 
-As the SNR incraeses, however, the quality of the \spot feature does not improve appreciably, since a SNR of 1,000 is more than sufficient to recover a $l_\mathrm{max} = 15$ band-limited map. 
+As the SNR increases, however, the quality of the \spot feature does not improve appreciably, since a SNR of 500 is sufficient to recover a $l_\mathrm{max} = 15$ band-limited map. 
 Interestingly, at constant spatial prior variance ($\boldsymbol{\Lambda}_\bvec{y} = 10^{-4}\bvec{I}$), the map quality actually begins to degrade with higher SNR south of the equator due to overfitting.
 To circumvent this, we decrease the prior variance by a factor of 10--100 for the highest SNR cases, which penalizes excessive complexity in the solution.
 
@@ -1396,6 +1397,7 @@ To circumvent this, we decrease the prior variance by a factor of 10--100 for th
         \caption{%
             Recovered \spot map as a function of SNR per resolution element. 
             The observed spectra are continuum-normalized and the rest frame spectrum is assumed to be known exactly.
+            The SNR=1,000 panel corresponds to the solution presented in Figure~\ref{fig:spot_infer_yb}.
         }
         \label{fig:snr}
     \end{centering}
@@ -1456,7 +1458,7 @@ This final template spectrum is shown as the blue curves in Figure~\ref{fig:luhm
 
 \citet{Crossfield2014} then employed the common technique of Least Squares Deconvolution \citep[LSD;][]{Donati1997} to transform each of the 14 spectra in Figure~\ref{fig:luhman16b:data_model} into a single high-SNR line spanning 35 pixels, which was used as the input to their Doppler imaging code, based on that of \citet{Vogt1987}.
 They discretized the stellar surface using 200 cells and solved for the optimal surface map with a maximum entropy prior as in \citet{Vogt1987}, assuming a fiducial inclination $i=70^\circ$ roughly based on the photometric rotation period and the inferred value of $v\sin i$; given the low SNR of the dataset, they were unable to place meaningful constraints on $i$.
-We reproduce their resulting surface brightness map in the right panel of Figure~\ref{fig:luhman16b:maps}, seen at six different phases spanning a full rotation.
+We show their resulting surface brightness map in the right panel of Figure~\ref{fig:luhman16b:maps}, seen at six different phases spanning a full rotation.
 
 \begin{figure}[p!]
     \begin{centering}
@@ -1610,26 +1612,7 @@ Our choice for prior covariance in \S\ref{sec:spotstar}, namely $\boldsymbol{\La
 Increasing this value will in general lead to solutions with more structure on all scales; decreasing it will favor more homogeneous maps.
 This may be an acceptable prior if truly nothing is known about the typical angular scale of features on the surface, but this is seldom the case.
 Both observations of the Sun and magnetohydrodynamic simulations of stellar magnetic fields give us prior constraints on the typical scales of starspots \citep[e.g.,][]{Berdyugina2005,Solanki2006}, and climate models of brown dwarfs tell us about typical sizes of clouds and other atmospheric features \citep[e.g.,][]{Tan2019,Tan2020,Tan2021a,Tan2021b}.
-These can be encoded into our Gaussian prior by choosing a prior variance that scales with spherical harmonic degree:
-%
-\begin{align}
-    \boldsymbol{\Lambda}_\bvec{y} = 
-    \begin{pmatrix}
-        \sigma_0^2 & & & & & & & & & \\[-0.5em]
-        & \sigma_1^2 & & & & & & & & \\[-0.5em]
-        & & \sigma_1^2 & & & & & & & \\[-0.5em]
-        & & & \sigma_1^2 & & & & & & \\[-0.5em]
-        & & & & \sigma_2^2 & & & & & \\[-0.5em]
-        & & & & & \sigma_2^2 & & & & \\[-0.5em]
-        & & & & & & \sigma_2^2 & & & \\[-0.5em]
-        & & & & & & & \sigma_2^2 & & \\[-0.5em]
-        & & & & & & & & \sigma_2^2 & \\[-0.5em]
-        & & & & & & & & & \ddots
-    \end{pmatrix}
-    \quad,
-\end{align}
-%
-where the variance at each degree is parametrized as, e.g.,
+These can be encoded into our Gaussian prior by choosing a prior variance that scales with spherical harmonic degree, as in Equation~(\ref{eq:isotropicprior}), where the variance at each degree is parametrized as, e.g.,
 %
 \begin{align}
     \label{eq:powerspec}
@@ -1677,7 +1660,7 @@ In the limit of finite SNR, and when things like the true stellar spectrum, the 
 The maps of Luhman 16B presented in Figure~\ref{fig:luhman16b:maps}, for instance, are just that: point estimates that carry no sense of the uncertainty associated with any of those features.
 Given the low SNR of the dataset (Figure~\ref{fig:luhman16b:data_model}), the unknown inclination of the star, and the uncertainty in parameters like the rotation period, $v\sin i$, and the limb darkening profile, the maps shown in Figure~\ref{fig:luhman16b:maps} are almost certainly \emph{not} what Luhman 16B actually looks like in reality.
 The fact that we obtained a solution that is qualitatively similar to that of \citet{Crossfield2014} is encouraging, but it is not sufficient.
-Doppler imaging studies are notorious at producing features that are artificially elongated in latitude, just like the dark spot seen in the figure \citep[see, e.g.,][]{Unruh1995}.
+Doppler imaging studies are notorious for producing features that are artificially elongated in latitude, just like the dark spot seen in the figure \citep[see, e.g.,][]{Unruh1995}.
 The Doppler imaging method is also less sensitive to azimuthally symmetric features, like the zonal bands that may be present on brown dwarfs as on Jupiter.
 Effects like these can bias the point estimates obtained in Doppler imaging studies, but they \emph{can} be captured if one fully propagates uncertainties to the final result.
 This requires computing the posterior distribution of the model parameters (including the parametrization of the surface map), which is absolutely critical when one wishes to \emph{interpret} a Doppler map.

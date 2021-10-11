@@ -83,5 +83,5 @@ for t in range(nt - 1):
     ax[t, 0].axis("off")
 
 ax[0, 1].set_title("spectrum", y=1.4)
-ax[0, 2].set_title("residuals", y=1.4)
+ax[0, 2].set_title("difference", y=1.4)
 fig.savefig("spot.pdf", bbox_inches="tight", dpi=300)
