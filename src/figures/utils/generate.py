@@ -1,5 +1,9 @@
 import numpy as np
 import starry
+from pathlib import Path
+
+
+STATIC = Path(__file__).absolute().parents[2] / "static"
 
 
 def generate_data(
@@ -15,7 +19,7 @@ def generate_data(
     wav=np.linspace(642.85, 643.15, 70),
     wav0=np.linspace(642.74, 643.26, 300),
     seed=0,
-    image="spot",
+    image=str(STATIC / "spot.png"),
     **kwargs
 ):
     # Set the seed
