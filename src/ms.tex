@@ -1084,6 +1084,9 @@ where $\boldsymbol{\mathbb{S}}$ is the $(K' \times J)$ matrix whose columns are 
 The model remains linear in both the spherical harmonic coefficients and the spectral components, and the procedures outlined in \S\ref{sec:inverse} may still be followed to solve the inverse problem, provided we unroll these matrices into vectors, letting $\mathbf{s} = \mathrm{vec}(\boldsymbol{\mathbb{S}})$ and $\mathbf{y} = \mathrm{vec}(\boldsymbol{\mathbb{Y}})$.
 We present an example of inference on a two-component stellar spectrum in \S\ref{sec:twospec} below.
 
+% HACK
+\pagebreak
+
 \section{Application to a spotted star}
 \label{sec:spotstar}
 
@@ -1734,7 +1737,17 @@ Both the derivation and application of our model make several assumptions, many 
 
 All of the assumptions listed above relate to our \emph{forward} model (\S\ref{sec:linear}).
 Throughout the paper, we make several additional assumptions when solving the \emph{inverse} problem, that is, solving for the map and/or spectrum given a dataset.
+None of these assumptions are necessary for the application of our model to other datasets, but we include them here for completeness:
 
+\begin{itemize}
+    \item We assume the data are correctly calibrated and free of significant outliers, and that the noise model (e.g., Gaussian errors with known standard deviation) is known.
+    \item We assume there are either no telluric lines, or that these have been removed in a pre-processing step.
+    These may also be modeled simultaneously, but that is beyond the scope of the present work.
+    \item We assume the SNR of the data is high enough that the maximum \emph{a posteriori} solution to the surface map is meaningful.
+    In general, however, we stress the importance of performing posterior inference to constrain the uncertainties and one's degree of confidence in the solution.
+    \item In all of our examples, we assume the stellar rotation period and inclination are known exactly.
+    In practice, this is rarely ever the case, and one should optimize for (or, ideall, sample over) these variables.
+\end{itemize}
 
 \subsection{Limitations and future work}
 \label{sec:discussion:caveats}
@@ -1824,10 +1837,9 @@ Each panel shows a full spectral-temporal dataset sampled from this GP, where in
 The main application of our GP, of course, will not be for drawing samples, but for doing inference. 
 In particular, we expect this GP to be useful for extreme precision radial velocity (EPRV) planet searches, which must contend with stellar variability signals that are often orders of magnitude stronger than the planetary signals of interest.
 Our GP can be used as a principled, physically-motivated way to marginalize over the stellar signal to robustly detect the Keplerian signal of an orbiting planet.
+It is even straightforward to account for time variability in the stellar surface with this formalism. \citet{Luger2021b} discussed how to incorporate a stochastic time-variable component into the photometric variability GP, which can be directly incorporated into Equation~(\ref{eq:discussion:gpcov}) via the inclusion of a decoherence timescale $\tau$ in the set of GP hyperparameters $\boldsymbol{\theta}$.
 
 The next paper in the \emph{Mapping Stellar Surfaces} series will focus on further development of this GP, including accounting for uncertainty in the spectral template, accounting for the nonlinearity introduced by the continuum normalization, marginalizing over unknowns such as the inclination and limb darkening parameters, and rigorously testing the formalism on both synthetic and real datasets.
-
-\xxx{TEMPORAL VARIABILITY}
 
 \section{Implementation in \starry}
 \label{sec:starry}
