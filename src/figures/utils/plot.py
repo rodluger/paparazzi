@@ -109,6 +109,8 @@ def plot_maps(
     fig, ax = plt.subplots(nrows, figsize=figsize)
     fig.subplots_adjust(hspace=0.3)
     norm01 = Normalize(vmin=0, vmax=1)
+    for axis in ax:
+        axis.set_rasterization_zorder(0)
 
     # Instantiate a map
     ydeg = int(np.sqrt(len(y_true)) - 1)

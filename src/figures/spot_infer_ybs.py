@@ -53,7 +53,7 @@ spectrum_uncert = (np.sqrt(np.diag(L @ L.T)) @ M).reshape(-1)
 
 # Plot the maps
 fig = plot_maps(y_true, y_inferred, y_uncert)
-fig.savefig("spot_infer_ybs_maps.pdf", bbox_inches="tight", dpi=300)
+fig.savefig("spot_infer_ybs_maps.pdf", bbox_inches="tight", dpi=150)
 
 # Plot the spectra
 fig = plot_spectra(

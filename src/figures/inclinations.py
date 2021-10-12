@@ -38,6 +38,7 @@ ax[0, 1].annotate(
     color="k",
     zorder=101,
 )
+ax[0, 1].set_rasterization_zorder(0)
 
 # Solve & plot
 ax = ax[1:].flatten()
@@ -94,4 +95,5 @@ for i, inc in enumerate(incs):
         color="k",
         zorder=101,
     )
-fig.savefig("inclinations.pdf", bbox_inches="tight")
+    ax[i].set_rasterization_zorder(0)
+fig.savefig("inclinations.pdf", bbox_inches="tight", dpi=100)

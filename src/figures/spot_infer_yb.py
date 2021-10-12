@@ -46,7 +46,7 @@ y_uncert = Q @ np.sqrt(np.diag(W @ W.T))
 
 # Plot the maps
 fig = plot_maps(y_true, y_inferred, y_uncert)
-fig.savefig("spot_infer_yb_maps.pdf", bbox_inches="tight", dpi=300)
+fig.savefig("spot_infer_yb_maps.pdf", bbox_inches="tight", dpi=150)
 
 # Plot the timeseries
 fig = plot_timeseries(

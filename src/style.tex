@@ -8,6 +8,12 @@
 \usepackage{tipa}
 \usepackage{booktabs}
 
+% Typography
+\frenchspacing
+\raggedbottom
+
+% Manually hack order of bib entries
+\newcommand{\noop}[1]{}
 
 % Shorthand for this paper
 \newcommand{\starry}{\textsf{starry}\xspace}
@@ -20,7 +26,6 @@
 \newcommand{\imag}{{\ensuremath{\mathbb{i}}}}
 \renewcommand{\quad}{\hskip 0.33em}
 \newcommand{\quadquad}{\quad\quad\quad\quad}
-
 \newcommand{\R}{\bvec{R}}
 \newcommand{\AOne}{\bvec{A_1}}
 \newcommand{\alm}{\bvec{a}}
@@ -41,41 +46,3 @@
 \newcommand{\almt}{\ensuremath{\bvec{a}}}
 \newcommand{\lnlam}{\mbox{\textipa{\textcrlambda}}}
 \newcommand{\fnorm}{\tilde{\bvec{f}\hspace{0.2em}}}
-
-
-% Algorithms
-\usepackage{algcompatible}
-\usepackage{newfloat}
-\usepackage{etoolbox}
-\let\singlespace\undefined
-\let\doublespace\undefined
-\usepackage{setspace}
-\usepackage{bold-extra}
-
-\DeclareFloatingEnvironment[
-    fileext=loa,
-    listname=List of Algorithms,
-    name=Algorithm,
-    placement=tbhp,
-]{algorithm}
-\algnewcommand\algorithmicfunction{\texttt{\textbf{function}}}
-\makeatletter
-\algdef{SE}[FUNCTION]{FUNCTION}{ENDFUNCTION}%
-   [2][default]{\algorithmicfunction\ \texttt{\textbf{#2}}\ \ALG@compatcomm{#1}}%
-   {\algorithmicend\ \algorithmicfunction}%
-\newcommand{\RETURN}[1]{\STATE \texttt{\textbf{return}}\ #1}
-\makeatother
-
-\newsavebox{\fminipagebox}
-\NewDocumentEnvironment{fminipage}{m O{\fboxsep}}
- {\par\kern#2\noindent\begin{lrbox}{\fminipagebox}
-  \begin{minipage}{#1}\ignorespaces}
- {\end{minipage}\end{lrbox}%
-  \makebox[#1]{%
-    \kern\dimexpr-\fboxsep-\fboxrule\relax
-    \fbox{\usebox{\fminipagebox}}%
-    \kern\dimexpr-\fboxsep-\fboxrule\relax
-  }\par\kern#2
- }
-
- \algrenewcommand\algorithmicindent{2.5em}%

@@ -255,4 +255,4 @@ for n in range(nt):
     axins.set_aspect(1)
     axins.axis("off")
 
-fig.savefig("linalg.pdf", bbox_inches="tight", dpi=300)
+fig.savefig("linalg.pdf", bbox_inches="tight", dpi=150)

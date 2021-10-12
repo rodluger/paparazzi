@@ -41,15 +41,22 @@
 \affil{Center~for~Computational~Astrophysics, Flatiron~Institute, New~York, NY}
 
 \begin{abstract}
-    We derive a novel, efficient, and closed form solution to the problem of Doppler imaging of stellar surfaces from high resolution spectral timeseries datasets.
     %
-    Our model for the observed spectrum is linear in the parameters describing the specific intensity distribution on the surface, which makes the posterior distribution over surface maps computationally trivial to evaluate under certain choices of priors.
+    The study of stellar surfaces can reveal information about the chemical composition, interior structure, and magnetic properties of stars.
+    It is also critical to the detection and characterization of extrasolar planets, in particular those targeted in extreme precision radial velocity (EPRV) searches, which must contend with stellar variability that is often orders of magnitude stronger than the planetary signal.
     %
-    Our model is also linear in the local (rest frame) stellar spectrum, which may itself be spatially variable; this allows one to perform Doppler imaging with limited knowledge of the local stellar spectrum and therefore works on blended lines, regions of the spectrum where line formation mechanisms are not well understood, or stars whose spots have intrinsically different spectra from the rest of the photosphere.
+    One of the most successful methods to map the surfaces of stars is Doppler imaging, in which the presence of inhomogeneities is inferred from subtle line shape changes in high resolution stellar spectra.
+    %
+    \textbf{In this paper, we present a novel, efficient, and closed-form solution to the problem of Doppler imaging of stellar surfaces.}
+    %
+    Our model explicitly allows for incomplete knowledge of the local (rest frame) stellar spectrum, allowing one to learn differences from spectral templates while simultaneously mapping the stellar surface. 
+    It therefore works on blended lines, regions of the spectrum where line formation mechanisms are not well understood, or stars whose spots have intrinsically different spectra from the rest of the photosphere.
     %
     We implement the model within the open source \starry stellar modeling framework, making it fast, differentiable, and easy to use in both optimization and posterior inference settings.
     %
-    As a proof-of-concept, we use our model to infer the surface map of the brown dwarf Luhman 16B, finding close agreement with the solution of \citet{Crossfield2014}.
+    As a proof-of-concept, we use our model to infer the surface map of the brown dwarf WISE 1049-5319B, finding close agreement with the solution of \citet{Crossfield2014}.
+    %
+    We also discuss Doppler imaging in the context of EPRV studies and describe an interpretable spectral-temporal Gaussian process for stellar spectral variability that we expect will be important for EPRV exoplanet searches.
     %
     This paper was prepared using the \showyourwork scientific article workflow, which exposes the data, source code, and package dependencies for all of the paper's figures, allowing readers to reproduce the results in this paper exactly and with minimal effort.
 \end{abstract}
@@ -70,41 +77,41 @@ However, the vast majority of Doppler imaging studies produce \emph{point estima
 In all but the simplest cases, maximum likelihood estimators are biased \citep[e.g.,][]{Lehman1998}, meaning any attempt to understand these estimates in bulk is prone to significant bias \citep[see, e.g.,][]{Hogg2010}.
 This problem is compounded by four factors.
 
-First, Doppler imaging is usually an ill-posed problem, meaning there is no unique solution for the surface map given a spectroscopic dataset.
+\textbf{First}, Doppler imaging is usually an ill-posed problem, meaning there is no unique solution for the surface map given a spectroscopic dataset.
 This issue is typically well understood \citep[e.g.,][]{Piskunov1990,Rice2002}, and most studies circumvent this issue by employing restrictive priors to ensure the uniqueness of the solution. 
 These include maximum entropy regularization \citep{Vogt1987} and Tikhonov regularization \citep[e.g.,][]{Piskunov1990}, which typically enforce sparsity and smoothness in the solution, respectively.
 However, while useful for obtaining a maximum likelihood solution, both choices can lead to significant bias in the inferred map, as they can both suppress features and introduce spurious artifacts.
 In fact, a recent comparison of Doppler imaging, photometric light curve inversion, and interferometry revealed qualitatively diffferent maps of the the same star \citep{Roettenbacher2017}, due to the various degeneracies afflicting each method.
 %
-Second, the Doppler imaging technique is generally more sensitive to longitudinal than latitudinal variations, often leading to spurious, latititudinally elongated features in the maximum likelihood solution \citep[e.g.,][]{Unruh1995,Crossfield2014b}.
+\textbf{Second}, the Doppler imaging technique is generally more sensitive to longitudinal than latitudinal variations, often leading to spurious, latititudinally elongated features in the maximum likelihood solution \citep[e.g.,][]{Unruh1995,Crossfield2014b}.
 %
-Third, the Doppler imaging technique requires the availability of accurate spectral templates for the local rest frame spectrum of the star.
-Several studies have shown that errors in these templates or the presence of unresolved line blends in the observed spectrum can introduce signficant artifacts in the map solution \citep[e.g.,][]{Rice1989,Unruh1995}.
+\textbf{Third}, the Doppler imaging technique requires the availability of accurate spectral templates for the local rest frame spectrum of the star.
+Several studies have shown that errors in line templates or the presence of unresolved line blends in the observed spectrum can introduce signficant artifacts in the map solution \citep[e.g.,][]{Rice1989,Unruh1995}.
 Moreover, changes in the local spectrum over the surface of the star (such as different line depths or the presence of different absorption lines within spots) can similarly bias the inferred map if these are not properly modeled.
 While some past studies have solved for variations in the local line profiles \citep{Khokhlova1976,Goncharskii1977,Goncharskii1982}, these usually make the assumption that the intensity variation is small across the surface of the star; that is, they do not simultaneously solve for the Doppler map of the surface brightness variations.
 %
-Fourth, and finally, Doppler imaging results reported in the literature use a variety of custom data analysis codes, most of which are not open source 
+\textbf{Fourth}, and finally, Doppler imaging results reported in the literature use a variety of custom data analysis codes, most of which are not open source 
 \citep[][to name a few]{Collier1997,Hackman2001,Carroll2012,Rosen2015,AsensioRamos2021}; % DOTS, INVERS7-PD, iMAP, INVERSLSD, ??
 many studies also utilize data that is often not included in the resulting publication or made easily available online. 
 This makes it difficult to reproduce results and compare Doppler images of different stars on the same footing. 
 As argued above, detailed choices in a Doppler imaging analysis will have a significant effect on the reported point-estimate result, so this inability to compare uniformly analyzed observations is a significant hindrance to interpretation.
 
-In this paper, the third in a series dedicated to mapping stellar surfaces \citep{Luger2021a,Luger2021b}, we seek to address these issues by developing a novel algorithm for Doppler imaging.
+In this paper, the third in a series dedicated to mapping stellar surfaces \citep{Luger2021a,Luger2021b}, we develop a novel algorithm for Doppler imaging that addresses each of these issues.
 The various pitfalls of Doppler imaging outlined above necessitate an algorithm that is efficient enough to be used in a Bayesian posterior inference context, where one can formally address the degeneracies at play and quantify their effect on the uncertainties of the inferred stellar maps.
 They also necessitate an algorithm that is flexible, capable of learning deviations from the template or capturing spatial variations in the rest-frame spectrum.
-And most of all, they necessitate a user-friendly, well-documented, and open source implementation, which is sorely lacking the literature.
-Our algorithm addresses these various issues by building on the work of \citet{Luger2019}, who derived analytic solutions to the light curve mapping problem by expanding the stellar surface map in the spherical harmonic basis.
+And most of all, they necessitate a user-friendly, well-documented, and open source implementation, which is currently lacking the literature.
+Our algorithm addresses these various issues by building on our previous work \citep{Luger2019}, where we derived analytic solutions to the light curve mapping problem by expanding the stellar surface map in the spherical harmonic basis.
 While spherical harmonics are routinely used in Doppler imaging problems \citep{Deutsch1958,Deutsch1970,Falk1974,Donati2006,Kochukhov2014}, we present a new closed-form solution to the forward model for Doppler imaging when working in this basis, making our model both precise and computationally efficient.
 We also expose a fundamental linearity of the model in terms of both the surface map and the rest frame spectrum, allowing us to learn both using a fast bilinear solver.
 Finally, we implement our algorithm within the open source \starry code package with accompanying documentation, examples, and tutorials.\footnote{\url{https://github.com/rodluger/starry}}
 All of the figures in this paper are also open source; clickable \GitHubIconBlue icons next to each figure link to the exact version of the \texttt{Python} script used to generate them.
 To ensure the full reproducibility of this paper, we prepared it using the \showyourwork workflow\footnote{\url{https://github.com/rodluger/showyourwork}}, which exposes the datasets, source code, and all package dependencies needed to exactly reproduce the results.
 
-The paper is organized as follows: in \S\ref{sec:the_problem}~and~\S\ref{sec:the_solution} we introduce the math behind the Doppler imaging problem and derive a closed form expression for the model. 
-In \S\ref{sec:linear},~\S\ref{sec:inverse},~and~\S\ref{sec:bellswhistles} we demonstrate how to re-express the model as a linear operation on the input spectrum and stellar map and derive closed form expressions for the two conditioned on the data and priors.
-In \S\ref{sec:spotstar} we apply our techniques to a mock problem, and in \S\ref{sec:luhman16b} we apply it to a real spectral dataset of the brown dwarf Luhman 16B.
-We further discuss our results in \S\ref{sec:discussion}~and~our implementation within the \starry framework in \S\ref{sec:starry}.
-We present a summary of the paper in \S\ref{sec:conclusions}. 
+The paper is organized as follows: in \S\ref{sec:the_problem}~and~\S\ref{sec:the_solution} we introduce the math behind the Doppler imaging problem and derive a closed-form expression for the model. 
+In \S\ref{sec:linear},~\S\ref{sec:inverse},~and~\S\ref{sec:bellswhistles} we demonstrate how to re-express the model as a linear operation on the input spectrum and stellar map and derive closed-form expressions for the two conditioned on the data and priors.
+In \S\ref{sec:spotstar} we apply our techniques to a mock problem, and in \S\ref{sec:luhman16b} we apply it to a real spectral dataset of the brown dwarf WISE 1049-5319B.
+We further discuss our results in \S\ref{sec:discussion}, and in \S\ref{sec:gp} we focus on an immediate extension of our work: the development of an interpretable spectral-temporal Gaussian process for stellar spectral variability.
+Finally, we discuss the implementation of our Doppler imaging algorithm within the \starry framework in \S\ref{sec:starry}, and present a summary of the paper in \S\ref{sec:conclusions}. 
 
 \section{The problem}
 \label{sec:the_problem}
@@ -438,6 +445,8 @@ We show the residuals in the lower panel, where it is clear that as the number o
             The problem setup is the same as that in Figure~\ref{fig:spot}. 
             The bottom panel shows the absolute value of the difference between the two spectra for different number of grid points in the numerical solution.
             As the number of grid points increases, the numerical solution approaches our solution.
+            Note that here we assume the stellar surface can be expressed exactly as an $l_\mathrm{max} = 20$ spherical harmonic decomposition.
+            When our algorithm is applied to real data, there will be errors due to the truncation of the expansion at finite spherical harmonic degree.
         }
         \label{fig:compare}
     \end{centering}
@@ -898,8 +907,8 @@ However, when solving for the spherical harmonic vector given the spectrum (\ref
     \quad.
 \end{align}
 %
-Unfortunately, this equation does not admit a closed form solution for $\mathbf{y}$. 
-One can, however, still solve for the maximum a posteriori value of $\mathbf{y}$ in an efficient manner by iteratively solving for the baseline and then for the spherical harmonic coefficients.
+Unfortunately, this equation does not admit a closed-form solution for $\mathbf{y}$. 
+One can, however, still solve for the maximum \emph{a posteriori} value of $\mathbf{y}$ in an efficient manner by iteratively solving for the baseline and then for the spherical harmonic coefficients.
 We describe a procedure for this in \S\ref{sec:spotstar} below.
 
 \subsection{Limb darkening}
@@ -1149,7 +1158,7 @@ In the following sections we discuss various approaches to solving the Doppler i
 Unless otherwise noted, in all experiments we adopt a Gaussian prior for the spherical harmonic coefficients $\bvec{y}$ with mean $\boldsymbol{\mu}_\bvec{y} = \left(1 \quad\quad \bvec{0}\right)$ and covariance $\boldsymbol{\Lambda}_\bvec{y} = 10^{-4} \bvec{I}$, corresponding to a flat power spectrum prior.
 When solving for the rest frame spectrum, we also place a Gaussian prior on $\bvec{s}$ with unit mean and covariance $\boldsymbol{\Lambda}_\bvec{s} = 10^{-3}\bvec{I}$.
 These choices are arbitrary and primarily based on trial-and-error given knowledge of the true solutions.
-We discuss strategies for choosing optimal priors for real datasets in \S\ref{sec:discussion:priors} below.
+We discuss strategies for choosing priors for real datasets in \S\ref{sec:discussion:priors} below.
 
 \subsection{Known baseline and spectrum}
 \label{sec:spot_y1}
@@ -1363,8 +1372,11 @@ We further place a Gaussian process (GP) prior on the spectra to enforce smoothn
 %
 We also solve for a single scale parameter $r \sim \mathrm{Uniform}(0, 0.75)$, equal to the ratio of the continuum levels of the two spectra (whose true value is 0.5).
 Finally, in order to enforce that the two component surface maps sum to unity (as described above), we optimize for the actual \emph{pixel} intensities of the photosphere map, on which we place a simple uniform prior on $[0, 1]$; the spot map is then simply the complement.
-The spherical harmonic coefficients are then computed via a fast, linear spherical harmonic transform (SHT) operation at each step, as in \citep{Bartolic2021}.
-In order to satisfy the Nyquist criterion, our pixel grid consists of twice as many pixels as spherical harmonic coefficients.
+The spherical harmonic coefficients are then computed via a fast, linear spherical harmonic transform (SHT) operation at each step, as in \citet{Bartolic2021}.
+In order to satisfy the Nyquist criterion, our pixel grid consists of twice as many pixels as spherical harmonic coefficients.%
+\footnote{%
+While it may seem strange to return to a discretized parametrization of the surface---after all the work we did to derive a closed-form solution in the spherical harmonic basis---our approach capitalizes on the strengths of both parametrizations: the ease of incorporating a nonnegativity prior in the pixel basis and the efficiency with which we can compute the model in the spherical harmonic basis.
+Thanks to the linear relationship between these two bases, the transformation between them accrues virtually no overhead.}
 
 We initialize our two maps with uniform intensities and initialize our two spectra at unity, with small random negative deviations to break the symmetry.
 We then take 20,000 steps of the optimizer with a learning rate of $10^{-2}$.
@@ -1435,18 +1447,18 @@ At an inclination of $80^\circ$ the spots are recovered fairly well, but never w
 These results are broadly consistent with those of \citet{Vogt1987}.
 
 
-\section{Application to Luhman 16B}
+\section{Application to WISE 1049-5319B}
 \label{sec:luhman16b}
 %
 
-Having shown that our model performs well on synthetic data, we now turn to a real dataset: the VLT/CRIRES observations of Luhman 16B (WISE 1049-5319B) presented in the Doppler imaging study of \citet{Crossfield2014}.
-Luhman 16B belongs to a binary brown dwarf system, which, at a distance of 2 pc, consists of the two closest known brown dwarfs to the Solar system.
-Despite its proximity, Luhman 16B is intrinsically dim and, with a projected rotational velocity $v \sin i = 26.1$ km/s, is at the slow end of what can be imaged using the traditional Doppler imaging technique.
-Therefore, unlike those of classical Doppler imaging targets, the spectral lines of Luhman 16B do not individually show large scale spot modulation (Figure~\ref{fig:spot}) from one epoch to the next; nor are the spectral templates for brown dwarfs particularly well understood.
-Nonetheless, we chose to model Luhman 16B specifically to show the power behind our new methodology, in particular its ability to learn both the surface map and the rest frame spectrum simultaneously from the entire dataset---not just from unblended spectral lines that have reliable templates.
+Having shown that our model performs well on synthetic data, we now turn to a real dataset: the VLT/CRIRES observations of WISE 1049-5319B (Luhman 16B) presented in the Doppler imaging study of \citet{Crossfield2014}.
+WISE 1049-5319B belongs to a binary brown dwarf system, which, at a distance of 2 pc, consists of the two closest known brown dwarfs to the Solar system.
+Despite its proximity, WISE 1049-5319B is intrinsically dim and, with a projected rotational velocity $v \sin i = 26.1$ km/s, is at the slow end of what can be imaged using the traditional Doppler imaging technique.
+Therefore, unlike those of classical Doppler imaging targets, the spectral lines of WISE 1049-5319B do not individually show large scale spot modulation (Figure~\ref{fig:spot}) from one epoch to the next; nor are the spectral templates for brown dwarfs particularly well understood.
+Nonetheless, we chose to model WISE 1049-5319B specifically to show the power behind our new methodology, in particular its ability to learn both the surface map and the rest frame spectrum simultaneously from the entire dataset---not just from unblended spectral lines that have reliable templates.
 
 In the original Doppler imaging study of this target, \citet{Crossfield2014} took 56 spectra of each object (the angular resolution was high enough to obtain individual spectra of both brown dwarfs) over the four CRIRES detectors in the range $2.288-2.345 \mu$m over a time span of 5 hours, with individual exposures of 300 s.
-The 5 hour baseline was enough to capture one full rotation of Luhman 16B, whose period was constrained to be about 4.9 hours from its photometric variability \citep{Gillon2013}.
+The 5 hour baseline was enough to capture one full rotation of WISE 1049-5319B, whose period was constrained to be about 4.9 hours from its photometric variability \citep{Gillon2013}.
 These spectra were then downbinned to 14 epochs to boost the SNR, corrected for tellurics and spectrograph systematics, and continuum-normalized.
 Each of the 14 spectra consist of 1,024 intensity measurements in each of 4 detectors, for a total of $57,344$ data points.
 For more details on the data reduction, refer to \citet{Crossfield2014}.
@@ -1454,7 +1466,7 @@ For more details on the data reduction, refer to \citet{Crossfield2014}.
 The black points in Figure~\ref{fig:luhman16b:data_model} show the exact dataset used in the Doppler imaging analysis of \citet{Crossfield2014}, except for the fact that we masked additional outliers at $>4\sigma$ (identified by subtracting a version of the spectrum smoothed on a lengthscale of 20 pixels) as well as regions of the spectrum that had been visibly overcorrected for tellurics.
 This figure shows the same data as the lower panel of Extended Data Figure 2 in \citet{Crossfield2014}.
 
-In order to produce Doppler images of Luhman 16B, \citet{Crossfield2014} used brown dwarf template spectra from the BT-Settl library \citep{Allard2013}, finding that the spectrum with $\log_{10} g = 5.0$ and $T_\mathrm{eff} = 1450$ K provided the best match to the dataset.
+In order to produce Doppler images of WISE 1049-5319B, \citet{Crossfield2014} used brown dwarf template spectra from the BT-Settl library \citep{Allard2013}, finding that the spectrum with $\log_{10} g = 5.0$ and $T_\mathrm{eff} = 1450$ K provided the best match to the dataset.
 This spectrum was then Doppler-shifted by the systemic radial velocity of the brown dwarf and broadened to match the spectrograph resolution.
 This final template spectrum is shown as the blue curves in Figure~\ref{fig:luhman16b:template_spectra}, where we again masked regions where data was discarded.
 
@@ -1466,7 +1478,7 @@ We show their resulting surface brightness map in the right panel of Figure~\ref
     \begin{centering}
         \includegraphics[width=\linewidth]{figures/luhman16b_data_model.pdf} % 
         \caption{%
-            Calibrated and tellurics-corrected CRIRES spectra of Luhman 16B from \citet{Crossfield2014} taken at 14 epochs spanning a full rotation of the brown dwarf (black points).
+            Calibrated and tellurics-corrected CRIRES spectra of WISE 1049-5319B from \citet{Crossfield2014} taken at 14 epochs spanning a full rotation of the brown dwarf (black points).
             Our maximum \emph{a posteriori} solution is shown as the orange curves.
         }
         \label{fig:luhman16b:data_model}
@@ -1498,7 +1510,7 @@ In total, our model has just over $4,000$ free parameters.
 As in \S\ref{sec:twospec}, our choice of parametrization and priors precludes the use of the fast bilinear approach outlined in \S\ref{sec:inverse}.
 We therefore follow the same approach as in \S\ref{sec:twospec}, optimizing our log-likelihood function using \texttt{Adam} with a learning rate of $10^{-3}$.
 Since we have a very good guess for the template spectrum, this optimization is much faster than in \S\ref{sec:twospec}, converging within $1,000$ steps.
-Because of our efficient gradient-based implementation (\S\ref{sec:starry}), the entire optimization takes only about 3 minutes of runtime on a typical Macbook laptop.
+Because of our efficient gradient-based implementation (\S\ref{sec:starry}), the entire optimization takes only about 3 minutes of runtime on a 2018 Macbook laptop.
 
 \begin{figure}[t!]
     \begin{centering}
@@ -1515,10 +1527,14 @@ Because of our efficient gradient-based implementation (\S\ref{sec:starry}), the
         \includegraphics[width=0.495\linewidth]{figures/luhman16b_map.pdf} % 
         \includegraphics[width=0.462\linewidth]{static/luhman16b_crossfield.png} % 
         \caption{%
-            Maximum \emph{a posteriori} surface maps of Luhman 16B inferred from the spectra in Figure~\ref{fig:luhman16b:data_model}. 
+            Maximum \emph{a posteriori} surface maps of WISE 1049-5319B inferred from the spectra in Figure~\ref{fig:luhman16b:data_model}. 
             \emph{Left:} surface map inferred using the algorithm developed in this work. 
             \emph{Right}: surface map inferred in \citet{Crossfield2014}, reproduced from Figure~2 in that paper.
-            We infer the presence of a bright circumpolar spot, as well as the presence of a few dark features, most of which agree with the map presented in the original work.
+            We infer the same two dominant features as in \citet{Crossfield2014b}:
+            a bright circumpolar spot, seen along the sub-observer meridian at $t = 0.0$ hr,
+            and a dark, latitudinally elongated band prominent at $t = 2.4$ hr.
+            While the exact latitude of the bright spot and the behaviour of the dark spot equatorward of $-30^\circ$ latitude differ betwee the two solutions, both are point estimates obtained under different choices of prior and from significantly different methods.
+            We take their qualitative agreement to be a successful validation of our method.
         }
         \label{fig:luhman16b:maps}
     \end{centering}
@@ -1531,7 +1547,7 @@ Since we used the \citet{Crossfield2014} template as a prior (blue curve), our s
 Nevertheless, we infer slightly different line depths for several of the lines at the level of a few percent; we also infer slightly different continuum levels in certain portions of the spectrum.
 Note, importantly, since we only performed an optimization (rather than full posterior inference), we cannot quantify the actual significance of these differences.
 
-The right panel of Figure~\ref{fig:luhman16b:maps} shows our principal result: the inferred solution for the surface brightness map of Luhman 16B; compare to the right panel, showing the solution inferred by \citet{Crossfield2014}.
+The right panel of Figure~\ref{fig:luhman16b:maps} shows our principal result: the inferred solution for the surface brightness map of WISE 1049-5319B; compare to the right panel, showing the solution inferred by \citet{Crossfield2014}.
 Broadly speaking, the two surface maps agree rather well: we infer the same circumpolar bright spot, of about the same size and at roughly the same phase, although the exact latitude is different.
 We also infer a similar dark feature on the ``back'' side of the object (visible near the sub-observer point at $t = 2.4$ hours).
 Bright equatorial regions also broadly match between both solutions.
@@ -1546,11 +1562,11 @@ These require a sampling scheme like MCMC (\S\ref{sec:discussion:priors}).
 \label{sec:discussion}
 %
 
-\subsection{Luhman 16B}
+\subsection{WISE 1049-5319B}
 \label{sec:discussion:luhman}
 
 In \S\ref{sec:luhman16b} we validated our novel approach by reproducing the results of \citet{Crossfield2014}. 
-Despite the fact that we obtained a qualitatively similar surface map for Luhman 16B (Figure~\ref{fig:luhman16b:maps}), there are several aspects to our approach that could be improved in future work. 
+Despite the fact that we obtained a qualitatively similar surface map for WISE 1049-5319B (Figure~\ref{fig:luhman16b:maps}), there are several aspects to our approach that could be improved in future work. 
 %
 First, we did not vary the inclination, but instead kept it fixed at the fiducial value $i = 70^\circ$ used in \citet{Crossfield2014}. 
 The authors of that study argued that the SNR of the dataset was too low to constrain the inclination, and that their surface maps did not qualitatively change by varying the inclination between $60^\circ$ and $90^\circ$, the range consistent with the joint knowledge of the rotation period and $v\sin i$. 
@@ -1636,12 +1652,12 @@ We discuss this in more detail in \S\ref{sec:discussion:priors:mcmc} below.
 \label{sec:discussion:priors:crossval}
 %
 The approach discussed above for choosing one's priors is distinctly Bayesian.
-Alternatively, one may choose a data-driven approach: to learn the optimal value of the priors from the data itself.
+Alternatively, one may take a data-driven approach: to learn the ``optimal'' value of the priors from the data itself.
 One common approach to this is \emph{cross-validation}, in which one's prior is optimized to yield the best predictive power for the data.
 Typically, cross-validation consists of choosing a specific value for the prior, masking one (``leave-one-out-cross-validation'') or several (``leave-p-out-cross-validation'') data points, optimizing the parameters of the model given this smaller dataset, then using the optimized model to predict the values of the missing data \citep[e.g.,][]{Stone1974}.
-The optimal value of the prior is then chosen as the one with the highest predictive power, i.e., the smallest loss when fitting the missing data points \citep[for an example of this, see \S 3.7 in][]{Luger2018}.
+The value of the prior is then chosen as the one with the highest predictive power, i.e., the smallest loss when fitting the missing data points \citep[for an example of this, see \S 3.7 in][]{Luger2018}.
 
-In this context, the prior is usually referred to as a ``regularization'' term, since this procedure is not exactly Bayesian. 
+In this context, the prior is usually referred to as a ``regularization'' term, since this procedure is decidedly not Bayesian.
 Specifically, it regularizes the model to ensure a balance between underfitting (the model doesn't fit the data well) and overfitting (the model fits the data so well that it's also fitting the noise, leading to spurious results).
 In addition to helping one choose the value for (say) the prior covariance on the surface map, cross-validation can be used to optimize most of the numerical choices one makes when fitting a dataset, such as the degree $l_\mathrm{max}$ of the spherical harmonic expansion (or, in a discrete basis, the number of pixels in the surface grid) and the number of map components (\S\ref{sec:twospec}).
 
@@ -1653,14 +1669,14 @@ In particular, in \S\ref{sec:luhman16b} we enforced a uniform prior in the range
 This encodes our seemingly trivial but surprisingly restrictive \citep[see][]{Fienup1982} belief that stellar intensities must be non-negative, which a Gaussian prior cannot do.
 Priors like this one break the analyticity of the MAP solution (\S\ref{sec:inverse}), but they can be especially important in the limit that the data is not sufficiently constraining.
 Traditionally, many Doppler imaging studies impose an additional \emph{maximum entropy} constraint \citep{Vogt1987}, whose objective is to ensure a similar balance between underfitting and overfitting as discussed above.
-These can also easily be incorporated into our formalism, although we recommend using a method such as cross-validation to choose the optimal regularization strength in this context.
+These can also easily be incorporated into our formalism, although we recommend using a method such as cross-validation to choose the regularization strength in this context.
 
 \subsubsection{Posterior sampling}
 \label{sec:discussion:priors:mcmc}
 %
 In the limit of finite SNR, and when things like the true stellar spectrum, the stellar inclination, and the limb darkening profile are not well known (which is usually the case in Doppler imaging studies!), it is important to recognize the limitation of point estimates like those obtained in this work.
-The maps of Luhman 16B presented in Figure~\ref{fig:luhman16b:maps}, for instance, are just that: point estimates that carry no sense of the uncertainty associated with any of those features.
-Given the low SNR of the dataset (Figure~\ref{fig:luhman16b:data_model}), the unknown inclination of the star, and the uncertainty in parameters like the rotation period, $v\sin i$, and the limb darkening profile, the maps shown in Figure~\ref{fig:luhman16b:maps} are almost certainly \emph{not} what Luhman 16B actually looks like in reality.
+The maps of WISE 1049-5319B presented in Figure~\ref{fig:luhman16b:maps}, for instance, are just that: point estimates that carry no sense of the uncertainty associated with any of those features.
+Given the low SNR of the dataset (Figure~\ref{fig:luhman16b:data_model}), the unknown inclination of the star, and the uncertainty in parameters like the rotation period, $v\sin i$, and the limb darkening profile, the maps shown in Figure~\ref{fig:luhman16b:maps} are almost certainly \emph{not} what WISE 1049-5319B actually looks like in reality.
 The fact that we obtained a solution that is qualitatively similar to that of \citet{Crossfield2014} is encouraging, but it is not sufficient.
 Doppler imaging studies are notorious for producing features that are artificially elongated in latitude, just like the dark spot seen in the figure \citep[see, e.g.,][]{Unruh1995}.
 The Doppler imaging method is also less sensitive to azimuthally symmetric features, like the zonal bands that may be present on brown dwarfs as on Jupiter.
@@ -1682,7 +1698,8 @@ When the input spectrum is unknown, the dimension of our problem can easily exce
 
 Fortunately, our model is computationally efficient to evaluate and, given its analyticity, trivial to differentiate using an autodifferentiation scheme (see \S\ref{sec:starry}).
 It can therefore be used out-of-the-box within gradient-based sampling schemes such as \texttt{pymc3} \citep{Salvatier2016}, in particular the No-U-Turn Sampler (NUTS), a variant of Hamiltonian Monte Carlo that harnesses gradient information to greatly speed up the convergence of the MCMC chains \citep[for a recent application of HMC in the context of spectroscopy, see][]{Kawahara2021}.
-The script used to infer the MAP solution for the map of Luhman 16B (see Figure~\ref{fig:luhman16b:maps}) uses \texttt{pymc3} to perform the optimization; extending it to perform posterior inference is straightforward.
+Our model may also be useful in the context of variational inference (VI), and in particular automatic differentiation variational inference \citep[ADVI;][]{Kucukelbir2016}, which casts posterior inference as an optimization problem; both VI and ADVI are also implemented in \texttt{pymc3}.
+The script used to infer the MAP solution for the map of WISE 1049-5319B (see Figure~\ref{fig:luhman16b:maps}) uses \texttt{pymc3} to perform the optimization; extending it to perform posterior inference is straightforward.
 However, doing so is beyond the scope of the present paper, given that this task is still likely to be challenging given the very large number of parameters (${\sim}4{,}000$). 
 We will therefore revisit this system in the context of posterior estimation in a future paper.
 
@@ -1690,7 +1707,34 @@ One final word regarding posterior inference: given that our end goal is often t
 An example of this is the model suggested in \S\ref{sec:discussion:priors:gaussian} above, where we express our prior covariance in terms of hyperparameters controlling the amplitude of the surface features and their typical lengthscale (Equation~\ref{eq:powerspec}) or in terms of the typical size, contrast, and latitude of spots \citep{Luger2021b,Luger2021d}.
 When the value of those hyperparameters is not known \emph{a priori}, we can include them as free variables in our model and perform MCMC to compute their marginal distribution (i.e., marginalized over everything else, including all possible surface maps that are consistent with the data).
 We can even imagine doing this in an ensemble setting under a fully hierarchical model, in which we attempt to constrain these properties from the analysis of many Doppler imaging datasets of different stars simultaneously.
-This procedure is likely computationally prohibitive, but the linearity of our model (\S\ref{sec:linear}) allows us to extend the Gaussian process formalism of \citet{Luger2021b} to Doppler imaging datasets, allowing us to marginalize over the surface maps consistent with the data \emph{analytically}; see \S\ref{sec:discussion:gp} below.
+This procedure is likely computationally prohibitive, but the linearity of our model (\S\ref{sec:linear}) allows us to extend the Gaussian process formalism of \citet{Luger2021b} to Doppler imaging datasets, allowing us to marginalize over the surface maps consistent with the data \emph{analytically}; see \S\ref{sec:gp} below.
+
+\subsection{Assumptions}
+\label{sec:discussion:assumptions}
+
+Both the derivation and application of our model make several assumptions, many of which we have already discussed. Nevertheless, we present a detailed list of these assumptions here for clarity:
+
+\begin{itemize}
+    \item We assume there is a well-defined stellar ``surface'', an effective layer from which the star emits its light. 
+    This is certainly an oversimplification, as stars are fundamentally three-dimensional objects with complex vertical temperature gradients.
+    \item We assume the emission is isotropic. 
+    We relax this assumption by allowing for limb darkening (\S\ref{sec:ld}), but this is treated as a suppression of flux toward the limb rather than by self-consistently solving the equations of radiative transfer.
+    \item We assume the radial velocity field of the stellar surface is a simple dipole, controlled only by the rigid body rotation of the star. This ignores effects like convective blueshift and differential rotation. We discuss incorporating these into our work in \S\ref{sec:discussion:caveats} below.
+    \item We assume the surface map is constant over time, and that all time variability comes from stellar rotation. 
+    We discuss modeling temporal surface variability in the context of a stochastic process in \S\ref{sec:gp} below.
+    \item We assume that the surface map may be well modeled by a spherical harmonic expansion truncated at some degree $l_\mathrm{max}$. 
+    The spherical harmonic basis is complete, meaning this assumption is rigorously correct in the limit  $l_\mathrm{max} \rightarrow \infty$.
+    In our experiments, we chose $l_\mathrm{max} = 10-20$, which allows us to model surface features on scales larger than about $18^\circ$ and $9^\circ$, respectively.
+    \item We assume the rest frame spectrum is defined on a grid with sufficiently high resolution that the convolution with the Doppler kernel may be approximated as a discrete linear convolution (Equation~\ref{eq:linear:convolution_def}).
+    \item In our base case (\S\ref{sec:the_solution}), we assume the star has a single rest frame spectrum, and that spatial changes are strictly changes in overall intensity. 
+    We relax this assumption in \S\ref{sec:eigen}, where we assume that variations in the spectrum with location can be expressed as the outer product of a set of $J$ spectral principal components $\boldsymbol{\mathbb{S}}$ and a set of $J$ spatial principal components $\boldsymbol{\mathbb{Y}}$.
+    If we choose $J = (l_\mathrm{max} + 1)^2$ (the number of spherical harmonic coefficients in the expansion of each component), this allows us to model \emph{any} spectral-spatial configuration on the surface of the star, band-limited to degree $l_\mathrm{max}$.
+    Truncation of this basis at smaller values of $J$ limits our ability to model arbitrary spatial variability in the spectrum.
+\end{itemize}
+
+All of the assumptions listed above relate to our \emph{forward} model (\S\ref{sec:linear}).
+Throughout the paper, we make several additional assumptions when solving the \emph{inverse} problem, that is, solving for the map and/or spectrum given a dataset.
+
 
 \subsection{Limitations and future work}
 \label{sec:discussion:caveats}
@@ -1703,7 +1747,7 @@ Similarly, the effect of convective blueshift on the velocity field can be model
 In the Appendix, we showed that in the absence of these effects, the curves $\mathcal{C}(\lnlam,\bvec{x})$ are straight lines, so the line integral in Equation~(\ref{eq:deconv:kT}) is trivial to solve.
 In the presence of differential rotation and convective blueshift, these curves become polynomials, making the integration trickier.
 While we were unable to find simple closed-form expressions for the resulting line integrals, they may still exist; we will investigate this in future work.
-Even if a closed form solution is unavailable, it is likely still possible to efficiently evaluate the integrals numerically.
+Even if a closed-form solution is unavailable, it is likely still possible to efficiently evaluate the integrals numerically.
 
 Another effect we do not presently model is stellar oblateness.
 Many of the Doppler imaging targets are massive stars, which tend to be fast-rotating and therefore oblate.
@@ -1724,15 +1768,15 @@ In a similar vein, our formalism assumes the data has been corrected for telluri
 This is typically done by removing a telluric model (based on a template spectrum) from the data in a pre-processing step \citep[as in][]{Crossfield2014}, but in the data-driven approach of this paper, they could also be learned from the data, similar to the approach in \citet{Bedell2019}.
 We will investigate this in future work.
 
-\subsection{A Spectral-Spatial-Temporal Gaussian Process}
-\label{sec:discussion:gp}
+\section{A Spectral-Temporal Gaussian Process}
+\label{sec:gp}
 
 %
 \begin{figure}[t!]
     \begin{centering}
         \includegraphics[width=\linewidth]{figures/gp.pdf}
         \caption{%
-            20 samples from a spectral-spatial-temporal Gaussian process constructed from the algorithm presented here.
+            20 samples from a spectral-temporal Gaussian process constructed from the algorithm presented here.
             Each panel shows a different sample, each of which consists of 16 epochs, offset vertically for visibility.
             The rest frame spectrum is the same as in Figure~\ref{fig:spot_setup} and the star is inclined at $i = 40^\circ$ with equatorial velocity $v = 50$ km/s.
             The star is assumed to have spots with radius $r = 15^\circ$, 25 percent contrast, and active latitude $\phi = 30^\circ \pm 5^\circ$.
@@ -1783,6 +1827,8 @@ Our GP can be used as a principled, physically-motivated way to marginalize over
 
 The next paper in the \emph{Mapping Stellar Surfaces} series will focus on further development of this GP, including accounting for uncertainty in the spectral template, accounting for the nonlinearity introduced by the continuum normalization, marginalizing over unknowns such as the inclination and limb darkening parameters, and rigorously testing the formalism on both synthetic and real datasets.
 
+\xxx{TEMPORAL VARIABILITY}
+
 \section{Implementation in \starry}
 \label{sec:starry}
 
@@ -1791,12 +1837,12 @@ All of the figures in this paper were generated via the Doppler imaging API in \
 The scripts used to generate them are available on GitHub\footnote{\url{https://github.com/rodluger/paparazzi}} and can be directly accessed via the GitHub icons next to each figure caption.
 These are well-commented and can be used as a starting point for other Doppler imaging projects.
 
-The algorithm is implemented using \texttt{theano} \citep{Bergstra2010}, a just-in-time compiling framework for \texttt{Python} with powerful autodifferentiation and optimization capabilities.
+The algorithm is implemented using \texttt{theano}/\texttt{aesara} \citep{Bergstra2010,Willard2021}, a just-in-time compiling framework for \texttt{Python} with powerful autodifferentiation and optimization capabilities.
 As such, the algorithm is fully differentiable and thus easy to use within gradient-based optimization and/or inference schemes such as Hamiltonian Monte Carlo.
 The analysis presented in Figures~\ref{fig:spot_infer_ybs} and \ref{fig:luhman16b:data_model}---\ref{fig:luhman16b:maps} harnesses this capability within the \texttt{pymc3} modeling framework; refer to the corresponding scripts for details.
 
 The implementation of the algorithm in \starry is highly optimized.
-Even though we derived the model for the flux as a purely linear operation on the spectral/spatial expansion of the stellar surface (Equation~\ref{eq:deconv:F}), it is more  efficient in practice to compute it as a convolution using the highly optimized \texttt{conv2d} operations in \texttt{theano}.
+Even though we derived the model for the flux as a purely linear operation on the spectral/spatial expansion of the stellar surface (Equation~\ref{eq:deconv:F}), it is more  efficient in practice to compute it as a convolution using the highly optimized \texttt{conv2d} operations in \texttt{theano}/\texttt{aesara}.
 Typical runtimes and scalings for the \starry algorithm are shown in Figure~\ref{fig:runtime}, where we plot the evaluation of the full forward model for all spectra in a dataset as a function of several parameters.
 %
 \begin{figure}[t!]
@@ -1835,7 +1881,7 @@ This is made computationally possible given our highly optimized \texttt{Python}
 By using the entire dataset and learning the template spectrum in regions where it is unavailable, we are able to maximize the information content of the inputs.
 Our approach therefore has potential applications to slow rotators, low signal-to-noise spectra, and spectra of objects, such as brown dwarfs and directly imaged exoplanets, whose templates are not well known \emph{a priori}.
 
-As a proof-of-concept, we qualitatively reproduced the Doppler map of the brown dwarf Luhman 16B (WISE 1049-5319B) inferred in \citet{Crossfield2014} from VLT/CRIRES observations; see Figure~\ref{fig:luhman16b:maps}.
+As a proof-of-concept, we qualitatively reproduced the Doppler map of the brown dwarf WISE 1049-5319B (Luhman 16B) inferred in \citet{Crossfield2014} from VLT/CRIRES observations; see Figure~\ref{fig:luhman16b:maps}.
 We also tested our model's ability to accurately infer the surface maps and rest frame spectra from synthetic high SNR spectral timeseries observations, even in the limit of minimally informative priors on both quantities. 
 Finally, we showed that we can infer the spectrum within spots when it is significantly different from that of the surrounding photosphere, again in the limit of high SNR and uninformative priors.
 
@@ -1846,12 +1892,12 @@ As we argued in \S\ref{sec:discussion:priors:mcmc}, this can lead to significant
 These biases are due to both the use of shrinkage priors (such as the commonly used maximum entropy constraint) and the fact that point estimates usually include spurious artifacts (like latititudinally elongated features) while suppressing certain surface modes (like azimuthally-symmetric features).
 To accurately infer spot properties from Doppler maps, one must treat the problem probabilistically, by explicitly marginalizing over unknown quantities to obtain a posterior \emph{distribution} over the quantities of interest.
 The model presented here, as well as its implementation in \starry, is easy to use in a posterior inference setting.
-In particular, our implementation harnesses the autodifferentation capabilities of the \texttt{theano} \citep{Bergstra2010} package within the \texttt{pymc3} \citep{Salvatier2016} probabilistic modeling framework, allowing for efficient posterior inference using Hamiltonian Monte Carlo (HMC) techniques.
+In particular, our implementation harnesses the autodifferentation capabilities of the \texttt{theano}/\texttt{aesara} \citep{Bergstra2010,Willard2021} package within the \texttt{pymc3} \citep{Salvatier2016} probabilistic modeling framework, allowing for efficient posterior inference using Hamiltonian Monte Carlo (HMC) techniques.
 We also present a sketch of how to incorporate our model into an interpretable, physically-motivated Gaussian process (GP) formalism for stellar spectroscopic timeseries datasets, a method that is highly relevant to extreme precision radial velocity (EPRV) searches for exoplanets. We will explore this application in more detail in the next paper in this series.
 
 While Doppler imaging has classically been used to infer the surfaces of giant or luminous pre-main sequence stars, the study of \citet{Crossfield2014} used the method to infer the first Doppler map of a brown dwarf, which we reproduced in this work.
 Future studies could help us understand the intricate atmospheric dynamics of brown dwarfs \citep{Tan2021a,Tan2021b}, as well as the global properties of exoplanets, which may be amenable to Doppler imaging given the advent of a new generation of extremely large ground-based telescopes \citep{Crossfield2014b}.
-A likely first target will be the directly-imaged giant planet $\beta$ Pictoris b, which is only an order of magnitude dimmer than Luhman 16B; \citet{Snellen2014} showed that future observations with the planned Extremely Large Telecope (ELT) should be able to produce a global map of its surface.
+A likely first target will be the directly-imaged giant planet $\beta$ Pictoris b, which is only an order of magnitude dimmer than WISE 1049-5319B; \citet{Snellen2014} showed that future observations with the planned Extremely Large Telecope (ELT) should be able to produce a global map of its surface.
 Given the expected low SNR of such observations and the considerable uncertainty in the rest-frame spectra of directly imaged exoplanets, an efficient, probabilistic Doppler imaging approach like the one developed in this work will be imperative to maximizing the scientific output of those studies.
 
 \vspace{1em}

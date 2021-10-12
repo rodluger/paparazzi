@@ -48,6 +48,7 @@ ax[0, 1].annotate(
     color="k",
     zorder=101,
 )
+ax[0, 1].set_rasterization_zorder(0)
 
 # Instantiate the map we'll use for inference
 map = starry.DopplerMap(lazy=False, **data["kwargs"])
@@ -82,4 +83,5 @@ for i, flux_err in enumerate(flux_errs):
         color="k",
         zorder=101,
     )
-fig.savefig("snr.pdf", bbox_inches="tight")
+    ax[i].set_rasterization_zorder(0)
+fig.savefig("snr.pdf", bbox_inches="tight", dpi=100)
