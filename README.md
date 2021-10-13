@@ -16,4 +16,4 @@
 </p>
 <br/>
 
-This is the repository for **Luger et al. (2021)**: *Mapping Stellar Surfaces III: A Bayesian Approach to Doppler Imaging*. The paper is autocompiled using the [showyourwork](https://github.com/rodluger/showyourwork) open source article workflow. Please click [here](https://github.com/rodluger/paparazzi/raw/main-pdf/ms.pdf) to read the latest draft of the paper.
+This is the repository for **Luger et al. (2021)**: *Mapping Stellar Surfaces III: An Efficient, Scalable, and Open-Source Doppler Imaging Model*. The paper is autocompiled using the [showyourwork](https://github.com/rodluger/showyourwork) open source article workflow. Please click [here](https://github.com/rodluger/paparazzi/raw/main-pdf/ms.pdf) to read the latest draft of the paper.
