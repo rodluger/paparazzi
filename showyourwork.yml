@@ -4,7 +4,9 @@ figure_dependencies:
     - utils/generate.py
 
   luhman16b.py:
-    - luhman16b.pickle
+    - luhman16b.pickle:
+        download:
+          id: 5534787
 
   snr.py:
     - utils/generate.py

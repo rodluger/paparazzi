@@ -19,3 +19,5 @@ jobs:
       - name: Build the article PDF
         id: build
         uses: ./showyourwork/showyourwork-action
+        env:
+          ZENODO_TOKEN: ${{ secrets.ZENODO_TOKEN }}
