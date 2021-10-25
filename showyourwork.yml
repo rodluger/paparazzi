@@ -1,34 +1,35 @@
-figure_dependencies:
+dependencies:
+  src/figures/inclinations.py:
+    - src/figures/utils/generate.py
 
-  inclinations.py:
-    - utils/generate.py
+  src/figures/luhman16b.py:
+    - src/figures/luhman16b.pickle:
 
-  luhman16b.py:
-    - luhman16b.pickle:
-        download:
-          id: 5534787
+  src/figures/snr.py:
+    - src/figures/utils/generate.py
 
-  snr.py:
-    - utils/generate.py
+  src/figures/spot_setup.py: 
+    - src/figures/utils/generate.py
+  
+  src/figures/spot_infer_y.py: 
+    - src/figures/utils/generate.py
+    - src/figures/utils/plot.py
+  
+  src/figures/spot_infer_yb.py: 
+    - src/figures/utils/generate.py
+    - src/figures/utils/plot.py
+  
+  src/figures/spot_infer_ybs.py: 
+    - src/figures/utils/generate.py
+    - src/figures/utils/plot.py
+  
+  src/figures/spot_infer_ybs_low_snr.py: 
+    - src/figures/utils/generate.py
+    - src/figures/utils/plot.py
+  
+  src/figures/twospec.py:
+    - src/figures/utils/plot.py
 
-  spot_setup.py: 
-    - utils/generate.py
-  
-  spot_infer_y.py: 
-    - utils/generate.py
-    - utils/plot.py
-  
-  spot_infer_yb.py: 
-    - utils/generate.py
-    - utils/plot.py
-  
-  spot_infer_ybs.py: 
-    - utils/generate.py
-    - utils/plot.py
-  
-  spot_infer_ybs_low_snr.py: 
-    - utils/generate.py
-    - utils/plot.py
-  
-  twospec.py:
-    - utils/plot.py
+zenodo:
+  src/figures/luhman16b.pickle:
+    id: 5534787
