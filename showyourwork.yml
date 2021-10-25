@@ -3,7 +3,7 @@ dependencies:
     - src/figures/utils/generate.py
 
   src/figures/luhman16b.py:
-    - src/figures/luhman16b.pickle:
+    - src/figures/luhman16b.pickle
 
   src/figures/snr.py:
     - src/figures/utils/generate.py
