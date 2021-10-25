@@ -46,3 +46,18 @@
 \newcommand{\almt}{\ensuremath{\bvec{a}}}
 \newcommand{\lnlam}{\mbox{\textipa{\textcrlambda}}}
 \newcommand{\fnorm}{\tilde{\bvec{f}\hspace{0.2em}}}
+
+% Force line numbers in paragraphs containing equations
+\ifdefined\LINENOS
+    \usepackage{lineno}
+    \linenumbers
+    \let\oldalign\align
+    \let\oldendalign\endalign
+    \renewenvironment{align}{%
+        \linenomath%
+            \oldalign%
+    }{%
+        \endlinenomath%
+            \oldendalign%
+    }
+\fi

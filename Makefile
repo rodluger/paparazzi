@@ -1,42 +1,27 @@
-# Default Snakemake options. Change here or override by setting
-# an environment variable as needed.
-SNAKEMAKEOPTS   ?= -c1 --use-conda
+# Snakemake options. Override by calling, e.g., `make ms.pdf OPTIONS="..."`
+OPTIONS ?= -c1
 
 
-# Local vars
-TEMPORARIES      = src/ms.pdf src/__latexindent*.tex
-CONDA           := $(shell conda -V 2&> /dev/null && echo 1 || echo 0)
-SNAKEMAKE       := $(shell snakemake -v 2&> /dev/null && echo 1 || echo 0)
-.PHONY: ms.pdf clean snakemake_setup conda_setup Makefile
+# Settings
+export OPTIONS
+.PHONY: Makefile
+SHOWYOURWORK := $(shell test -f showyourwork/LICENSE && echo 1 || echo 0)
 
 
 # Default target: generate the article
-ms.pdf: snakemake_setup
-	@snakemake $(SNAKEMAKEOPTS) ms.pdf
+ms.pdf: showyourwork_setup
+	@$(MAKE) -C showyourwork ms.pdf
 
 
-# Ensure conda is setup
-conda_setup:
-	@if [ "$(CONDA)" = "0" ]; then \
-		echo "Conda package manager not found. Please install it from anaconda.com/products/individual.";\
-		false;\
+# Ensure we've cloned the showyourwork submodule
+showyourwork_setup:
+	@if [ "$(SHOWYOURWORK)" = "0" ]; then \
+		echo "Setting up the showyourwork submodule...";\
+		git submodule init;\
+		git submodule update;\
 	fi
 
 
-# Ensure Snakemake is setup
-snakemake_setup: conda_setup
-	@if [ "$(SNAKEMAKE)" = "0" ]; then \
-		echo "Snakemake not found. Installing it using conda...";\
-		conda install -c defaults -c conda-forge -c bioconda mamba snakemake;\
-	fi
-
-
-# Remove all intermediates, outputs, and temporaries
-clean: snakemake_setup
-	@snakemake $(SNAKEMAKEOPTS) ms.pdf --delete-all-output
-	@rm -rf $(TEMPORARIES)
-
-
-# Catch-all target: route all unknown targets to Snakemake
-%: Makefile snakemake_setup
-	@snakemake $(SNAKEMAKEOPTS) $@
+# Route all targets to showyourwork/Makefile
+%: Makefile showyourwork_setup
+	@$(MAKE) -C showyourwork $@
