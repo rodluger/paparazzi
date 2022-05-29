@@ -29,7 +29,8 @@ dependencies:
     - src/scripts/utils/generate.py
     - src/scripts/utils/plot.py
 
-  src/scripts/twospec.py:
+  src/scripts/twospec_plot.py:
+    - src/data/twospec_solution.npz
     - src/scripts/utils/plot.py
 
 datasets:

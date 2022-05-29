@@ -2,8 +2,8 @@ from utils import patch_theano
 from utils.plot import plot_timeseries, plot_maps, plot_spectra
 import starry
 from pathlib import Path
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import starry
 import pymc3 as pm
 import pymc3_ext as pmx
@@ -189,95 +189,3 @@ with pm.Model() as model:
             -1,
         ),
     )
-
-
-# Optimize!
-loss = []
-best_loss = np.inf
-map_soln = model.test_point
-iterator = tqdm(
-    pmx.optim.optimize_iterator(pmx.optim.Adam(lr=lr), niter, start=map_soln),
-    total=niter,
-    disable=os.getenv("CI", "false") == "true",
-)
-with model:
-    for obj, point in iterator:
-        iterator.set_description(
-            "loss: {:.3e} / {:.3e}".format(obj, best_loss)
-        )
-        loss.append(obj)
-        if obj < best_loss:
-            best_loss = obj
-            map_soln = point
-
-
-# Plot the loss
-loss = np.array(loss)
-logloss = np.log10(loss)
-logloss[loss < 0] = -np.log10(-loss[loss < 0])
-fig, ax = plt.subplots(1)
-ax.plot(np.arange(len(loss)), logloss, lw=1)
-ax.set_ylabel("log-ish loss")
-ax.set_xlabel("iteration")
-fig.savefig(paths.figures / "twospec_loss.pdf", bbox_inches="tight")
-
-
-# Get the solution
-with model:
-    y_inferred = pmx.eval_in_model(map.y, point=map_soln)
-    spectrum_inferred = pmx.eval_in_model(map.spectrum, point=map_soln)
-
-
-# Plot the maps
-fig = plot_maps(data["truths"]["y"][:, 0], y_inferred[:, 0], figsize=(8, 7.5))
-fig.savefig(paths.figures / "twospec_maps.pdf", bbox_inches="tight", dpi=300)
-
-
-# Mask portions of the spectrum that don't contribute to the
-# observed flux; we can't know anything about those.
-mask = np.ones(map.nw0, dtype=bool)
-mask[map._unused_idx] = False
-
-
-# Plot spectrum 1
-fig = plot_spectra(
-    wav,
-    wav0[mask],
-    data["truths"]["spectrum"][0][mask],
-    spectrum1.tag.test_value[mask],
-    spectrum_inferred[0][mask],
-    figsize=(8, 2),
-)
-fig.gca().set_ylabel("background spectrum", fontsize=12)
-fig.savefig(
-    paths.figures / "twospec_spectra1.pdf", bbox_inches="tight", dpi=300
-)
-
-
-# Plot spectrum 2
-fig = plot_spectra(
-    wav,
-    wav0[mask],
-    data["truths"]["spectrum"][1][mask],
-    r.tag.test_value * spectrum2.tag.test_value[mask],
-    spectrum_inferred[1][mask],
-    figsize=(8, 2),
-)
-fig.gca().set_ylabel("spot spectrum", fontsize=12)
-fig.savefig(
-    paths.figures / "twospec_spectra2.pdf", bbox_inches="tight", dpi=300
-)
-
-
-# Plot the timeseries
-fig = plot_timeseries(
-    data,
-    y_inferred,
-    spectrum_inferred,
-    normalized=True,
-    overlap=5,
-    figsize=(5, 7.5),
-)
-fig.savefig(
-    paths.figures / "twospec_timeseries.pdf", bbox_inches="tight", dpi=300
-)
