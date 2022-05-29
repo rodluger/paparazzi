@@ -1,35 +1,38 @@
+version: /Users/rluger/src/showyourwork/showyourwork # DEBUG 0.3.0.dev6
+
 dependencies:
-  src/figures/inclinations.py:
-    - src/figures/utils/generate.py
+  src/scripts/inclinations.py:
+    - src/scripts/utils/generate.py
 
-  src/figures/luhman16b.py:
-    - src/figures/luhman16b.pickle
+  src/scripts/luhman16b.py:
+    - src/data/luhman16b.pickle
 
-  src/figures/snr.py:
-    - src/figures/utils/generate.py
+  src/scripts/snr.py:
+    - src/scripts/utils/generate.py
 
-  src/figures/spot_setup.py: 
-    - src/figures/utils/generate.py
-  
-  src/figures/spot_infer_y.py: 
-    - src/figures/utils/generate.py
-    - src/figures/utils/plot.py
-  
-  src/figures/spot_infer_yb.py: 
-    - src/figures/utils/generate.py
-    - src/figures/utils/plot.py
-  
-  src/figures/spot_infer_ybs.py: 
-    - src/figures/utils/generate.py
-    - src/figures/utils/plot.py
-  
-  src/figures/spot_infer_ybs_low_snr.py: 
-    - src/figures/utils/generate.py
-    - src/figures/utils/plot.py
-  
-  src/figures/twospec.py:
-    - src/figures/utils/plot.py
+  src/scripts/spot_setup.py:
+    - src/scripts/utils/generate.py
 
-zenodo:
-  src/figures/luhman16b.pickle:
-    id: 5534787
+  src/scripts/spot_infer_y.py:
+    - src/scripts/utils/generate.py
+    - src/scripts/utils/plot.py
+
+  src/scripts/spot_infer_yb.py:
+    - src/scripts/utils/generate.py
+    - src/scripts/utils/plot.py
+
+  src/scripts/spot_infer_ybs.py:
+    - src/scripts/utils/generate.py
+    - src/scripts/utils/plot.py
+
+  src/scripts/spot_infer_ybs_low_snr.py:
+    - src/scripts/utils/generate.py
+    - src/scripts/utils/plot.py
+
+  src/scripts/twospec.py:
+    - src/scripts/utils/plot.py
+
+datasets:
+  10.5281/zenodo.5534787:
+    contents:
+      luhman16b.pickle: src/data/luhman16b.pickle

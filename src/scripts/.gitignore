@@ -1,0 +1,7 @@
+# Nothing should be tracked in this folder...
+*
+
+# Except...
+*.py
+utils
+!.gitignore
