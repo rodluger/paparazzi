@@ -2,6 +2,6 @@
 *
 
 # Except...
-*.py
-utils
+!*.py
+!utils
 !.gitignore
