@@ -1,4 +1,4 @@
-version: /Users/rluger/src/showyourwork/showyourwork # DEBUG 0.3.0.dev6
+version: 0.3.0.dev7
 
 dependencies:
   src/scripts/inclinations.py:
