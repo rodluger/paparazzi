@@ -1,4 +1,6 @@
-version: 0.3.0.dev7
+version: 0.3.0.dev8
+
+run_cache_rules_on_ci: true
 
 dependencies:
   src/scripts/inclinations.py:
